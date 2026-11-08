@@ -21,7 +21,7 @@ Mods pessoais de qualidade de vida para **Graveyard Keeper 2** (Unity 6000.3 Mon
 | Jogo | `D:\SteamLibrary\steamapps\common\Graveyard Keeper 2` | cópia em `D:\GK2-green` (`/mnt/d/GK2-green`) |
 | Dados (saves, `Player.log`, `Mods/`) | `%USERPROFILE%\AppData\LocalLow\Lazy Bear Games\Graveyard Keeper 2` | `...\Lazy Bear Games\GK2 Green Instance` |
 | Configurações (registro) | `HKCU\Software\Lazy Bear Games\Graveyard Keeper 2` | `...\GK2 Green Instance` (sincronizado do blue, janela, sem som) |
-| Plugins | só mods promovidos, via `Mods/Code/<Mod>/` | `BepInEx/plugins/` direto + DevBridge |
+| Plugins | GK2 HotLoader + mods promovidos (`Mods/Code/<Mod>/` e `BepInEx/hot/`) | `BepInEx/plugins/` direto + DevBridge (+ HotLoader para ensaio) |
 | Janela | a de quem joga | 1920×1080 em modo janela, em `x=4000` (fora dos dois monitores) |
 
 O isolamento vem de trocar o *productName* `Graveyard Keeper 2` por `GK2 Green Instance` (mesmo tamanho, 18 bytes)
@@ -33,14 +33,16 @@ para abrir o blue pela biblioteca. Com 4358690 o Steam mostra o GK2 "Rodando" e 
 remove a recompensa do save de teste) e os amigos na Steam veem "jogando Spacewar" enquanto o green roda.
 
 **Regras invioláveis**
-- Nunca fechar, matar, injetar ou enviar entrada ao processo do **blue**. Nunca trocar o `steam_appid.txt` do green
+- Nunca fechar, matar ou enviar entrada ao processo do **blue**. No blue entram só o GK2 HotLoader e DLLs de mods
+  promovidos; DevBridge, cenários e qualquer código avulso são exclusivos do green. Nunca trocar o `steam_appid.txt` do green
   para 4358690. O `green.ps1` só toca em processos cujo
   caminho começa por `D:\GK2-green`.
 - No blue, só **leitura**: `Steam_1.dat` vira snapshot (`gk2 save snapshot`), nunca é escrito.
 - Mudança de estado (itens, tempo, teleporte, salvar) **só no green**. O save do green é descartável
   (`gk2 save reset` volta ao snapshot).
-- O blue só recebe mod por `gk2 promote <Mod>`, e só depois de os prints serem aprovados. Vale ao reabrir
-  o jogo; nunca reiniciar o blue por conta própria.
+- O blue só recebe mod por `gk2 promote <Mod>`, e só depois de os prints serem aprovados. Ensaie antes com
+  `gk2 promote <Mod> --green` e confira o aviso no print.
+- Mod de gameplay (que muda estado) é marcado "só ao reabrir": promover sem a pasta `hot/` e avisar que só vale ao reabrir o jogo.
 
 ## Ambiente
 
@@ -55,7 +57,7 @@ gk2 ui <filtro> [prof]                           árvore da UI nativa: rects em 
 gk2 run <cenario.cs>                             C# dentro do jogo (≈1,5 s): abrir janela, ler valor, preparar cena
 gk2 log [n] [grep] | state | windows | ping
 gk2 save snapshot|reset                          save de teste a partir do blue
-gk2 promote <Mod>                                entrega ao blue (com aprovação)
+gk2 promote <Mod> [--green]                      entrega com o jogo aberto (blue, com aprovação) ou ensaio no green
 gk2 bridge | green-sync | decomp                 manutenção (ver abaixo)
 ```
 
@@ -69,6 +71,11 @@ Peças:
 - **Cenários** (`docs/cenarios/*.cs`): `public static class Snippet { public static object Run() }`. Pode retornar
   `IEnumerator` (vários frames; o último valor que não é yield vira o resultado). Logue com `Debug.Log("[cenario] ...")`.
   Cenário útil e reutilizável vai para `docs/cenarios/` com um comentário de uma linha dizendo o que prepara.
+- **GK2 HotLoader** (`GK2HotLoader/`): entrega sem reabrir. Observa só `<jogo>/BepInEx/hot/*.dll` a cada 2 s; quando
+  o hash muda, troca o plugin em execução (mesmo `Shared/PluginReloader.cs` da DevBridge) e mostra a notificação
+  nativa do jogo ("GK2 Insight updated to 0.1.1"; em pt se o jogo estiver em pt). Ao abrir o jogo, marca o que já está
+  na pasta como aplicado, porque o pacote `Mods/Code` carregou a mesma versão. Ele próprio e a DevBridge não se
+  recarregam a quente. Falha vira aviso "update failed (see log)" e o jogo segue.
 - **Fallback sem ponte**: `gk2 winshot` (PrintWindow da janela green).
 
 ## Ciclo de trabalho
@@ -79,7 +86,8 @@ Peças:
 3. Antes de criar UI: print e `gk2 ui` da tela nativa equivalente, salvos em `docs/referencia/` quando forem novos.
 4. Editar → `gk2 deploy <Mod>` → cenário que leva à tela → `gk2 shot` → **olhar o print** (Read) → julgar → repetir.
 5. `gk2 log 40 <Mod>` sem exceções.
-6. Mostrar o print final, de preferência ao lado da referência, e pedir aprovação. Só então `gk2 promote`.
+6. Mostrar o print final, de preferência ao lado da referência, e pedir aprovação.
+7. Subir a `Version` (plugin e `modinfo.json`), `gk2 promote <Mod> --green` (print do aviso) e então `gk2 promote <Mod>`.
 
 ## Design nativo
 
@@ -119,6 +127,7 @@ alinhamento com o HUD existente; não cobre informação nativa; legível com fu
 - O Mono devolve o assembly em cache quando o nome se repete: a DevBridge renomeia (Mono.Cecil) a cada carga.
 - A DLL carregada pelo Chainloader fica travada pelo Windows: o deploy grava `<Mod>.dll.next`, aplicado no
   próximo `gk2 green start`.
+- `ScreenCapture` vem com alfa 0 em áreas pretas: o `gk2 shot` salva em RGB para o recorte não parecer cinza.
 - O log do Unity é ruidoso (`BoxCollider does not support negative scale` aos milhares): o `gk2` agrupa repetições.
 - `SteamApps.GetAppInstallDir` aponta para a pasta do blue mesmo no green; hoje só é usado em log e na importação de
   save da demo.
@@ -139,5 +148,5 @@ mesma zona (`WgoData.GetCraftableMultiInventory`). Dados completos: `Ctrl+F7` do
 - [ ] Compila sem aviso; `gk2 deploy` e um segundo `gk2 deploy` funcionam (recarregável de verdade).
 - [ ] Print do green na tela relevante, julgado contra a referência, com os itens acima.
 - [ ] `gk2 log` sem exceção do mod.
-- [ ] Nada mudou no blue nem no save do blue.
+- [ ] Nada mudou no blue nem no save do blue além do que foi promovido com aprovação.
 - [ ] Commit no repo local (mensagem sem trailers) e memória atualizada se algo novo foi aprendido.

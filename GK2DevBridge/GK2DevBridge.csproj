@@ -4,5 +4,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="$(Refs)/core/Mono.Cecil.dll" Private="false" />
+    <Compile Include="../Shared/PluginReloader.cs" Link="Shared/PluginReloader.cs" />
   </ItemGroup>
 </Project>

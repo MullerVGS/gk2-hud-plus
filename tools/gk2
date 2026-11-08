@@ -76,6 +76,8 @@ apply_pending() {
   find "$GREEN/BepInEx/plugins" -name '*.dll.next' 2>/dev/null | while read -r f; do mv -f "$f" "${f%.next}"; echo "aplicado ${f##*/}"; done
 }
 
+urlenc() { python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))' "$1"; }
+
 pretty() { python3 -c 'import json,sys; d=json.load(sys.stdin); print(json.dumps(d,indent=2,ensure_ascii=False))'; }
 
 print_logs() { python3 "$HERE/tools/fmtlog.py"; }
@@ -155,9 +157,13 @@ EOF
       *) die "opção desconhecida $1" ;; esac; shift; done
     mkdir -p "$SHOTS"; out="$SHOTS/$(date +%H%M%S)-$name.png"
     curl -sS --max-time 60 -o "$out" -w '%{http_code}' "$URL/shot?$q" | grep -q 200 || { cat "$out"; rm -f "$out"; die "print falhou"; }
-    if [ -n "$crop" ]; then python3 -c "
+    # Sem alfa: a captura vem com alfa 0 em áreas pretas, que viewers mostram como cinza/xadrez.
+    python3 -c "
 from PIL import Image; import sys
-x,y,w,h=map(int,sys.argv[2].split(',')); im=Image.open(sys.argv[1]).crop((x,y,x+w,y+h)); im.save(sys.argv[1])" "$out" "$crop"; fi
+im=Image.open(sys.argv[1]).convert('RGB')
+if sys.argv[2]:
+    x,y,w,h=map(int,sys.argv[2].split(',')); im=im.crop((x,y,x+w,y+h))
+im.save(sys.argv[1])" "$out" "$crop"
     echo "$out"
     ;;
   winshot)
@@ -165,19 +171,26 @@ x,y,w,h=map(int,sys.argv[2].split(',')); im=Image.open(sys.argv[1]).crop((x,y,x+
     pid=$(ps1 green.ps1 status | sed -n 's/.*pid=\([0-9]*\).*/\1/p'); [ -n "$pid" ] || die "green parado"
     ps1 winshot.ps1 -ProcessId "$pid" -Out "$(winpath "$out")" >/dev/null; echo "$out"
     ;;
-  log) api "/log?n=${1:-80}&grep=${2:-}" | print_logs ;;
+  log) api "/log?n=${1:-80}&grep=$(urlenc "${2:-}")" | print_logs ;;
   state) api /state | pretty ;;
   ping) api /ping | pretty ;;
   windows) api /windows | pretty ;;
-  ui) api "/ui?filter=${1:-}&depth=${2:-8}&inactive=${3:-0}" ;;
+  ui) api "/ui?filter=$(urlenc "${1:-}")&depth=${2:-8}&inactive=${3:-0}" ;;
   wait) wait_bridge "${1:-120}"; api /ping | pretty ;;
   promote)
-    # Copia o mod aprovado para o blue como pacote local (Mods/Code). Vale ao reabrir o jogo.
-    proj=${1:?projeto}; dll=$(build "$proj")
-    pack="$BLUE_DATA/Mods/Code/$proj"; mkdir -p "$pack/BepInEx/plugins/$proj"
-    [ -f "$HERE/$proj/modinfo.json" ] && cp "$HERE/$proj/modinfo.json" "$pack/modinfo.json"
-    cp "$dll" "$pack/BepInEx/plugins/$proj/$proj.dll"
-    sha256sum "$dll"; echo "promovido para $pack (vale na próxima abertura do blue)"
+    # Entrega um mod aprovado. Blue: pacote Mods/Code (vale ao reabrir) + BepInEx/hot (o GK2 HotLoader aplica com o
+    # jogo aberto e avisa na tela). --green: só a pasta hot do green, para ensaiar a entrega antes do blue.
+    proj=${1:?projeto}; target=${2:-blue}; dll=$(build "$proj")
+    if [ "$target" = "--green" ]; then game="$GREEN"; else game="$BLUE"
+      pack="$BLUE_DATA/Mods/Code/$proj"; mkdir -p "$pack/BepInEx/plugins/$proj"
+      [ -f "$HERE/$proj/modinfo.json" ] && cp "$HERE/$proj/modinfo.json" "$pack/modinfo.json"
+      cp "$dll" "$pack/BepInEx/plugins/$proj/$proj.dll"; echo "pacote: $pack (vale ao reabrir)"
+    fi
+    case "$proj" in GK2HotLoader|GK2DevBridge) echo "$proj não se recarrega a quente: vale ao reabrir" ;;
+      *) mkdir -p "$game/BepInEx/hot"; cp "$dll" "$game/BepInEx/hot/$proj.dll.tmp"; mv -f "$game/BepInEx/hot/$proj.dll.tmp" "$game/BepInEx/hot/$proj.dll"
+         echo "hot: $game/BepInEx/hot/$proj.dll (aplicado em ~2 s se o HotLoader estiver rodando)" ;;
+    esac
+    sha256sum "$dll"
     ;;
   decomp)
     refs; rm -rf "$HERE/decomp"; mkdir -p "$HERE/decomp"
@@ -198,7 +211,7 @@ run <arquivo.cs>           executa um cenário C# dentro do jogo (static class S
 shot [nome] [--hideui] [--crop x,y,w,h] [--frames n]   print pelo Unity → .shots/
 winshot [nome]             print pela janela (fallback, sem ponte)
 log [n] [grep] | state | ping | windows | ui [filtro] [prof] [inativos 0|1] | wait [s]
-promote <Proj>             copia o mod aprovado para Mods/Code do blue
+promote <Proj> [--green]   entrega o mod aprovado (blue: Mods/Code + hot-reload pelo HotLoader; --green: ensaio)
 decomp                     regenera decomp/ (após update do jogo)
 EOF
     ;;
