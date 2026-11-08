@@ -6,12 +6,30 @@ Mods pessoais de qualidade de vida para **Graveyard Keeper 2** (Unity 6000.3 Mon
 
 ## O que vamos fazer
 
-- **Mods que parecem do jogo.** Interface, fontes, molduras, cores e comportamento indistinguíveis dos nativos.
-  O IMGUI (`OnGUI`, `GUI.Box`) só serve de rascunho ou depuração e nunca chega à versão promovida.
+- **Dois tipos de mod, duas regras de interface.**
+  - **Mods de jogador** (o HUD que vamos fazer, dicas, janelas): parecem do jogo. Interface, fontes, molduras,
+    cores e comportamento indistinguíveis dos nativos (ver "Design nativo"); IMGUI nunca chega à versão promovida.
+  - **GK2 Insight é ferramenta de debug e estudo**, fora da regra de visual nativo. Vale legibilidade, densidade e
+    informação que o jogo **não** entrega; IMGUI e desenho técnico (GL) são permitidos. Ver "GK2 Insight".
 - **Por ora, informação e interface, não gameplay.** Mais números, dicas, contexto e entendimento das mecânicas.
   Mudança de regra do jogo (velocidade, custos, craft com todos os baús) só com pedido explícito.
-- **Prints sempre.** Toda mudança visível termina com print do green e um julgamento escrito contra a referência
-  nativa (ver "Design nativo"). Sem print, a tarefa não acabou.
+- **Prints sempre.** Toda mudança visível termina com print do green e um julgamento escrito (contra a referência
+  nativa nos mods de jogador; legibilidade, sobreposição e utilidade no Insight). Sem print, a tarefa não acabou.
+
+## GK2 Insight
+
+| Tecla | Camada | Conteúdo |
+| --- | --- | --- |
+| F7 | Local e momento | o que o jogo não mostra sobre onde o jogador está: zona (qualidade e de onde vem), NPCs e zumbis carregados (o que fazem, onde), tempo/dia/sono, clima, crafts em andamento. **Sem buffs** (o inventário já mostra) |
+| Shift+F7 | Técnico | recursos internos do jogador e overlays desenhados no mundo: colisores, hitboxes, pathing, dock points |
+| Ctrl+F7 | Dump | `GameBalance`, textos e `PlayerData` em JSON |
+
+Cenários úteis para ver as camadas no green: `insight-camadas.cs` (liga F7/Shift+F7 sem teclado), `hora.cs` (muda a
+hora; 0,445 = NPCs saindo), `teleporte-npc-andando.cs`, `teleporte-zumbi.cs`, `perk.cs`. Hitboxes de combate ainda
+não foram vistas em print (precisa de luta).
+
+Critérios: não repetir o que a UI nativa já mostra; texto curto, colunas alinhadas, sem cobrir o centro da tela;
+custo baixo por frame (atualizar listas a cada 0,25–1 s, nunca varrer a cena inteira por frame).
 
 ## Blue-green
 
@@ -91,6 +109,9 @@ Peças:
 
 ## Design nativo
 
+Vale para mods de jogador (não para o GK2 Insight).
+
+
 Fatos medidos (HUD, 1920×1080):
 - Canvas raiz `UI` em `ScreenSpaceOverlay`, `scaleFactor` 2 (`LazyUI.ScaleFactor`). **1 pixel de arte = 2 px de tela.**
   Posições e tamanhos em múltiplos de 2 px de tela; nada de meio pixel de arte.
@@ -127,6 +148,12 @@ alinhamento com o HUD existente; não cobre informação nativa; legível com fu
 - O Mono devolve o assembly em cache quando o nome se repete: a DevBridge renomeia (Mono.Cecil) a cada carga.
 - A DLL carregada pelo Chainloader fica travada pelo Windows: o deploy grava `<Mod>.dll.next`, aplicado no
   próximo `gk2 green start`.
+- **Leituras que gravam no save**: `WorldZoneData.GetTotalQuality()`, `GetQualityString()` e `PlayerData.GetRes("wz_*")`
+  escrevem `wz_<zona>` e podem desbloquear conquista. Somar `WgoData.Quality` dos `wgoDataList` à mão (ver
+  `GK2Insight/LocalSection.cs`). Também não chamar `GetActionDamage` (avança o RNG) nem métodos `Roll*/Send*/Set*`
+  de NPC, zumbi ou clima. Ler campos crus de `PlayerData.res` com `AccessTools`.
+- Overlays: projetar com `CameraSystem.WorldCamera.WorldToScreenPoint` + `MainCamera.RenderTargetToScreen` e desenhar
+  com GL no `OnGUI` (Repaint). O debug do dev (`MovementPathDebugManager`, gizmos) foi removido do build.
 - `ScreenCapture` vem com alfa 0 em áreas pretas: o `gk2 shot` salva em RGB para o recorte não parecer cinza.
 - O log do Unity é ruidoso (`BoxCollider does not support negative scale` aos milhares): o `gk2` agrupa repetições.
 - `SteamApps.GetAppInstallDir` aponta para a pasta do blue mesmo no green; hoje só é usado em log e na importação de

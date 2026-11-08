@@ -26,5 +26,8 @@
     <Reference Include="$(Refs)/Managed/UnityEngine.ScreenCaptureModule.dll" Private="false" />
     <Reference Include="$(Refs)/Managed/UnityEngine.AudioModule.dll" Private="false" />
     <Reference Include="$(Refs)/Managed/UniTask.dll" Private="false" />
+    <Reference Include="$(Refs)/Managed/UnityEngine.PhysicsModule.dll" Private="false" />
+    <Reference Include="$(Refs)/Managed/AstarPathfindingProject.dll" Private="false" />
+    <Reference Include="$(Refs)/Managed/Sirenix.Serialization.dll" Private="false" />
   </ItemGroup>
 </Project>
