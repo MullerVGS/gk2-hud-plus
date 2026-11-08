@@ -26,11 +26,15 @@ Mods pessoais de qualidade de vida para **Graveyard Keeper 2** (Unity 6000.3 Mon
 
 O isolamento vem de trocar o *productName* `Graveyard Keeper 2` por `GK2 Green Instance` (mesmo tamanho, 18 bytes)
 em `GraveyardKeeper2_Data/globalgamemanagers` e `app.info` da cópia: o Unity deriva disso o `persistentDataPath` e a
-chave do registro. Na cópia, o `steam_appid.txt` (4358690) impede o `RestartAppIfNecessary` de relançar o blue pelo
-Steam. As duas instâncias coexistem; o Steam inicializa nas duas.
+chave do registro. Na cópia, o `steam_appid.txt` contém **480** (Spacewar, app de teste do Steamworks): o Steam
+registra o green como outro app (`HKCU\Software\Valve\Steam\RunningAppID=480`), e o GK2 (4358690) continua livre
+para abrir o blue pela biblioteca. Com 4358690 o Steam mostra o GK2 "Rodando" e bloqueia o blue (aconteceu em
+08/11). Efeitos do 480 no green: Workshop e conquistas são do Spacewar, o DLC de pré-venda fica desligado (o jogo
+remove a recompensa do save de teste) e os amigos na Steam veem "jogando Spacewar" enquanto o green roda.
 
 **Regras invioláveis**
-- Nunca fechar, matar, injetar ou enviar entrada ao processo do **blue**. O `green.ps1` só toca em processos cujo
+- Nunca fechar, matar, injetar ou enviar entrada ao processo do **blue**. Nunca trocar o `steam_appid.txt` do green
+  para 4358690. O `green.ps1` só toca em processos cujo
   caminho começa por `D:\GK2-green`.
 - No blue, só **leitura**: `Steam_1.dat` vira snapshot (`gk2 save snapshot`), nunca é escrito.
 - Mudança de estado (itens, tempo, teleporte, salvar) **só no green**. O save do green é descartável
@@ -118,6 +122,7 @@ alinhamento com o HUD existente; não cobre informação nativa; legível com fu
 - O log do Unity é ruidoso (`BoxCollider does not support negative scale` aos milhares): o `gk2` agrupa repetições.
 - `SteamApps.GetAppInstallDir` aponta para a pasta do blue mesmo no green; hoje só é usado em log e na importação de
   save da demo.
+- Green não pode usar o app id do jogo (ver Blue-green); conferir com `RunningAppID` no registro do Steam.
 - Depois de update do jogo: `gk2 green stop && gk2 green-sync && gk2 decomp`, depois recompilar tudo.
 
 ## Mecânicas já mapeadas

@@ -104,7 +104,7 @@ for f in ('globalgamemanagers', 'app.info'):
     if b.count(new) == 1: print(f, 'já corrigido'); continue
     assert b.count(old) == 1, (f, b.count(old)); open(p, 'wb').write(b.replace(old, new)); print(f, 'corrigido')
 EOF
-    printf '4358690' > "$GREEN/steam_appid.txt"
+    printf '480' > "$GREEN/steam_appid.txt"  # Spacewar: o Steam não vê o green como GK2 e o blue continua abrindo
     ;;
   save)
     sub=${1:-}
