@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <AssemblyName>GK2Insight</AssemblyName>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <Refs>$(MSBuildThisFileDirectory)../refs</Refs>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+  </ItemGroup>
+  <ItemGroup>
+    <Reference Include="$(Refs)/core/BepInEx.dll" Private="false" />
+    <Reference Include="$(Refs)/core/0Harmony.dll" Private="false" />
+    <Reference Include="$(Refs)/Managed/Assembly-CSharp.dll" Private="false" />
+    <Reference Include="$(Refs)/Managed/LazyBearTechnology.dll" Private="false" />
+    <Reference Include="$(Refs)/Managed/Newtonsoft.Json.dll" Private="false" />
+    <Reference Include="$(Refs)/Managed/UnityEngine.dll" Private="false" />
+    <Reference Include="$(Refs)/Managed/UnityEngine.CoreModule.dll" Private="false" />
+    <Reference Include="$(Refs)/Managed/UnityEngine.IMGUIModule.dll" Private="false" />
+    <Reference Include="$(Refs)/Managed/UnityEngine.InputLegacyModule.dll" Private="false" />
+    <Reference Include="$(Refs)/Managed/UnityEngine.TextRenderingModule.dll" Private="false" />
+  </ItemGroup>
+</Project>
