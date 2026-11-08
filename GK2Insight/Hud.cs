@@ -14,6 +14,8 @@ namespace GK2Insight
         private const float LackOfSleepDays = 2f;
 
         private static readonly Regex RichTag = new Regex("<[^>]+>", RegexOptions.Compiled);
+        private static readonly Regex SpriteTag = new Regex("<sprite name=\"?([^\">]+)\"?>", RegexOptions.Compiled);
+        private static readonly Regex Spaces = new Regex(" {2,}", RegexOptions.Compiled);
         private static readonly AccessTools.FieldRef<PlayerData, GameRes> PlayerRes =
             AccessTools.FieldRefAccess<PlayerData, GameRes>("res");
 
@@ -265,7 +267,8 @@ namespace GK2Insight
 
         private static string Clean(string s)
         {
-            return RichTag.Replace(s ?? "", "").Replace("\n", " ").Trim();
+            string withIcons = SpriteTag.Replace(s ?? "", m => "[" + m.Groups[1].Value + "]");
+            return Spaces.Replace(RichTag.Replace(withIcons, "").Replace("\n", " "), " ").Trim();
         }
     }
 }
