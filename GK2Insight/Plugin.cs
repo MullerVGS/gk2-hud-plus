@@ -12,7 +12,6 @@ namespace GK2Insight
         public const string Version = "0.1.0";
 
         internal static BepInEx.Logging.ManualLogSource Log;
-        private const string BuildStamp = "D";
 
         private ConfigEntry<KeyboardShortcut> hudKey;
         private ConfigEntry<KeyboardShortcut> dumpKey;
@@ -35,7 +34,7 @@ namespace GK2Insight
             detailKey = Config.Bind("HUD", "DetailKey", new KeyboardShortcut(KeyCode.F7, KeyCode.LeftShift), "Alterna o modo detalhado (todos os recursos internos do jogador).");
             dumpKey = Config.Bind("Dump", "DumpKey", new KeyboardShortcut(KeyCode.F7, KeyCode.LeftControl), "Exporta dados do jogo (GameBalance e textos) em JSON.");
             hud = new Hud();
-            Log.LogInfo($"{Name} {Version} carregado (build {BuildStamp})");
+            Log.LogInfo($"{Name} {Version} carregado");
         }
 
         private void Update()
