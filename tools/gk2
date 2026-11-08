@@ -187,6 +187,7 @@ im.save(sys.argv[1])" "$out" "$crop"
       cp "$dll" "$pack/BepInEx/plugins/$proj/$proj.dll"; echo "pacote: $pack (vale ao reabrir)"
     fi
     case "$proj" in GK2HotLoader|GK2DevBridge) echo "$proj não se recarrega a quente: vale ao reabrir" ;;
+      *) [ "$target" = "--sem-hot" ] && { echo "sem hot-reload (mod de gameplay): vale ao reabrir"; sha256sum "$dll"; exit 0; } ;;&
       *) mkdir -p "$game/BepInEx/hot"; cp "$dll" "$game/BepInEx/hot/$proj.dll.tmp"; mv -f "$game/BepInEx/hot/$proj.dll.tmp" "$game/BepInEx/hot/$proj.dll"
          echo "hot: $game/BepInEx/hot/$proj.dll (aplicado em ~2 s se o HotLoader estiver rodando)" ;;
     esac
@@ -211,7 +212,7 @@ run <arquivo.cs>           executa um cenário C# dentro do jogo (static class S
 shot [nome] [--hideui] [--crop x,y,w,h] [--frames n]   print pelo Unity → .shots/
 winshot [nome]             print pela janela (fallback, sem ponte)
 log [n] [grep] | state | ping | windows | ui [filtro] [prof] [inativos 0|1] | wait [s]
-promote <Proj> [--green]   entrega o mod aprovado (blue: Mods/Code + hot-reload pelo HotLoader; --green: ensaio)
+promote <Proj> [--green|--sem-hot]   entrega o mod aprovado (blue: Mods/Code + hot-reload pelo HotLoader; --green: ensaio)
 decomp                     regenera decomp/ (após update do jogo)
 EOF
     ;;

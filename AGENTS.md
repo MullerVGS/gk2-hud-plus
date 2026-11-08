@@ -42,7 +42,7 @@ remove a recompensa do save de teste) e os amigos na Steam veem "jogando Spacewa
   (`gk2 save reset` volta ao snapshot).
 - O blue só recebe mod por `gk2 promote <Mod>`, e só depois de os prints serem aprovados. Ensaie antes com
   `gk2 promote <Mod> --green` e confira o aviso no print.
-- Mod de gameplay (que muda estado) é marcado "só ao reabrir": promover sem a pasta `hot/` e avisar que só vale ao reabrir o jogo.
+- Mod de gameplay (que muda estado) é marcado "só ao reabrir": `gk2 promote <Mod> --sem-hot` e avisar que só vale ao reabrir o jogo.
 
 ## Ambiente
 
