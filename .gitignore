@@ -3,3 +3,5 @@ decomp/
 dumps/
 **/bin/
 **/obj/
+.shots/
+tools/snippet/work/

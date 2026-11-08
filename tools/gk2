@@ -1,0 +1,205 @@
+#!/usr/bin/env bash
+# CLI único para desenvolver mods do Graveyard Keeper 2 na instância green. Rode `gk2 help`.
+set -euo pipefail
+
+HERE=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
+BLUE=${GK2_BLUE_DIR:-/mnt/d/SteamLibrary/steamapps/common/Graveyard Keeper 2}
+GREEN=${GK2_GREEN_DIR:-/mnt/d/GK2-green}
+GREEN_WIN='D:\GK2-green'
+SNAPSHOTS=/mnt/d/GK2-green-saves
+WINHOME=${GK2_WINHOME:-$(wslpath "$(cmd.exe /c 'echo %USERPROFILE%' 2>/dev/null | tr -d '\r')")}
+BLUE_DATA="$WINHOME/AppData/LocalLow/Lazy Bear Games/Graveyard Keeper 2"
+GREEN_DATA="$WINHOME/AppData/LocalLow/Lazy Bear Games/GK2 Green Instance"
+PORT=${GK2_BRIDGE_PORT:-47777}
+URL="http://127.0.0.1:$PORT"
+SHOTS="$HERE/.shots"
+BUILDER=gk2-builder
+SDK_IMAGE=mcr.microsoft.com/dotnet/sdk:8.0.425
+
+die() { echo "gk2: $*" >&2; exit 1; }
+ps1() { local f=$1; shift; powershell.exe -NoProfile -ExecutionPolicy Bypass -File "$(wslpath -w "$HERE/tools/$f")" "$@" | tr -d '\r'; }
+winpath() { wslpath -w "$1"; }
+
+refs() {
+  mkdir -p "$HERE/refs/Managed" "$HERE/refs/core"
+  # Só recopia quando o jogo mudou (Assembly-CSharp diferente).
+  if ! cmp -s "$BLUE/GraveyardKeeper2_Data/Managed/Assembly-CSharp.dll" "$HERE/refs/Managed/Assembly-CSharp.dll"; then
+    cp -L "$BLUE"/GraveyardKeeper2_Data/Managed/*.dll "$HERE/refs/Managed/"
+    cp -L "$BLUE"/BepInEx/core/*.dll "$HERE/refs/core/"
+    echo "refs atualizadas a partir do jogo"
+  fi
+}
+
+builder() {
+  if [ "$(docker inspect -f '{{.State.Running}}' "$BUILDER" 2>/dev/null)" != "true" ]; then
+    docker rm -f "$BUILDER" >/dev/null 2>&1 || true
+    docker run -d --name "$BUILDER" -v "$HERE":/src -w /src "$SDK_IMAGE" sleep infinity >/dev/null
+  fi
+}
+
+# build <Projeto> [msbuild args...] → imprime o caminho da DLL
+build() {
+  local proj=$1; shift
+  [ -f "$HERE/$proj/$proj.csproj" ] || die "projeto $proj não existe (esperado $proj/$proj.csproj)"
+  refs >&2
+  builder
+  docker exec -w "/src/$proj" "$BUILDER" dotnet build -c Release -nologo -v q -clp:NoSummary "$@" >&2 || die "build de $proj falhou"
+  echo "$HERE/$proj/bin/Release/$proj.dll"
+}
+
+api() { curl -sS --max-time "${GK2_TIMEOUT:-90}" "$URL$1"; }
+
+bridge_up() { curl -sS --max-time 2 "$URL/ping" >/dev/null 2>&1; }
+
+wait_bridge() {
+  local limit=${1:-120}
+  for _ in $(seq 1 "$limit"); do bridge_up && return 0; sleep 1; done
+  die "ponte não respondeu em ${limit}s (green rodando? DevBridge instalada?)"
+}
+
+stage() { # copia uma DLL para a pasta dev do green e imprime o caminho Windows
+  local dll=$1 name=$2
+  mkdir -p "$GREEN/BepInEx/dev"
+  find "$GREEN/BepInEx/dev" -name '*.dll' -mmin +60 -delete 2>/dev/null || true
+  local dst="$GREEN/BepInEx/dev/$name-$(date +%s%N).dll"
+  cp "$dll" "$dst"
+  winpath "$dst"
+}
+
+install_green() { # copia para BepInEx/plugins do green; se a DLL estiver travada pelo jogo, deixa .next para o próximo start
+  local dll=$1 proj=$2 dst="$GREEN/BepInEx/plugins/$2/$2.dll"
+  mkdir -p "$(dirname "$dst")"
+  if cp "$dll" "$dst" 2>/dev/null; then rm -f "$dst.next"; else cp "$dll" "$dst.next"; echo "(DLL em uso pelo green: ficou $proj.dll.next, aplicado no próximo start)"; fi
+}
+
+apply_pending() {
+  find "$GREEN/BepInEx/plugins" -name '*.dll.next' 2>/dev/null | while read -r f; do mv -f "$f" "${f%.next}"; echo "aplicado ${f##*/}"; done
+}
+
+pretty() { python3 -c 'import json,sys; d=json.load(sys.stdin); print(json.dumps(d,indent=2,ensure_ascii=False))'; }
+
+print_logs() { python3 "$HERE/tools/fmtlog.py"; }
+
+cmd=${1:-help}; shift || true
+case "$cmd" in
+  green)
+    sub=${1:-status}
+    case "$sub" in
+      start) apply_pending; ps1 green.ps1 start ;;
+      stop) bridge_up && api /quit >/dev/null 2>&1 && sleep 3; ps1 green.ps1 stop ;;
+      restart) "$0" green stop; apply_pending; ps1 green.ps1 start ;;
+      status|show|hide|sync-settings) ps1 green.ps1 "$sub" ;;
+      *) die "green start|stop|restart|status|show|hide|sync-settings" ;;
+    esac
+    ;;
+  green-sync)
+    # Re-sincroniza a cópia green com o jogo (após atualização do Steam), preservando o BepInEx de desenvolvimento.
+    ps1 green.ps1 status | grep -q parado || die "pare o green antes (gk2 green stop)"
+    powershell.exe -NoProfile -Command "robocopy '$(winpath "$BLUE")' '$GREEN_WIN' /MIR /NFL /NDL /NJH /NP /R:1 /W:1 /XD '$GREEN_WIN\\BepInEx\\plugins' '$GREEN_WIN\\BepInEx\\config' '$GREEN_WIN\\BepInEx\\dev' '$GREEN_WIN\\BepInEx\\cache' /XF steam_appid.txt; exit 0" | tr -d '\r' | tail -3
+    python3 - "$GREEN/GraveyardKeeper2_Data" <<'EOF'
+import sys, os
+old, new = b'Graveyard Keeper 2', b'GK2 Green Instance'
+for f in ('globalgamemanagers', 'app.info'):
+    p = os.path.join(sys.argv[1], f); b = open(p, 'rb').read()
+    if b.count(new) == 1: print(f, 'já corrigido'); continue
+    assert b.count(old) == 1, (f, b.count(old)); open(p, 'wb').write(b.replace(old, new)); print(f, 'corrigido')
+EOF
+    printf '4358690' > "$GREEN/steam_appid.txt"
+    ;;
+  save)
+    sub=${1:-}
+    case "$sub" in
+      snapshot) mkdir -p "$SNAPSHOTS/snapshot"; cp "$BLUE_DATA"/Steam_1.dat "$BLUE_DATA"/Steam_1.info "$SNAPSHOTS/snapshot/"; ls -la "$SNAPSHOTS/snapshot" ;;
+      reset) [ -f "$SNAPSHOTS/snapshot/Steam_1.dat" ] || die "sem snapshot"; mkdir -p "$GREEN_DATA"; cp "$SNAPSHOTS"/snapshot/Steam_1.* "$GREEN_DATA/"; echo "save do green = snapshot (recarregue o save no jogo)" ;;
+      *) die "save snapshot|reset" ;;
+    esac
+    ;;
+  build) build "${1:?projeto}" ;;
+  bridge)
+    # Instala a DevBridge no green. Ela não se recarrega a quente: reinicia o green se estiver rodando.
+    dll=$(build GK2DevBridge)
+    if ps1 green.ps1 status | grep -q rodando; then "$0" green stop; restart=1; fi
+    install_green "$dll" GK2DevBridge; apply_pending
+    echo "DevBridge instalada no green"
+    if [ "${restart:-0}" = 1 ]; then ps1 green.ps1 start; wait_bridge; api /ping | pretty; fi
+    ;;
+  deploy)
+    # build + instala no green (persistente) + hot-reload se a ponte estiver no ar
+    proj=${1:?projeto}
+    dll=$(build "$proj")
+    install_green "$dll" "$proj"
+    if bridge_up; then
+      path=$(stage "$dll" "$proj")
+      api "/reload?path=$(python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))' "$path")" | print_logs
+    else
+      echo "ponte fora do ar: instalado em plugins, vale no próximo start do green"
+    fi
+    ;;
+  unload) api "/unload?guid=${1:?guid}" | pretty ;;
+  run)
+    # Compila um cenário (static class Snippet { static object Run() }) e executa dentro do jogo.
+    src=${1:?arquivo .cs}; [ -f "$src" ] || die "não achei $src"
+    mkdir -p "$HERE/tools/snippet/work"; cp "$src" "$HERE/tools/snippet/work/Snippet.cs"
+    refs >&2; builder
+    docker exec -w /src/tools/snippet "$BUILDER" dotnet build -c Release -nologo -v q -clp:NoSummary >&2 || die "cenário não compilou"
+    dll="$HERE/tools/snippet/bin/Release/Snippet.dll"
+    path=$(stage "$dll" snippet)
+    api "/run?path=$(python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))' "$path")&timeout=${GK2_RUN_TIMEOUT:-60}" | print_logs
+    ;;
+  shot)
+    # gk2 shot [nome] [--hideui] [--crop x,y,w,h] [--frames n]
+    name=${1:-shot}; [[ "$name" == --* ]] && name=shot || shift || true
+    q="frames=1"; crop=""
+    while [ $# -gt 0 ]; do case "$1" in
+      --hideui) q="$q&hideui=1" ;; --crop) crop=$2; shift ;; --frames) q="${q/frames=1/frames=$2}"; shift ;;
+      *) die "opção desconhecida $1" ;; esac; shift; done
+    mkdir -p "$SHOTS"; out="$SHOTS/$(date +%H%M%S)-$name.png"
+    curl -sS --max-time 60 -o "$out" -w '%{http_code}' "$URL/shot?$q" | grep -q 200 || { cat "$out"; rm -f "$out"; die "print falhou"; }
+    if [ -n "$crop" ]; then python3 -c "
+from PIL import Image; import sys
+x,y,w,h=map(int,sys.argv[2].split(',')); im=Image.open(sys.argv[1]).crop((x,y,x+w,y+h)); im.save(sys.argv[1])" "$out" "$crop"; fi
+    echo "$out"
+    ;;
+  winshot)
+    name=${1:-winshot}; mkdir -p "$SHOTS"; out="$SHOTS/$(date +%H%M%S)-$name.png"
+    pid=$(ps1 green.ps1 status | sed -n 's/.*pid=\([0-9]*\).*/\1/p'); [ -n "$pid" ] || die "green parado"
+    ps1 winshot.ps1 -ProcessId "$pid" -Out "$(winpath "$out")" >/dev/null; echo "$out"
+    ;;
+  log) api "/log?n=${1:-80}&grep=${2:-}" | print_logs ;;
+  state) api /state | pretty ;;
+  ping) api /ping | pretty ;;
+  windows) api /windows | pretty ;;
+  ui) api "/ui?filter=${1:-}&depth=${2:-8}&inactive=${3:-0}" ;;
+  wait) wait_bridge "${1:-120}"; api /ping | pretty ;;
+  promote)
+    # Copia o mod aprovado para o blue como pacote local (Mods/Code). Vale ao reabrir o jogo.
+    proj=${1:?projeto}; dll=$(build "$proj")
+    pack="$BLUE_DATA/Mods/Code/$proj"; mkdir -p "$pack/BepInEx/plugins/$proj"
+    [ -f "$HERE/$proj/modinfo.json" ] && cp "$HERE/$proj/modinfo.json" "$pack/modinfo.json"
+    cp "$dll" "$pack/BepInEx/plugins/$proj/$proj.dll"
+    sha256sum "$dll"; echo "promovido para $pack (vale na próxima abertura do blue)"
+    ;;
+  decomp)
+    refs; rm -rf "$HERE/decomp"; mkdir -p "$HERE/decomp"
+    docker run --rm -e DOTNET_ROLL_FORWARD=Major -v "$HERE":/w -w /w "$SDK_IMAGE" bash -c 'dotnet tool install -g ilspycmd --version 8.2.0.7535 >/dev/null 2>&1; export PATH=$PATH:/root/.dotnet/tools; for a in Assembly-CSharp LazyBearTechnology; do ilspycmd -p -o decomp/$a -r refs/Managed refs/Managed/$a.dll >/dev/null 2>&1; done'
+    find "$HERE/decomp" -name '*.cs' | wc -l
+    ;;
+  help|*)
+    sed -n 's/^  \([a-z-]*\)).*/\1/p' "$0" | tr '\n' ' '; echo
+    cat <<'EOF'
+green start|stop|restart|status|show|hide|sync-settings   instância green (D:\GK2-green, janela fora da tela)
+green-sync                 re-sincroniza o green com o jogo após update (green parado)
+save snapshot|reset        snapshot = copia o save do blue; reset = green volta ao snapshot
+build <Proj>               compila (container gk2-builder persistente)
+bridge                     compila e instala a DevBridge no green (reinicia o green)
+deploy <Proj>              compila, instala no green e faz hot-reload
+unload <guid>              descarrega um plugin recarregável
+run <arquivo.cs>           executa um cenário C# dentro do jogo (static class Snippet { static object Run() })
+shot [nome] [--hideui] [--crop x,y,w,h] [--frames n]   print pelo Unity → .shots/
+winshot [nome]             print pela janela (fallback, sem ponte)
+log [n] [grep] | state | ping | windows | ui [filtro] [prof] [inativos 0|1] | wait [s]
+promote <Proj>             copia o mod aprovado para Mods/Code do blue
+decomp                     regenera decomp/ (após update do jogo)
+EOF
+    ;;
+esac

@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Host de cenários do `gk2 run`: compila work/Snippet.cs contra o jogo. -->
+  <PropertyGroup>
+    <AssemblyName>Snippet</AssemblyName>
+  </PropertyGroup>
+</Project>

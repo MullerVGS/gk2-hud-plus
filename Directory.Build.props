@@ -1,0 +1,30 @@
+<Project>
+  <!-- Base comum dos mods: net472 contra as DLLs do jogo copiadas em refs/ pelo tools/gk2. -->
+  <PropertyGroup>
+    <TargetFramework>net472</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>disable</Nullable>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <Refs>$(MSBuildThisFileDirectory)refs</Refs>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NETFramework.ReferenceAssemblies" Version="1.0.3" PrivateAssets="all" />
+    <Reference Include="$(Refs)/core/BepInEx.dll" Private="false" />
+    <Reference Include="$(Refs)/core/0Harmony.dll" Private="false" />
+    <Reference Include="$(Refs)/Managed/Assembly-CSharp.dll" Private="false" />
+    <Reference Include="$(Refs)/Managed/LazyBearTechnology.dll" Private="false" />
+    <Reference Include="$(Refs)/Managed/Newtonsoft.Json.dll" Private="false" />
+    <Reference Include="$(Refs)/Managed/UnityEngine.dll" Private="false" />
+    <Reference Include="$(Refs)/Managed/UnityEngine.CoreModule.dll" Private="false" />
+    <Reference Include="$(Refs)/Managed/UnityEngine.IMGUIModule.dll" Private="false" />
+    <Reference Include="$(Refs)/Managed/UnityEngine.InputLegacyModule.dll" Private="false" />
+    <Reference Include="$(Refs)/Managed/UnityEngine.TextRenderingModule.dll" Private="false" />
+    <Reference Include="$(Refs)/Managed/UnityEngine.UI.dll" Private="false" />
+    <Reference Include="$(Refs)/Managed/UnityEngine.UIModule.dll" Private="false" />
+    <Reference Include="$(Refs)/Managed/Unity.TextMeshPro.dll" Private="false" />
+    <Reference Include="$(Refs)/Managed/UnityEngine.ImageConversionModule.dll" Private="false" />
+    <Reference Include="$(Refs)/Managed/UnityEngine.ScreenCaptureModule.dll" Private="false" />
+    <Reference Include="$(Refs)/Managed/UnityEngine.AudioModule.dll" Private="false" />
+    <Reference Include="$(Refs)/Managed/UniTask.dll" Private="false" />
+  </ItemGroup>
+</Project>
