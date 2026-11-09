@@ -25,6 +25,76 @@ namespace GK2Hud.Tooltips
 
         public Index Index => index;
 
+        // Sprites de construção: SpriteAtlas.GetSprite devolve um clone novo a cada chamada; um por estação, destruídos no Dispose.
+        private readonly Dictionary<string, Sprite> stationImages = new Dictionary<string, Sprite>();
+
+        /// <summary>
+        /// Imagem da construção como a Tech Tree mostra (LinkedEntityWidgetData.cs:146: EasySpritesCollection.GetSprite(
+        /// BuildingDef.BuildResultIcon)). Cada variante (I/II/III) tem o seu BuildingDef. Sem BuildingDef ou com o ícone
+        /// genérico "i_b_blueprint_placeholder": null (o popup fica sem imagem).
+        /// </summary>
+        public Sprite StationImage(string wgoId)
+        {
+            if (string.IsNullOrEmpty(wgoId)) return null;
+            if (stationImages.TryGetValue(wgoId, out Sprite cached)) return cached;
+            Sprite sprite = null;
+            if (GameBalance.Me.buildableWgos.TryGetValue(wgoId, out BuildingDef bd) && bd != null)
+            {
+                string icon = bd.BuildResultIcon;
+                EasySpritesCollection sprites = LazySingletonSO<EasySpritesCollection>.Instance;
+                if (icon != "i_b_blueprint_placeholder" && sprites.HasSprite(icon)) sprite = sprites.GetSprite(icon);
+            }
+            stationImages[wgoId] = sprite;
+            return sprite;
+        }
+
+        private string stationDescLang;
+        private Dictionary<string, int> stationDescCounts;
+
+        /// <summary>
+        /// Descrição própria da estação (<c>&lt;wgoId&gt;_d</c>) ou null. Muitas estações não têm a chave: o idioma tem um
+        /// alias (LLBase.L, aliases1→aliases2) que leva a <c>simple_workbench_d</c>, "Select an object to craft", o subtítulo
+        /// genérico da janela de craft. Só vale a chave que está no dicionário do idioma por ela mesma (sem alias) e cujo
+        /// texto não se repete em outra construção.
+        /// </summary>
+        private string StationDescription(string wgoId)
+        {
+            string key = wgoId + "_d";
+            if (!OwnLocKey(key)) return null;
+            string text = LLBase.L(key);
+            if (stationDescCounts == null || stationDescLang != LLBase.CurrentLang)
+            {
+                stationDescLang = LLBase.CurrentLang;
+                stationDescCounts = new Dictionary<string, int>();
+                foreach (string id in GameBalance.Me.buildableWgos.Keys)
+                {
+                    string k = id + "_d", t = LLBase.L(k);
+                    if (t == k) continue;
+                    stationDescCounts.TryGetValue(t, out int n);
+                    stationDescCounts[t] = n + 1;
+                }
+            }
+            return stationDescCounts.TryGetValue(text, out int count) && count > 1 ? null : text;
+        }
+
+        private static readonly System.Reflection.FieldInfo CurrentLangField = HarmonyLib.AccessTools.Field(typeof(LLBase), "currentLang");
+
+        /// <summary>A chave existe no dicionário do idioma atual por ela mesma (não por alias).</summary>
+        private static bool OwnLocKey(string key)
+        {
+            object lang = CurrentLangField?.GetValue(null);
+            if (lang == null) return false;
+            var dict = HarmonyLib.AccessTools.Field(lang.GetType(), "dictionary")?.GetValue(lang) as System.Collections.IDictionary;
+            return dict != null && dict.Contains(key);
+        }
+
+        public void Dispose()
+        {
+            foreach (Sprite sp in stationImages.Values)
+                if (sp != null) Object.Destroy(sp);
+            stationImages.Clear();
+        }
+
         // ---------- hover normal: acrescenta ao que o jogo montou ----------
 
         public void Enrich(List<LazyWidgetDataBase> list, Entity e)
@@ -119,7 +189,8 @@ namespace GK2Hud.Tooltips
                 case EntityKind.Station:
                     list.Add(new UITooltipTextWidgetData(LLBase.L(e.Id), TextAlignmentOptions.Center, s.Header));
                     list.Add(new UITooltipSeparatorWidgetData());
-                    AddDescription(list, e.Id, s.Description);
+                    string desc = StationDescription(e.Id);
+                    if (desc != null) list.Add(new UITooltipTextWidgetData(desc, TextAlignmentOptions.Center, s.Description));
                     AppendBlock(list, StationLines(e, s, true));
                     if (gb.buildableWgos.TryGetValue(e.Id, out BuildingDef bd) && bd != null)
                         Native.TryAddNeedItemsWidget(list, bd.needItems);

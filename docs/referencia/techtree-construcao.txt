@@ -1,0 +1,305 @@
+{
+  "screen": {
+    "width": 1920,
+    "height": 1080
+  },
+  "nota": "Tech Tree: ícone de construção = LinkedEntityWidget/Icon, sprite i_b_* (EasySpritesCollection, BuildingDef.BuildResultIcon), 48x48 arte, ppu 50, Simple, 96x96 px de tela (escala 1 de arte = 2 px).",
+  "roots": [
+    {
+      "path": "UI/UIRoot/CharacterWindow_Big(Clone)/Content/Pages/TechTreePage/Scroll View/Viewport/Content/Front/LazyScrollableElement(Clone)/chooping(Unlocked)/Container/Content/LinkedEntityWidget(Clone)",
+      "node": {
+        "name": "LinkedEntityWidget(Clone)",
+        "rect": [
+          698.0,
+          310.0,
+          64.0,
+          64.0
+        ],
+        "size": [
+          32.0,
+          32.0
+        ],
+        "image": {
+          "sprite": "tech_tree-tech_plate-item_cell",
+          "texture": "tech_tree-tech_plate-item_cell",
+          "spriteRect": [
+            0.0,
+            0.0,
+            32.0,
+            32.0
+          ],
+          "ppu": 50.0,
+          "ppuMultiplier": 1.0,
+          "type": "Simple",
+          "color": "#FFFFFF4C",
+          "raycast": true
+        },
+        "components": [
+          "CanvasRenderer",
+          "Image",
+          "GamepadNavigationItem",
+          "LazyButton",
+          "LinkedEntityWidget"
+        ],
+        "children": [
+          {
+            "name": "Icon",
+            "rect": [
+              682.0,
+              294.0,
+              96.0,
+              96.0
+            ],
+            "size": [
+              48.0,
+              48.0
+            ],
+            "image": {
+              "sprite": "i_firewood(Clone)",
+              "texture": "sactx-0-1024x2048-Uncompressed-Icons-5f95c55a",
+              "spriteRect": [
+                0.0,
+                0.0,
+                48.0,
+                48.0
+              ],
+              "ppu": 50.0,
+              "ppuMultiplier": 1.0,
+              "type": "Simple",
+              "color": "#1F1F28FF",
+              "material": "Blue Color Replace",
+              "raycast": true
+            },
+            "components": [
+              "CanvasRenderer",
+              "Image",
+              "BlueColorReplaceComponent"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "path": "UI/UIRoot/CharacterWindow_Big(Clone)/Content/Pages/TechTreePage/Scroll View/Viewport/Content/Front/LazyScrollableElement(Clone)/chooping(Unlocked)/Container/Content/LinkedEntityWidget(Clone)",
+      "node": {
+        "name": "LinkedEntityWidget(Clone)",
+        "rect": [
+          764.0,
+          310.0,
+          64.0,
+          64.0
+        ],
+        "size": [
+          32.0,
+          32.0
+        ],
+        "image": {
+          "sprite": "tech_tree-tech_plate-item_cell",
+          "texture": "tech_tree-tech_plate-item_cell",
+          "spriteRect": [
+            0.0,
+            0.0,
+            32.0,
+            32.0
+          ],
+          "ppu": 50.0,
+          "ppuMultiplier": 1.0,
+          "type": "Simple",
+          "color": "#FFFFFF4C",
+          "raycast": true
+        },
+        "components": [
+          "CanvasRenderer",
+          "Image",
+          "GamepadNavigationItem",
+          "LazyButton",
+          "LinkedEntityWidget"
+        ],
+        "children": [
+          {
+            "name": "Icon",
+            "rect": [
+              748.0,
+              294.0,
+              96.0,
+              96.0
+            ],
+            "size": [
+              48.0,
+              48.0
+            ],
+            "image": {
+              "sprite": "i_spike_1(Clone)",
+              "texture": "sactx-0-1024x2048-Uncompressed-Icons-5f95c55a",
+              "spriteRect": [
+                0.0,
+                0.0,
+                48.0,
+                48.0
+              ],
+              "ppu": 50.0,
+              "ppuMultiplier": 1.0,
+              "type": "Simple",
+              "color": "#1F1F28FF",
+              "material": "Blue Color Replace",
+              "raycast": true
+            },
+            "components": [
+              "CanvasRenderer",
+              "Image",
+              "BlueColorReplaceComponent"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "path": "UI/UIRoot/CharacterWindow_Big(Clone)/Content/Pages/TechTreePage/Scroll View/Viewport/Content/Front/LazyScrollableElement(Clone)/chooping(Unlocked)/Container/Content/LinkedEntityWidget(Clone)",
+      "node": {
+        "name": "LinkedEntityWidget(Clone)",
+        "rect": [
+          830.0,
+          310.0,
+          64.0,
+          64.0
+        ],
+        "size": [
+          32.0,
+          32.0
+        ],
+        "image": {
+          "sprite": "tech_tree-tech_plate-item_cell",
+          "texture": "tech_tree-tech_plate-item_cell",
+          "spriteRect": [
+            0.0,
+            0.0,
+            32.0,
+            32.0
+          ],
+          "ppu": 50.0,
+          "ppuMultiplier": 1.0,
+          "type": "Simple",
+          "color": "#FFFFFF4C",
+          "raycast": true
+        },
+        "components": [
+          "CanvasRenderer",
+          "Image",
+          "GamepadNavigationItem",
+          "LazyButton",
+          "LinkedEntityWidget"
+        ],
+        "children": [
+          {
+            "name": "Icon",
+            "rect": [
+              814.0,
+              294.0,
+              96.0,
+              96.0
+            ],
+            "size": [
+              48.0,
+              48.0
+            ],
+            "image": {
+              "sprite": "i_b_chunk_1(Clone)",
+              "texture": "sactx-0-2048x1024-Uncompressed-IconsCompressed-35b1b199",
+              "spriteRect": [
+                0.0,
+                0.0,
+                48.0,
+                48.0
+              ],
+              "ppu": 50.0,
+              "ppuMultiplier": 1.0,
+              "type": "Simple",
+              "color": "#1F1F28FF",
+              "material": "Blue Color Replace",
+              "raycast": true
+            },
+            "components": [
+              "CanvasRenderer",
+              "Image",
+              "BlueColorReplaceComponent"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "path": "UI/UIRoot/CharacterWindow_Big(Clone)/Content/Pages/TechTreePage/Scroll View/Viewport/Content/Front/LazyScrollableElement(Clone)/work_with_wood_1(Unlocked)/Container/Content/LinkedEntityWidget(Clone)",
+      "node": {
+        "name": "LinkedEntityWidget(Clone)",
+        "rect": [
+          731.0,
+          444.0,
+          64.0,
+          64.0
+        ],
+        "size": [
+          32.0,
+          32.0
+        ],
+        "image": {
+          "sprite": "tech_tree-tech_plate-item_cell",
+          "texture": "tech_tree-tech_plate-item_cell",
+          "spriteRect": [
+            0.0,
+            0.0,
+            32.0,
+            32.0
+          ],
+          "ppu": 50.0,
+          "ppuMultiplier": 1.0,
+          "type": "Simple",
+          "color": "#FFFFFF4C",
+          "raycast": true
+        },
+        "components": [
+          "CanvasRenderer",
+          "Image",
+          "GamepadNavigationItem",
+          "LazyButton",
+          "LinkedEntityWidget"
+        ],
+        "children": [
+          {
+            "name": "Icon",
+            "rect": [
+              715.0,
+              428.0,
+              96.0,
+              96.0
+            ],
+            "size": [
+              48.0,
+              48.0
+            ],
+            "image": {
+              "sprite": "i_wooden_plank(Clone)",
+              "texture": "sactx-0-1024x2048-Uncompressed-Icons-5f95c55a",
+              "spriteRect": [
+                0.0,
+                0.0,
+                48.0,
+                48.0
+              ],
+              "ppu": 50.0,
+              "ppuMultiplier": 1.0,
+              "type": "Simple",
+              "color": "#1F1F28FF",
+              "material": "Blue Color Replace",
+              "raycast": true
+            },
+            "components": [
+              "CanvasRenderer",
+              "Image",
+              "BlueColorReplaceComponent"
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

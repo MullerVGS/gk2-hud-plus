@@ -21,6 +21,7 @@ namespace GK2Hud.Tooltips
         public int RootCorner = -1;             // raiz: ponta ativa do nativo
         public int Side = 1;                    // +1 abre à direita da mãe, -1 à esquerda
         public List<TMP_Text> LinkTexts = new List<TMP_Text>();   // textos com <link>, coletados no render
+        public Sprite Image;                    // imagem da construção (popup de estação), entre o cabeçalho e o resto
 
         /// <summary>Margem transparente da moldura hint-frame (px de tela, ~7 px de arte em cada lado).</summary>
         public const float FrameMargin = 14f;
@@ -127,6 +128,7 @@ namespace GK2Hud.Tooltips
             RectTransform target = b.Parent != null ? b.Parent.Rt : (RectTransform)Native.Instance.transform;
             Native.ShowAt.Invoke(b.Tip, new object[] { data, target, UIBasicBubble.ForceCornerPosition.Auto, false, Vector2.zero, TooltipPlacementPriority.TopRight });
             if (g != null) { g.alpha = 1f; g.interactable = true; g.blocksRaycasts = true; }
+            RectTransform image = PlaceImage(b);
             if (b.Parent != null) PlaceBeside(b);
             else if (b.RootPos.HasValue)
             {
@@ -134,6 +136,7 @@ namespace GK2Hud.Tooltips
                 int i = 0;
                 foreach (UIBubbleCorner c in Native.Corners(b.Tip)) c.gameObject.SetActive(i++ == b.RootCorner);
             }
+            if (image != null) SnapToScreenGrid(image);
             b.LinkTexts.Clear();
             if (b.Pinned)
                 foreach (TMP_Text t in b.Rt.GetComponentsInChildren<TMP_Text>())
@@ -162,6 +165,50 @@ namespace GK2Hud.Tooltips
         }
 
         private static float Even(float v) => Mathf.Round(v / 2f) * 2f;
+
+        private const string ImageName = Prefix + "StationImage";
+        private const int ImageSiblingIndex = 2;   // depois do cabeçalho e do separador nativo
+
+        /// <summary>
+        /// Imagem da construção como na Tech Tree (LinkedEntityWidget/Icon: sprite i_b_* em tamanho nativo, 1 px de arte =
+        /// 2 px de tela). Fica num GameObject próprio, filho do clone (fora do pool de widgets e do singleton), recriado a
+        /// cada render e destruído junto com o clone. Só Image + LayoutElement: nada que se inscreva em eventos.
+        /// </summary>
+        private static RectTransform PlaceImage(Bubble b)
+        {
+            Transform old = b.Rt.Find(ImageName);
+            if (old != null) Object.DestroyImmediate(old.gameObject);
+            if (b.Image == null) return null;
+            var holder = new GameObject(ImageName, typeof(RectTransform));
+            var hrt = (RectTransform)holder.transform;
+            hrt.SetParent(b.Rt, false);
+            hrt.SetSiblingIndex(Mathf.Min(ImageSiblingIndex, b.Rt.childCount - 1));
+            Vector2 size = b.Image.rect.size * (50f / b.Image.pixelsPerUnit);   // canvas UI tem referencePixelsPerUnit 50: 1 unidade por px de arte
+            var le = holder.AddComponent<LayoutElement>();
+            le.minHeight = le.preferredHeight = size.y;
+            le.minWidth = le.preferredWidth = size.x;
+            var go = new GameObject("Icon", typeof(RectTransform));
+            var rt = (RectTransform)go.transform;
+            rt.SetParent(hrt, false);
+            rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+            rt.sizeDelta = size;
+            var img = go.AddComponent<Image>();
+            img.sprite = b.Image;
+            img.type = Image.Type.Simple;
+            img.preserveAspect = true;
+            img.raycastTarget = false;
+            LayoutRebuilder.ForceRebuildLayoutImmediate(b.Rt);
+            return rt;
+        }
+
+        /// <summary>O VLG centraliza com meia unidade quando a largura é fracionária: alinha o canto do sprite à grade de 2 px.</summary>
+        private static void SnapToScreenGrid(RectTransform rt)
+        {
+            var c = new Vector3[4];
+            rt.GetWorldCorners(c);
+            Vector2 d = new Vector2(Even(c[0].x) - c[0].x, Even(c[0].y) - c[0].y);
+            if (d.sqrMagnitude > 0.0001f) rt.position += (Vector3)d;
+        }
 
         /// <summary>Todo clone sai por aqui: libera os widgets como o jogo faria e só então destrói.</summary>
         public static void DestroyClone(GameObject go)

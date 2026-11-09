@@ -65,6 +65,7 @@ namespace GK2Hud.Tooltips
             LazyWindowsStackController.OnWindowClosed -= OnWindowChanged;
             MainGame.OnGoToMainMenu -= OnGoToMainMenu;
             Stack.Dispose();
+            Content.Dispose();
             if (Current == this) Current = null;
         }
 
@@ -371,6 +372,7 @@ namespace GK2Hud.Tooltips
             b.Data = data;
             b.SourceLink = link;
             b.SourceRect = termRect;
+            if (e.Kind == EntityKind.Station) b.Image = Content.StationImage(e.Id);
             Stack.Transient = b;
             Stack.Render(b, Styles.Read());
             transientAway = 0f;
