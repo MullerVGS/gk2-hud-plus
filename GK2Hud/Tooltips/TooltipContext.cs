@@ -18,6 +18,8 @@ namespace GK2Hud.Tooltips
         public CraftDef CraftDef;
         public WgoData Wgo;        // estação do ShowCraftInfo
         public PerkDef PerkDef;
+        public RectTransform Target;   // alvo do Show* que gravou a entidade
+        public int Frame;              // frame em que foi gravada (o funil só usa se bater alvo e frame)
 
         public static Entity ForItem(ItemDef def, Item instance = null) =>
             def == null ? null : new Entity { Kind = EntityKind.Item, Id = def.id, ItemDef = def, Instance = instance };
@@ -41,9 +43,9 @@ namespace GK2Hud.Tooltips
             GameBalance gb = GameBalance.Me;
             switch (kind)
             {
-                case Links.Item: return ForItem(gb.GetData<ItemDef>(id));
-                case Links.Craft: return ForCraft(GameBalance.GetCraftDef(id));
-                case Links.Perk: return ForPerk(gb.GetData<PerkDef>(id));
+                case Links.Item: return ForItem(gb.GetDataOrNull<ItemDef>(id));
+                case Links.Craft: return id.StartsWith("mix") ? null : ForCraft(gb.GetDataOrNull<CraftDef>(id));
+                case Links.Perk: return ForPerk(gb.GetDataOrNull<PerkDef>(id));
                 case Links.Station: return ForStation(id);
             }
             return null;
@@ -105,12 +107,23 @@ namespace GK2Hud.Tooltips
     internal sealed class Styles
     {
         public TextStyle Header, HeaderBold, Description, Small, SmallSelected, Term;
+        public string Lang;
+        public string CraftedAtText;    // LLBase.L("ui_crafted_at") no idioma atual
+        public string CraftedAtLabel;   // rótulo "Crafted at: " já estilizado como o jogo monta
 
+        private static Styles cached;
+        private static UITooltip cachedFor;
+
+        /// <summary>Cacheado por idioma e instância do UITooltip (o ShowItemCell roda a cada Draw da célula).</summary>
         public static Styles Read()
         {
-            if (Native.Instance == null) return null;
-            return new Styles
+            UITooltip inst = Native.Instance;
+            if (inst == null) return null;
+            string lang = LLBase.CurrentLang;
+            if (cached != null && cachedFor == inst && cached.Lang == lang) return cached;
+            var s = new Styles
             {
+                Lang = lang,
                 Header = Native.Style("headerTextStyle"),
                 HeaderBold = Native.Style("headerBoldTextStyle"),
                 Description = Native.Style("descriptionTextStyle"),
@@ -118,6 +131,11 @@ namespace GK2Hud.Tooltips
                 SmallSelected = Native.Style("selectedSmallDescriptionTextStyle"),
                 Term = Native.Style("perkDescriptionTextStyle"),
             };
+            s.CraftedAtText = LLBase.L("ui_crafted_at");
+            s.CraftedAtLabel = s.SmallSelected.ApplyStyleToString(s.CraftedAtText + ": ") ?? "";
+            cached = s;
+            cachedFor = inst;
+            return s;
         }
     }
 }

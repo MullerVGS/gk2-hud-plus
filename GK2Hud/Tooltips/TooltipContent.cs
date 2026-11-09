@@ -16,9 +16,12 @@ namespace GK2Hud.Tooltips
     {
         private const int MaxListed = 6;
         private const float CacheSeconds = 1f;
+        private const float BlockSeconds = 0.5f;
 
         private readonly Index index = new Index();
         private readonly Dictionary<string, KeyValuePair<float, object>> cache = new Dictionary<string, KeyValuePair<float, object>>();
+        // "Crafted at" esperado e com links por lista de estações (listas estáveis do GameBalance, chave por referência).
+        private readonly Dictionary<List<string>, string[]> craftedAtCache = new Dictionary<List<string>, string[]>();
 
         public Index Index => index;
 
@@ -32,23 +35,52 @@ namespace GK2Hud.Tooltips
             {
                 case EntityKind.Item:
                     ReplaceCraftedAt(list, s, ItemStations(e.Id));
-                    AppendBlock(list, ItemLines(e, s));
+                    AppendBlock(list, Block(BlockKey(e), () => ItemLines(e, s)));
                     break;
                 case EntityKind.Craft:
                 {
-                    ItemDef res = e.CraftDef.TryGetResultingItemDef();
-                    bool hadCraftedAt = ReplaceCraftedAt(list, s, e.CraftDef.craftsIn, res != null ? ItemStations(res.id) : null) || HasCraftedAt(list);
-                    InsertBlock(list, CraftLines(e, s, !hadCraftedAt), BlockIndexBeforeNeeds(list));
+                    bool hadCraftedAt = HasCraftedAt(list, s);
+                    if (hadCraftedAt)
+                    {
+                        ItemDef res = e.CraftDef.TryGetResultingItemDef();
+                        ReplaceCraftedAt(list, s, e.CraftDef.craftsIn, res != null ? ItemStations(res.id) : null);
+                    }
+                    InsertBlock(list, Block(BlockKey(e) + "|" + hadCraftedAt, () => CraftLines(e, s, !hadCraftedAt)), BlockIndexBeforeNeeds(list));
                     break;
                 }
                 case EntityKind.Perk:
-                    AppendBlock(list, PerkLines(e, s));
+                    AppendBlock(list, Block(BlockKey(e), () => PerkLines(e, s)));
                     break;
                 case EntityKind.Station:
-                    AppendBlock(list, StationLines(e, s, false));
+                    AppendBlock(list, Block(BlockKey(e), () => StationLines(e, s, false)));
                     break;
             }
         }
+
+        /// <summary>
+        /// Chave do bloco pronto: tipo, id e o que muda a leitura (durabilidade da instância, estação/worker, tempo
+        /// restante da perk). O idioma entra no Cached. O ShowItemCell roda a cada Draw da célula: o bloco vem daqui.
+        /// </summary>
+        private static string BlockKey(Entity e)
+        {
+            switch (e.Kind)
+            {
+                case EntityKind.Item:
+                    int dur = -1;
+                    if (e.Instance != null && e.ItemDef.hasDurability && e.Instance.TryGetProperty(out DurabilitySerializedItemProperty p))
+                        dur = Mathf.RoundToInt(p.Durability * 1000f);
+                    return "item:" + e.Id + "|" + dur;
+                case EntityKind.Craft:
+                    return "craft:" + e.Id + "|" + (e.Wgo != null ? e.Wgo.UniqueId.ToString() : "-");
+                case EntityKind.Perk:
+                    PerkData active = MainGame.Instance?.GameSave?.perkSystemData?.activePerks?.Find(x => x != null && x.id == e.Id);
+                    return "perk:" + e.Id + "|" + (active != null ? (int)active.currentDuration : -1);
+                default:
+                    return e.Kind + ":" + e.Id;
+            }
+        }
+
+        private List<LazyWidgetDataBase> Block(string key, System.Func<List<LazyWidgetDataBase>> make) => Cached("block:" + key, make, BlockSeconds);
 
         // ---------- tooltip aninhado: conteúdo completo da entidade ----------
 
@@ -123,7 +155,13 @@ namespace GK2Hud.Tooltips
         {
             var lines = new List<string>();
             CraftDef cd = e.CraftDef;
+            // Mesmo cálculo da janela de craft (UIBaseCraftSelectionWindow(Data)): worker real da estação (zumbi ou
+            // jogador), perks ligadas ao craft dele e ferramenta que ele usaria. Sem estação (aninhado): o jogador, sem ferramenta.
+            IWorker worker = e.Wgo?.Worker ?? MainGame.PlayerController;
             int ticks = cd.duration != null && cd.duration.HasExpression ? cd.duration.EvaluateInt() : 0;
+            if (ticks > 0 && worker != null) ticks = Mathf.Max(0, ticks + worker.GetPerksCraftAddTotalProgressTicksValue(cd));
+            Item tool = e.Wgo != null && worker != null ? worker.GetToolForWorkOnCraft(e.Wgo, cd) : null;
+            bool hasTool = tool != null && !tool.IsEmpty && tool.Definition != null;
             if (ticks > 0)
             {
                 string t = L10n.T("duration") + ": " + string.Format(L10n.T("ticks"), Num(s, ticks.ToString()));
@@ -134,9 +172,10 @@ namespace GK2Hud.Tooltips
                 }
                 lines.Add(t);
             }
-            List<PerkData> perks = LinkedActivePerks(cd);
-            AddPerTick(lines, s, "energy", cd.energyPerTick, perks.Sum(p => p.Definition.energyAdd), ticks);
-            AddPerTick(lines, s, "insanity", cd.insanityPerTick, perks.Sum(p => p.Definition.insanityAdd), ticks);
+            float energyAdd = (worker?.GetPerksEnergyBonusValue(cd) ?? 0f) - (hasTool ? tool.Definition.GetGameResOnUse("energy") : 0f);
+            float insanityAdd = (worker?.GetPerksInsanityBonusValue(cd) ?? 0f) - (hasTool ? tool.Definition.GetGameResOnUse("insanity") : 0f);
+            AddPerTick(lines, s, "energy", cd.energyPerTick, energyAdd, ticks);
+            AddPerTick(lines, s, "insanity", cd.insanityPerTick, insanityAdd, ticks);
             List<LazyWidgetDataBase> w = Widgets(lines, s);
             // Na janela da própria estação, "Crafted at: <ela mesma>" não diz nada.
             bool onlyHere = e.Wgo != null && cd.craftsIn != null && cd.craftsIn.Count == 1 && cd.craftsIn[0] == e.Wgo.id;
@@ -148,8 +187,9 @@ namespace GK2Hud.Tooltips
         private static void AddPerTick(List<string> lines, Styles s, string res, LazyExpression expr, float perkAdd, int ticks)
         {
             if (expr == null || !expr.HasExpression) return;
-            float per = expr.EvaluateFloat() + perkAdd;
-            if (Mathf.Approximately(per, 0f)) return;
+            float baseValue = expr.EvaluateFloat();
+            float per = baseValue + perkAdd;
+            if (Mathf.Approximately(baseValue, 0f) && Mathf.Approximately(per, 0f)) return;   // perk zerando o custo ainda aparece (0), como na janela
             string t = LLBase.L(res) + ": " + res.FontIcon() + L10n.T("per_tick", Num(s, F(per)));
             if (ticks > 0) t += ", " + L10n.T("total", Num(s, F(per * ticks)));
             lines.Add(t);
@@ -198,7 +238,7 @@ namespace GK2Hud.Tooltips
             GameBalance gb = GameBalance.Me;
             if (gb.craftsInCache.TryGetValue(e.Id, out List<CraftDefBase> crafts) && crafts != null)
             {
-                List<string> links = crafts.OfType<CraftDef>().Where(IsListable).Where(Known)
+                List<string> links = crafts.OfType<CraftDef>().Where(IsListable).Where(Known).Where(c => CraftNameOrNull(c) != null)
                     .GroupBy(CraftName).Select(g => Links.Wrap(Links.Craft, g.First().id, g.Key)).ToList();
                 if (links.Count > 0)
                     w.Add(new UITooltipTextWidgetData(ListText(s, L10n.T("crafts"), links), TextAlignmentOptions.Center, s.Small));
@@ -218,7 +258,7 @@ namespace GK2Hud.Tooltips
             {
                 List<CraftDef> all = index.UsedIn(itemId);
                 if (all == null) return new List<string>();
-                return all.Where(Known).GroupBy(CraftName).Select(g => Links.Wrap(Links.Craft, g.First().id, g.Key)).ToList();
+                return all.Where(Known).Where(c => CraftNameOrNull(c) != null).GroupBy(CraftName).Select(g => Links.Wrap(Links.Craft, g.First().id, g.Key)).ToList();
             });
             return links.Count == 0 ? null : ListText(s, L10n.T("used_in"), links);
         }
@@ -228,35 +268,36 @@ namespace GK2Hud.Tooltips
         private static List<string> ItemStations(string itemId) =>
             itemId != null && GameBalance.Me.craftInItemsCacheShownInTooltips.TryGetValue(itemId, out List<string> l) ? l : null;
 
-        private static string CraftedAtLabel(Styles s) => s.SmallSelected.ApplyStyleToString(LLBase.L("ui_crafted_at") + ": ") ?? "";
-
         private static string CraftedAtText(Styles s, List<string> stations) =>
-            CraftedAtLabel(s) + string.Join(", ", stations.Select(id => Links.Wrap(Links.Station, id, LLBase.L(id))));
+            s.CraftedAtLabel + string.Join(", ", stations.Select(id => Links.Wrap(Links.Station, id, LLBase.L(id))));
 
-        private static bool HasCraftedAt(List<LazyWidgetDataBase> list)
+        private static bool HasCraftedAt(List<LazyWidgetDataBase> list, Styles s)
         {
-            string label = LLBase.L("ui_crafted_at");
-            return list.Any(d => d is UITooltipTextWidgetData t && t.Text != null && t.Text.Contains(label));
+            foreach (LazyWidgetDataBase d in list)
+                if (d is UITooltipTextWidgetData t && t.Text != null && t.Text.Contains(s.CraftedAtText)) return true;
+            return false;
         }
 
         /// <summary>
         /// Troca o "Crafted at: A, B" nativo por um texto idêntico com cada estação como link. Só troca quando o texto
         /// começa exatamente como o jogo o monta (UITooltip.AddItemWidgets / ShowLinkedEntity); o resto (ex.: "\nRequired
-        /// extension") é preservado.
+        /// extension") é preservado. Barato quando não há "Crafted at" (só um Contains por widget de texto).
         /// </summary>
-        private static bool ReplaceCraftedAt(List<LazyWidgetDataBase> list, Styles s, params List<string>[] candidates)
+        private bool ReplaceCraftedAt(List<LazyWidgetDataBase> list, Styles s, params List<string>[] candidates)
         {
-            string labelText = LLBase.L("ui_crafted_at");
-            string label = CraftedAtLabel(s);
             for (int i = list.Count - 1; i >= 0; i--)
             {
-                if (!(list[i] is UITooltipTextWidgetData t) || t.Text == null || !t.Text.Contains(labelText) || Links.HasLinks(t.Text)) continue;
+                if (!(list[i] is UITooltipTextWidgetData t) || t.Text == null || !t.Text.Contains(s.CraftedAtText) || Links.HasLinks(t.Text)) continue;
                 foreach (List<string> cand in candidates)
                 {
                     if (cand == null || cand.Count == 0) continue;
-                    string expected = label + string.Join(", ", cand.Select(id => LLBase.L(id)));
-                    if (!t.Text.StartsWith(expected)) continue;
-                    list[i] = new UITooltipTextWidgetData(CraftedAtText(s, cand) + t.Text.Substring(expected.Length), t.TextAlignmentOptions, t.TextStyle);
+                    if (!craftedAtCache.TryGetValue(cand, out string[] pair) || pair[0] != s.Lang)
+                    {
+                        pair = new[] { s.Lang, s.CraftedAtLabel + string.Join(", ", cand.Select(id => LLBase.L(id))), CraftedAtText(s, cand) };
+                        craftedAtCache[cand] = pair;
+                    }
+                    if (!t.Text.StartsWith(pair[1])) continue;
+                    list[i] = new UITooltipTextWidgetData(pair[2] + t.Text.Substring(pair[1].Length), t.TextAlignmentOptions, t.TextStyle);
                     return true;
                 }
             }
@@ -327,28 +368,15 @@ namespace GK2Hud.Tooltips
             });
         }
 
-        private T Cached<T>(string key, System.Func<T> make)
+        private T Cached<T>(string key, System.Func<T> make, float ttl = CacheSeconds)
         {
             key = LLBase.CurrentLang + "|" + key;
             float now = Time.unscaledTime;
-            if (cache.TryGetValue(key, out KeyValuePair<float, object> hit) && now - hit.Key < CacheSeconds) return (T)hit.Value;
+            if (cache.TryGetValue(key, out KeyValuePair<float, object> hit) && now - hit.Key < ttl) return (T)hit.Value;
             T v = make();
             if (cache.Count > 512) cache.Clear();
             cache[key] = new KeyValuePair<float, object>(now, v);
             return v;
-        }
-
-        private static List<PerkData> LinkedActivePerks(CraftDef cd)
-        {
-            var res = new List<PerkData>();
-            List<PerkData> active = MainGame.Instance?.GameSave?.perkSystemData?.activePerks;
-            if (active == null || cd.linkedPerks == null) return res;
-            foreach (string id in cd.linkedPerks)
-            {
-                PerkData p = active.Find(x => x != null && x.id == id);
-                if (p?.Definition != null) res.Add(p);
-            }
-            return res;
         }
 
         /// <summary>Mesmo filtro de conhecimento do jogo (CraftComponent.AvailableCrafts / IsCraftHiddenByKnowledge).</summary>
@@ -361,14 +389,17 @@ namespace GK2Hud.Tooltips
         }
 
         private static bool IsListable(CraftDef cd) =>
-            cd != null && !cd.isHidden && !cd.id.StartsWith("rem_") && !cd.id.StartsWith("set_") && !cd.id.StartsWith("town_building_craft:");
+            cd != null && !cd.isHidden && !cd.doNotShowInTooltips && !cd.id.StartsWith("rem_") && !cd.id.StartsWith("set_") && !cd.id.StartsWith("town_building_craft:");
 
-        public static string CraftName(CraftDef cd)
+        public static string CraftName(CraftDef cd) => CraftNameOrNull(cd) ?? cd.id;
+
+        /// <summary>Nome do craft (texto próprio ou o do item resultante); null quando o jogo não tem nome para ele.</summary>
+        private static string CraftNameOrNull(CraftDef cd)
         {
             string n = LLBase.L(cd.id);
             if (n != cd.id) return n;
             ItemDef res = cd.TryGetResultingItemDef();
-            return res != null ? res.GetHeader() : cd.id;
+            return res != null ? res.GetHeader() : null;
         }
 
         private static string ResIcon(string res)

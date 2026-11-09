@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using LazyBearTechnology;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -19,8 +20,18 @@ namespace GK2Hud.Tooltips
         public Vector3? RootPos;                // raiz: posição do tooltip nativo no momento de fixar
         public int RootCorner = -1;             // raiz: ponta ativa do nativo
         public int Side = 1;                    // +1 abre à direita da mãe, -1 à esquerda
+        public List<TMP_Text> LinkTexts = new List<TMP_Text>();   // textos com <link>, coletados no render
 
-        public bool Contains(Vector2 screen) => Rt != null && Rt.gameObject.activeInHierarchy && RectTransformUtility.RectangleContainsScreenPoint(Rt, screen, null);
+        /// <summary>Margem transparente da moldura hint-frame (px de tela, ~7 px de arte em cada lado).</summary>
+        public const float FrameMargin = 14f;
+
+        /// <summary>Dentro da moldura visível (sem a margem transparente da hint-frame).</summary>
+        public bool Contains(Vector2 screen)
+        {
+            if (Rt == null || !Rt.gameObject.activeInHierarchy) return false;
+            Rect r = ScreenRect();
+            return screen.x >= r.xMin + FrameMargin && screen.x <= r.xMax - FrameMargin && screen.y >= r.yMin + FrameMargin && screen.y <= r.yMax - FrameMargin;
+        }
 
         public Rect ScreenRect()
         {
@@ -95,6 +106,13 @@ namespace GK2Hud.Tooltips
             cv.overrideSorting = true;
             cv.sortingOrder = BaseSorting + depth * 2;
             if (go.GetComponent<GraphicRaycaster>() == null) go.AddComponent<GraphicRaycaster>();
+            // Raycast só na moldura visível: a margem transparente não bloqueia células coladas na bolha.
+            Image frame = go.GetComponent<Image>();
+            if (frame != null)
+            {
+                float m = Bubble.FrameMargin / Mathf.Max(1f, LazyUI.ScaleFactor);
+                frame.raycastPadding = new Vector4(m, m, m, m);
+            }
             return new Bubble { Tip = go.GetComponent<UITooltip>(), Rt = (RectTransform)go.transform, Depth = depth };
         }
 
@@ -115,6 +133,10 @@ namespace GK2Hud.Tooltips
                 int i = 0;
                 foreach (UIBubbleCorner c in Native.Corners(b.Tip)) c.gameObject.SetActive(i++ == b.RootCorner);
             }
+            b.LinkTexts.Clear();
+            if (b.Pinned)
+                foreach (TMP_Text t in b.Rt.GetComponentsInChildren<TMP_Text>())
+                    if (Links.HasLinks(t.text)) b.LinkTexts.Add(t);
         }
 
         /// <summary>Ao lado da mãe (direita ou esquerda conforme espaço), topo alinhado ao termo, dentro da tela.</summary>
@@ -143,6 +165,18 @@ namespace GK2Hud.Tooltips
         public void Destroy(Bubble b)
         {
             if (b?.Rt != null) Object.Destroy(b.Rt.gameObject);
+        }
+
+        /// <summary>
+        /// Descarta bolhas destruídas por fora (troca de cena, volta ao menu sem evento de janela): uma fixada perdida
+        /// derruba a pilha inteira, porque as filhas dependem dela.
+        /// </summary>
+        public void Prune()
+        {
+            if (Transient != null && Transient.Rt == null) Transient = null;
+            bool lost = false;
+            foreach (Bubble b in Pinned) if (b.Rt == null) { lost = true; break; }
+            if (lost) CloseAll();
         }
 
         public void CloseTransient()

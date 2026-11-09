@@ -44,13 +44,13 @@ namespace GK2Hud.Tooltips
             return dst;
         }
 
-        /// <summary>Link sob o ponto de tela dentro de <paramref name="root"/>; devolve o retângulo do termo em px de tela.</summary>
-        public static string LinkAt(Transform root, Vector2 screen, out Rect termRect)
+        /// <summary>Link sob o ponto de tela entre os textos com link da bolha (coletados no render); devolve o retângulo do termo em px de tela.</summary>
+        public static string LinkAt(List<TMP_Text> texts, Vector2 screen, out Rect termRect)
         {
             termRect = default;
-            foreach (TMP_Text tmp in root.GetComponentsInChildren<TMP_Text>())
+            foreach (TMP_Text tmp in texts)
             {
-                if (!tmp.isActiveAndEnabled || !HasLinks(tmp.text)) continue;
+                if (tmp == null || !tmp.isActiveAndEnabled) continue;
                 int idx = TMP_TextUtilities.FindIntersectingLink(tmp, screen, null);
                 if (idx < 0 || idx >= tmp.textInfo.linkCount) continue;
                 TMP_LinkInfo li = tmp.textInfo.linkInfo[idx];

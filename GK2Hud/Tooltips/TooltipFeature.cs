@@ -29,6 +29,8 @@ namespace GK2Hud.Tooltips
         private Entity pending;
         private List<LazyWidgetDataBase> lastData;
         private RectTransform lastTarget;
+        private RectTransform suppressTarget;   // alvo recém-fixado: o nativo não volta por cima até o mouse sair dele
+        private bool indexReady;
 
         private string hoverLink;
         private Bubble hoverOwner;
@@ -54,17 +56,26 @@ namespace GK2Hud.Tooltips
             Patch();
             LazyWindowsStackController.OnWindowOpened += OnWindowChanged;
             LazyWindowsStackController.OnWindowClosed += OnWindowChanged;
+            MainGame.OnGoToMainMenu += OnGoToMainMenu;
         }
 
         public void Dispose()
         {
             LazyWindowsStackController.OnWindowOpened -= OnWindowChanged;
             LazyWindowsStackController.OnWindowClosed -= OnWindowChanged;
+            MainGame.OnGoToMainMenu -= OnGoToMainMenu;
             Stack.Dispose();
             if (Current == this) Current = null;
         }
 
         private void OnWindowChanged(LazyWidgetBase _) => Stack.CloseAll();
+
+        private void OnGoToMainMenu()
+        {
+            Stack.CloseAll();
+            lastData = null;
+            lastTarget = suppressTarget = null;
+        }
 
         // ---------------- Harmony ----------------
 
@@ -72,9 +83,10 @@ namespace GK2Hud.Tooltips
         {
             Type t = typeof(UITooltip);
             Type p = typeof(TooltipFeature);
+            // Finalizer (não postfix): se o Show* nativo lançar, a entidade não fica presa para o próximo tooltip.
             HarmonyMethod clear = new HarmonyMethod(p, nameof(ClearPending));
             harmony.Patch(Native.ShowAt, prefix: new HarmonyMethod(p, nameof(FunnelPrefix)));
-            void Ctx(string method, string prefix) => harmony.Patch(AccessTools.Method(t, method), prefix: new HarmonyMethod(p, prefix), postfix: clear);
+            void Ctx(string method, string prefix) => harmony.Patch(AccessTools.Method(t, method), prefix: new HarmonyMethod(p, prefix), finalizer: clear);
             Ctx(nameof(UITooltip.ShowItemCell), nameof(PreItemCell));
             Ctx(nameof(UITooltip.ShowCraftOutputCell), nameof(PreCraftOutputCell));
             Ctx(nameof(UITooltip.ShowCraftInfo), nameof(PreCraftInfo));
@@ -86,9 +98,12 @@ namespace GK2Hud.Tooltips
             harmony.Patch(AccessTools.Method(typeof(LazyInput), nameof(LazyInput.GetKeyDown), new[] { typeof(GameKey) }), prefix: new HarmonyMethod(p, nameof(PreGetKeyDown)));
         }
 
-        private static void SetPending(Entity e)
+        private static void SetPending(Entity e, Component target)
         {
-            if (Current != null && e != null) Current.pending = e;
+            if (Current == null || e == null) return;
+            e.Target = target != null ? target.transform as RectTransform : null;
+            e.Frame = Time.frameCount;
+            Current.pending = e;
         }
 
         private static void ClearPending()
@@ -101,57 +116,66 @@ namespace GK2Hud.Tooltips
             if (uiItemCell == null || uiItemCell.CustomTooltipShowAction != null || uiItemCell.DisplayingOutputPreview != null) return;
             Item it = uiItemCell.DisplayingItem;
             if (it == null || string.IsNullOrEmpty(it.id) || it.id == "empty") return;
-            SetPending(Entity.ForItem(it.Definition, it));
+            SetPending(Entity.ForItem(it.Definition, it), uiItemCell);
         }
 
         private static void PreCraftOutputCell(UIItemCell uiItemCell)
         {
             string craftId = uiItemCell?.DisplayingOutputPreview?.craftId;
-            if (craftId != null) SetPending(Entity.ForCraft(GameBalance.GetCraftDef(craftId)));
+            // Mistura de alquimia (conhecida ou não) fica de fora: GetCraftDef("mix...") escreve nos caches do balanço.
+            if (string.IsNullOrEmpty(craftId) || craftId.StartsWith("mix")) return;
+            SetPending(Entity.ForCraft(GameBalance.Me.GetDataOrNull<CraftDef>(craftId)), uiItemCell);
         }
 
-        private static void PreCraftInfo(WgoData wgoData, CraftDef craftDef) => SetPending(Entity.ForCraft(craftDef, wgoData));
+        private static void PreCraftInfo(UIItemCell uiItemCell, WgoData wgoData, CraftDef craftDef, RectTransform customTarget) =>
+            SetPending(Entity.ForCraft(craftDef, wgoData), customTarget != null ? (Component)customTarget : uiItemCell);
 
-        private static void PrePerk(PerkDef perkDef) => SetPending(Entity.ForPerk(perkDef));
+        private static void PrePerk(PerkDef perkDef, RectTransform target) => SetPending(Entity.ForPerk(perkDef), target);
 
-        private static void PrePerkWidget(PerkWidget perkWidget) => SetPending(Entity.ForPerk(perkWidget?.PerkData?.Definition));
+        private static void PrePerkWidget(PerkWidget perkWidget) => SetPending(Entity.ForPerk(perkWidget?.PerkData?.Definition), perkWidget);
 
-        private static void PreFertilizer(UIGardenBedSlot fertilizerSlot) => SetPending(Entity.ForPerk(fertilizerSlot?.PerkData?.Definition));
+        private static void PreFertilizer(UIGardenBedSlot fertilizerSlot) => SetPending(Entity.ForPerk(fertilizerSlot?.PerkData?.Definition), fertilizerSlot);
 
         private static void PreOrderWidget(UIVendorOrderWidget orderWidget)
         {
             string id = orderWidget?.Data?.VendorOrderData?.Definition?.itemId;
-            if (id != null) SetPending(Entity.ForItem(GameBalance.Me.GetData<ItemDef>(id)));
+            if (id != null) SetPending(Entity.ForItem(GameBalance.Me.GetDataOrNull<ItemDef>(id)), orderWidget);
         }
 
         private static void PreLinkedEntity(LinkedEntityWidget entityWidget)
         {
             LinkedEntityWidgetData d = entityWidget?.WidgetData;
             if (d == null) return;
+            Entity e = null;
             switch (d.LinkedEntityType)
             {
-                case LinkedEntityType.CraftDef: SetPending(Entity.ForCraft(d.CraftDef)); break;
+                case LinkedEntityType.CraftDef: e = Entity.ForCraft(d.CraftDef); break;
                 case LinkedEntityType.ItemDef:
-                case LinkedEntityType.Order: SetPending(Entity.ForItem(d.ItemDef)); break;
-                case LinkedEntityType.Item: SetPending(Entity.ForItem(d.Item?.Definition)); break;
-                case LinkedEntityType.PerkDef: SetPending(Entity.ForPerk(d.PerkDef)); break;
-                case LinkedEntityType.BuildingDef: SetPending(Entity.ForStation(d.BuildingDef?.wgoId)); break;
+                case LinkedEntityType.Order: e = Entity.ForItem(d.ItemDef); break;
+                case LinkedEntityType.Item: e = Entity.ForItem(d.Item?.Definition); break;
+                case LinkedEntityType.PerkDef: e = Entity.ForPerk(d.PerkDef); break;
+                case LinkedEntityType.BuildingDef: e = Entity.ForStation(d.BuildingDef?.wgoId); break;
             }
+            SetPending(e, entityWidget);
         }
 
-        private static void FunnelPrefix(UITooltip __instance, List<LazyWidgetDataBase> dataList, RectTransform target)
+        private static bool FunnelPrefix(UITooltip __instance, List<LazyWidgetDataBase> dataList, RectTransform target)
         {
             TooltipFeature f = Current;
-            if (f == null || __instance != Native.Instance || dataList == null) return;
+            if (f == null || dataList == null || __instance != Native.Instance) return true;
             Entity e = f.pending;
             f.pending = null;
-            if (e != null)
+            // O Draw da célula ainda sob o mouse chama ShowItemCell de novo: não reabre o nativo por cima da bolha fixada.
+            if (f.suppressTarget != null && target == f.suppressTarget) return false;
+            // Só enriquece se a entidade é deste tooltip (mesmo alvo, mesmo frame).
+            if (e != null && e.Target == target && e.Frame == Time.frameCount)
             {
                 try { f.Content.Enrich(dataList, e); }
                 catch (Exception ex) { Plugin.Log.LogError($"enriquecer {e.Kind} {e.Id}: {ex}"); }
             }
-            f.lastData = new List<LazyWidgetDataBase>(dataList);
+            f.lastData = dataList;   // lista nova a cada Show* do jogo: guardar a referência basta
             f.lastTarget = target;
+            return true;
         }
 
         private static bool PreGetKeyDown(GameKey key, ref bool __result)
@@ -192,6 +216,8 @@ namespace GK2Hud.Tooltips
             bool esc = TestEsc || Input.GetKeyDown(KeyCode.Escape);
             TestPin = TestRightClick = TestLeftClick = TestEsc = false;
 
+            Stack.Prune();
+            if (!indexReady && MainGame.PlayerData != null) indexReady = Content.Index.EnsureBuilt();
             if (LazyInput.IsGamepadActive)
             {
                 if (Stack.Any) Stack.CloseAll();
@@ -204,6 +230,8 @@ namespace GK2Hud.Tooltips
                 return;
             }
             Vector2 mouse = VirtualMouse ?? (Vector2)Input.mousePosition;
+            if (suppressTarget != null && (!suppressTarget.gameObject.activeInHierarchy || !RectTransformUtility.RectangleContainsScreenPoint(suppressTarget, mouse, null)))
+                suppressTarget = null;
             if (pin) HandlePin(mouse);
             else if (right)
             {
@@ -288,6 +316,7 @@ namespace GK2Hud.Tooltips
             Stack.Pinned.Add(b);
             Stack.Render(b, Styles.Read());
             UITooltip.HideImmediately();
+            suppressTarget = lastTarget;
             ResetHover();
         }
 
@@ -301,7 +330,7 @@ namespace GK2Hud.Tooltips
 
             string link = null;
             Rect rect = default;
-            if (top.Contains(mouse)) link = Links.LinkAt(top.Rt, mouse, out rect);
+            if (top.Contains(mouse)) link = Links.LinkAt(top.LinkTexts, mouse, out rect);
 
             if (tr != null && link == tr.SourceLink && tr.Parent == top) { transientAway = 0f; hoverLink = null; return; }
 
@@ -368,8 +397,9 @@ namespace GK2Hud.Tooltips
         /// <summary>Resumo do estado para os cenários.</summary>
         internal string Describe()
         {
-            string B(Bubble b) => b == null ? "-" : $"{b.Rt.name} pinned={b.Pinned} depth={b.Depth} rect={b.ScreenRect()} link={b.SourceLink}";
-            return "pinned=[" + string.Join(" | ", Stack.Pinned.Select(B)) + "] transient=" + B(Stack.Transient) + " native=" + Native.IsVisible(Native.Instance);
+            string B(Bubble b) => b == null ? "-" : b.Rt == null ? "(destruída)" : $"{b.Rt.name} pinned={b.Pinned} depth={b.Depth} rect={b.ScreenRect()} link={b.SourceLink}";
+            return "pinned=[" + string.Join(" | ", Stack.Pinned.Select(B)) + "] transient=" + B(Stack.Transient) + " native=" + Native.IsVisible(Native.Instance)
+                + " suppress=" + (suppressTarget != null ? suppressTarget.name : "-");
         }
     }
 }

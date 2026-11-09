@@ -37,9 +37,11 @@ public static class Snippet
 
         if (!LazyUI.GetWindow<CharacterWindow>().gameObject.activeInHierarchy)
             LazyUI.GetWindow<CharacterWindow>().Open(new CharacterWindowData(MainGame.Instance.GameSave));
-        for (int i = 0; i < 20; i++) yield return null;
+        float tOpen = Time.realtimeSinceStartup;
+        while (Time.realtimeSinceStartup - tOpen < 1f) yield return null;   // a janela anima ao abrir: fixar no meio guardaria a posição errada
         var cell = Object.FindObjectsByType<UIItemCell>(FindObjectsSortMode.None)
-            .FirstOrDefault(c => c.isActiveAndEnabled && c.DisplayingItem != null && c.DisplayingItem.id == ITEM);
+            .FirstOrDefault(c => c.isActiveAndEnabled && c.DisplayingItem != null && c.DisplayingItem.id == ITEM
+                && c.transform.position.y > 100 && c.transform.position.y < 980 && c.transform.position.x > 0 && c.transform.position.x < 1920);
         if (cell == null) { yield return "sem célula " + ITEM; yield break; }
         Vector2 cellPos = cell.transform.position;
         Set(f, "VirtualMouse", (Vector2?)cellPos);
