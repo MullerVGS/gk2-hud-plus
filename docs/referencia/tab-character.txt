@@ -1,0 +1,70 @@
+# Janela do TAB (CharacterWindow_Big), página Character: abas e coluna Buffs/Perks — base da aba Calendário do GK2Hud (1920x1080, scaleFactor 2; rect = x,y,w,h em px de tela)
+# UI/UIRoot/CharacterWindow_Big(Clone)/Content/HeaderGroup/Windows Tabs Content
+Windows Tabs Content rect=580,130,760,52 HorizontalLayoutGroup,ContentSizeFitter
+  DecorLeft rect=502,130,120,52 Image,LayoutElement sprite=main_window-header_1-dec_left Simple border=None color=#FFFFFFFF
+  DecorRight rect=1298,130,120,52 Image,LayoutElement sprite=main_window-header_1-dec_right Simple border=None color=#FFFFFFFF
+  CharMainPage_Button rect=580,130,174,52 CharPageTabButton,LazyButton,ContentSizeFitter,VerticalLayoutGroup
+    Content rect=580,130,174,52 VerticalLayoutGroup,ContentSizeFitter
+      RaycastZone rect=580,130,174,52 Image,LayoutElement sprite=main_window-header_1-button Sliced border=[20.0, 0.0, 20.0, 0.0] color=#FFFFFF00
+      DecorSeparator rect=714,130,80,52 Image,LayoutElement sprite=main_window-header_1-dec_separator Simple border=None color=#FFFFFFFF
+      Label rect=606,136,122,40 TextMeshProUGUI,TextStyleComponent,ContentSizeFitter,LanguageRtlLabelState text="Character" font=small_font_bold mat=en:[small_font_bold-menu_item-unselect] color=#FFFFFFFF
+  TechTreePage_Button rect=752,130,170,52 CharPageTabButton,LazyButton,ContentSizeFitter,VerticalLayoutGroup
+    Content rect=752,130,170,52 VerticalLayoutGroup,ContentSizeFitter
+      RaycastZone rect=752,130,170,52 Image,LayoutElement sprite=main_window-header_1-button Sliced border=[20.0, 0.0, 20.0, 0.0] color=#FFFFFF00
+      DecorSeparator rect=882,130,80,52 Image,LayoutElement sprite=main_window-header_1-dec_separator Simple border=None color=#FFFFFFFF
+      Label rect=778,136,118,40 TextMeshProUGUI,TextStyleComponent,ContentSizeFitter,LanguageRtlLabelState text="Tech Tree" font=small_font_bold mat=en:[small_font_bold-menu_item-unselect] color=#FFFFFFFF
+  CharInspirationPage_Button rect=920,130,192,52 CharPageTabButton,LazyButton,ContentSizeFitter,VerticalLayoutGroup
+    Content rect=920,130,192,52 VerticalLayoutGroup,ContentSizeFitter
+      RaycastZone rect=920,130,192,52 Image,LayoutElement sprite=main_window-header_1-button Sliced border=[20.0, 0.0, 20.0, 0.0] color=#FFFFFF00
+      DecorSeparator rect=1072,130,80,52 Image,LayoutElement sprite=main_window-header_1-dec_separator Simple border=None color=#FFFFFFFF
+      Label rect=946,136,140,40 TextMeshProUGUI,TextStyleComponent,ContentSizeFitter,LanguageRtlLabelState text="Inspirations" font=small_font_bold mat=en:[small_font_bold-menu_item-unselect] color=#FFFFFFFF
+      Action Indicator rect=1090,134,12,20 LayoutElement,Image sprite=notify_indicator-red Simple border=None color=#FFFFFFFF
+  QuestTreePage_Button rect=1110,130,134,52 CharPageTabButton,LazyButton,ContentSizeFitter,VerticalLayoutGroup
+    Content rect=1110,130,134,52 VerticalLayoutGroup,ContentSizeFitter
+      RaycastZone rect=1110,130,134,52 Image,LayoutElement sprite=main_window-header_1-button Sliced border=[20.0, 0.0, 20.0, 0.0] color=#FFFFFF00
+      DecorSeparator rect=1204,130,80,52 Image,LayoutElement sprite=main_window-header_1-dec_separator Simple border=None color=#FFFFFFFF
+      Label rect=1136,136,82,40 TextMeshProUGUI,TextStyleComponent,ContentSizeFitter,LanguageRtlLabelState text="Quests" font=small_font_bold mat=en:[small_font_bold-menu_item-unselect] color=#FFFFFFFF
+  MapPage_Button rect=1242,130,98,52 CharPageTabButton,LazyButton,ContentSizeFitter,VerticalLayoutGroup
+    Content rect=1242,130,98,52 VerticalLayoutGroup,ContentSizeFitter
+      RaycastZone rect=1242,130,98,52 Image,LayoutElement sprite=main_window-header_1-button Sliced border=[20.0, 0.0, 20.0, 0.0] color=#FFFFFF00
+      ActiveBack rect=1242,130,98,52 Image,LayoutElement sprite=main_window-header_1-button Sliced border=[20.0, 0.0, 20.0, 0.0] color=#FFFFFFFF
+      Label rect=1268,136,46,40 TextMeshProUGUI,TextStyleComponent,ContentSizeFitter,LanguageRtlLabelState text="Map" font=small_font_bold mat=en:[small_font_bold-menu_item-selected] color=#FFFFFFFF
+# UI/UIRoot/CharacterWindow_Big(Clone)/Content/Pages/CharMainPage/PerksAndBuffs
+PerksAndBuffs rect=1158,188,440,758
+  Scroll View rect=1158,188,440,758 Image,ScrollRect,AutoScroll sprite=Background Sliced border=[10.0, 10.0, 10.0, 10.0] color=#FFFFFF00
+    Viewport rect=1158,188,440,758 Image,Mask sprite=UIMask Sliced border=[10.0, 10.0, 10.0, 10.0] color=#FFFFFFFF
+      Content rect=1158,188,440,564 VerticalLayoutGroup,ContentSizeFitter
+        Buffs Widget rect=1158,188,440,188 PerksWidget,VerticalLayoutGroup,ContentSizeFitter
+          HeaderBackGround rect=1158,188,440,52 Image sprite=comm-header_2 Sliced border=[80.0, 0.0, 80.0, 0.0] color=#FFFFFFFF
+            Header rect=1158,188,440,52 TextMeshProUGUI,TextStyleComponent,LocalizedLabel,LanguageRtlLabelState text="Buffs" font=small_font_bold mat=en:[small_font_bold-header_2-text_1] color=#FFFFFFFF
+            DecotLeft rect=1158,188,44,52 Image sprite=comm-header_2-dec_side_1 Simple border=None color=#FFFFFFFF
+            DecotRight rect=1598,188,-44,52 Image sprite=comm-header_2-dec_side_1 Simple border=None color=#FFFFFFFF
+          Content rect=1158,240,440,128 ContentSizeFitter,VerticalLayoutGroup,LayoutElement
+            PerkWidgetFull(Clone) rect=1158,240,440,128 PerkWidgetFull,GamepadNavigationItem,ContentSizeFitter,LayoutElement,VerticalLayoutGroup
+              IconGroup rect=1178,250,52,66 LayoutElement
+                Icon rect=1178,250,52,52 Image,LazyButton sprite=b_sleep(Clone) Simple border=None color=#FFFFFFFF
+              Name rect=1254,244,332,32 TextMeshProUGUI,TextStyleComponent,LayoutElement,LanguageRtlLabelState text="Lack of sleep" font=small_font_bold mat=en:[small_font_bold-effects_header] color=#DFAA6CFF
+              Description rect=1254,272,344,96 TextMeshProUGUI,TextStyleComponent,ContentSizeFitter,LanguageRtlLabelState text="You're tired. Until you go to bed, any work will waste more font=small_font mat=en:[small_font-effects_regular_text] color=#AAAEBBFF
+        Perks Widget rect=1158,376,440,356 PerksWidget,VerticalLayoutGroup,ContentSizeFitter
+          HeaderBackGround rect=1158,376,440,52 Image sprite=comm-header_2 Sliced border=[80.0, 0.0, 80.0, 0.0] color=#FFFFFFFF
+            Header rect=1158,376,440,52 TextMeshProUGUI,TextStyleComponent,LocalizedLabel,LanguageRtlLabelState text="Perks" font=small_font_bold mat=en:[small_font_bold-header_2-text_1] color=#FFFFFFFF
+            DecotLeft rect=1158,376,44,52 Image sprite=comm-header_2-dec_side_1 Simple border=None color=#FFFFFFFF
+            DecotRight rect=1598,376,-44,52 Image sprite=comm-header_2-dec_side_1 Simple border=None color=#FFFFFFFF
+          Content rect=1158,428,440,296 ContentSizeFitter,VerticalLayoutGroup,LayoutElement
+            PerkWidgetFull(Clone) rect=1158,428,440,176 PerkWidgetFull,GamepadNavigationItem,ContentSizeFitter,LayoutElement,VerticalLayoutGroup
+              IconGroup rect=1178,438,52,66 LayoutElement
+                Icon rect=1174,434,60,60 Image,LazyButton sprite=i_p-axeman(Clone) Simple border=None color=#FFFFFFFF
+              Name rect=1254,432,332,32 TextMeshProUGUI,TextStyleComponent,LayoutElement,LanguageRtlLabelState text="Axeman" font=small_font_bold mat=en:[small_font_bold-effects_header] color=#DFAA6CFF
+              Description rect=1254,460,344,144 TextMeshProUGUI,TextStyleComponent,ContentSizeFitter,LanguageRtlLabelState text="The axe is your friend, and it's a sharp friend! You someti font=small_font mat=en:[small_font-effects_regular_text] color=#AAAEBBFF
+            PerksWidgetSeparator(Clone) rect=1158,604,440,16 PerksWidgetSeparator
+              Image rect=1178,608,400,8 Image sprite=widget_perks-separator_hor-drk_1 Sliced border=[6.0, 0.0, 6.0, 0.0] color=#FFFFFFFF
+            PerkWidgetFull(Clone) rect=1158,620,440,104 PerkWidgetFull,GamepadNavigationItem,ContentSizeFitter,LayoutElement,VerticalLayoutGroup
+              IconGroup rect=1178,630,52,66 LayoutElement
+                Icon rect=1174,626,60,60 Image,LazyButton sprite=i_p-cook(Clone) Simple border=None color=#FFFFFFFF
+              Name rect=1254,624,332,32 TextMeshProUGUI,TextStyleComponent,LayoutElement,LanguageRtlLabelState text="Cook" font=small_font_bold mat=en:[small_font_bold-effects_header] color=#DFAA6CFF
+              Description rect=1254,652,344,72 TextMeshProUGUI,TextStyleComponent,ContentSizeFitter,LanguageRtlLabelState text="It's not haute cuisine, but there's plenty of it. You creat font=small_font mat=en:[small_font-effects_regular_text] color=#AAAEBBFF
+        Footer rect=1158,732,440,20
+          Center rect=1328,732,100,20 Image sprite=widget_perks-footer-center-drk_1 Sliced border=[24.0, 0.0, 25.0, 0.0] color=#FFFFFFFF
+          Left rect=1178,732,150,20 Image,AnchorOverride sprite=widget_perks-edge-drk_1 Sliced border=[6.0, 0.0, 0.0, 0.0] color=#FFFFFFFF
+          Right rect=1428,732,150,20 AnchorOverride
+            Image rect=1578,732,-150,20 Image sprite=widget_perks-edge-drk_1 Sliced border=[6.0, 0.0, 0.0, 0.0] color=#FFFFFFFF

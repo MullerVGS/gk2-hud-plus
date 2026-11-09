@@ -241,3 +241,45 @@ grava ao construir; `DropData.EnsureSpawnDay` grava. Durações de craft no bala
   (o jogo esconde o cursor após 4 s parado em gameplay: `CursorController.cs:79`). Teste: `HudFeature.VirtualMouse`
   (ignora o cursor oculto, que no green está sempre oculto). Abrir/fechar janela custa um frame longo: o primeiro passo
   do fade da placa já sai em ~0,4–0,6 de alpha.
+
+## Calendário (pasta `Calendar/`, 0.3.0, 09/11)
+
+Pedido: sem spoiler (só o que o jogador já sabe), aba no TAB, popup no medalhão (semana; sigilo = o dia, com
+contagem regressiva), hora em cima do medalhão no hover, HUD simples e nada de gameplay.
+
+- **Fonte dos horários**: o agendador do jogo (`GameLogicsSystem` + `gameLogicsDefs`, dump em `dumps/*/gameLogicsDefs.json`).
+  Eventos `Day` rodam no `dayNumber` a partir de `dayTime`; `Period` guardam a próxima execução no save
+  (`GameLogicData.execDay/execTime`, avança mesmo se a condição falhar) e repetem a cada `periodTime` dias.
+  Medido: Orgulho 00:14 `ResetVendors` + `ClearTownPalettes` + quadro de giz (até 23:45); Ira sermão (00:14–23:45);
+  Preguiça batalha; Inveja tempestade (faíscas no porão); fim de Luxúria recarrega a energia da ressurreição; Gula = só
+  nesse dia a Máquina de RP; burro e entrega da freira a cada 2 dias às 13:12 (0,55), se `donkey_ready`/`nun_body_drop_ready`.
+  Navio do porto e Pergaminhos Verdes da Linda (Luxúria) e lágrimas da Deusa (Inveja) não estão no agendador: vêm de falas
+  e tutoriais (`35_port_pop_new_people_4`, `tut_town_houses`, `quest_closed_63_swamp_goddess_speak_d`), sem hora.
+- **Sem spoiler** (`CalendarModel.Known`): evento aparece se o ícone de dia do mapa estiver liberado
+  (`KnowledgeSystem.unlockedMapDayIcons`: `day_pride`, `day_lust`, `day_gluttony`, `day_envy_morgue`, `day_envy_goddess`,
+  `day_wrath_church`, `day_wrath` (freira), `day_sloth`; liberados por quests via `UnlockMapDayIcon`), ou o tutorial
+  correspondente aberto (`unlockedTutorials`: `tut_commerce_hdr`, `tut_trading_hdr`, `tut_town_hdr`, `tut_pr_machine_hdr`,
+  `tut_resurrection_hdr`, `tutorial_hdr_seremons`, `tut_battle_*_hdr`; páginas conferidas em runtime pelos `LocalizedLabel`
+  do `UITutorialWindow`), ou o recurso cru do jogador (`PlayerData.res`, `GetWithoutSystemsCheck`). Descrições = texto
+  do próprio jogo quando ele explica a regra (já traduzido); próprio só onde a fala nativa fica fora de contexto.
+- **Medalhão** (`WheelFeature`): sigilos = `UIHUDWheelElement` (o dia vem do `icon.sprite.name`, `day_*`); hover por
+  geometria (rect do sigilo, círculo de raio 0,42 × largura do `Wheel`). Hora = TMP com `tiny_font-inspiration-plate_bar_progress`
+  16 px de arte abaixo do centro do céu, fade do `HudFader`. Popup = `UITooltip` nativo num proxy (como o mundo), com
+  `follow=true` (com `false` o alvo some e o redesenho tocaria som); `BottomRight`. Já aberto, troca medalhão ↔ sigilo na hora.
+  O `ShowAtTargetAndCalculateOffsets` ignora `TextAlignmentOptions.Left` (linhas saem centradas); `<nobr>` funciona.
+- **Aba do TAB** (`CalendarTab` + `CalendarPage`): `CharacterWindow` só conhece o enum `CharPage` e grava
+  `PlayerData.lastOpenedPage` no save, então `LastOpenedPage` nunca recebe valor nosso. Botão = cópia de
+  `charPageTabButtonPrefab` com `Init(textoTraduzido, ...)` (o `LLBase.L` devolve a chave quando ela não existe) e o
+  `rightSeparator` da última aba nativa ligado. Abrir: `pages[LastOpenedPage].Hide()` + `UpdateState(false)` nas abas nativas.
+  Prefixo em `SwitchPage` fecha o calendário e força `checkCurrent=false` (a aba clicada pode ser a `LastOpenedPage`
+  escondida); prefixo em `Hide` fecha junto com a janela. Página montada com sprites tirados da própria janela
+  (`comm-header_2`, `comm-header_2-dec_side_1`, `widget_perks-*`), sigilos do `UIHUDWheel.dayIcons`, ícones do mapa
+  (`UIMapDayActivityIcon.expandedSprite`, `day_*_expanded`) e TextStyles `small_font_bold-header_2-text_1`,
+  `small_font_bold-sub_header_2`, `small_font_bold-effects_header`, `small_font-effects_regular_text`,
+  `tiny_font-effects_timer` (o tempo de buff), `small_font-no_effects`. Referência: `docs/referencia/tab-character.*`.
+- **Contagem**: tempo real acordado (`EnvironmentEngine.gameplayDayInMinutes` × 60 por dia; o sono acelera 50×), em m:ss
+  como os tempos do jogo. Horários de evento arredondam (0,55f × 1440 = 791,99 → 13:12).
+- Cenários: `gk2hud-calendario.cs` (medalhão, sigilo, aba; `REVELAR` mostra tudo só para layout),
+  `gk2hud-calendario-abas.cs` (transições com as abas nativas e fechar/reabrir), `tab-abrir.cs` (abre o TAB numa página).
+- Config `[Calendar]`: `Enabled`, `WheelClockMode` (Hover|Always|Off), `WheelPopup`, `HoverDelay` (0,35 s), `Tab`.
+  `[Hud] DayPlate` (falso desde a 0.3.0) liga a placa antiga de dia/hora sob a felicidade.

@@ -13,7 +13,8 @@ namespace GK2Hud.Hud
 {
     /// <summary>
     /// Informações extras no HUD nativo, todas só leitura:
-    /// - placa com dia da semana e hora sob o "0/10" da felicidade (clone do painel de tech points, mesma moldura
+    /// - placa opcional (<c>[Hud] DayPlate</c>, desligada por padrão desde a 0.3.0: a hora aparece no hover do medalhão)
+    ///   com dia da semana e hora sob o "0/10" da felicidade (clone do painel de tech points, mesma moldura
     ///   <c>hud-gameres_frame</c> e TextStyle <c>tiny_font-perk_techpoint_cost</c>; posição = âncora que o próprio HUD usa
     ///   para esse painel no modo de janela Small);
     /// - números de energia e insanidade dentro da barra dupla (energia enche da esquerda, insanidade da direita), com o
@@ -34,6 +35,7 @@ namespace GK2Hud.Hud
         private const float HoverLinger = 0.3f;
         private const int PlatePadLeft = 7, PlatePadRight = 7, PlateHeight = 20, LabelHeight = 16, LabelCenterY = -11;
 
+        private readonly ConfigEntry<bool> plateOn;
         private readonly ConfigEntry<bool> clockOn;
         private readonly ConfigEntry<bool> weekDayOn;
         private readonly ConfigEntry<HudNumbersMode> barsMode;
@@ -70,9 +72,10 @@ namespace GK2Hud.Hud
         /// <summary>Modo de teste (cenários gk2hud-hud-*.cs): no green o mouse não mexe e o cursor fica oculto.</summary>
         internal Vector2? VirtualMouse { get; set; }
 
-        public HudFeature(ConfigEntry<bool> clockOn, ConfigEntry<bool> weekDayOn, ConfigEntry<HudNumbersMode> barsMode, ConfigEntry<bool> barsShowMax,
+        public HudFeature(ConfigEntry<bool> plateOn, ConfigEntry<bool> clockOn, ConfigEntry<bool> weekDayOn, ConfigEntry<HudNumbersMode> barsMode, ConfigEntry<bool> barsShowMax,
             ConfigEntry<int> clockStep, ConfigEntry<float> fadeDuration)
         {
+            this.plateOn = plateOn;
             this.clockOn = clockOn;
             this.weekDayOn = weekDayOn;
             this.barsMode = barsMode;
@@ -319,7 +322,7 @@ namespace GK2Hud.Hud
             // No modo de janela Small o painel de tech points desce para este mesmo lugar (HUD.GetTechPointsRightAnchor).
             bool techPanelHere = GUIElements.Instance != null && GUIElements.Instance.UIWindowSizeType == UIWindowSizeType.Small
                 && techPanel != null && techPanel.gameObject.activeSelf;
-            return (clockOn.Value || weekDayOn.Value) && !techPanelHere && LazyWindowsStackController.ActiveWindow == null;
+            return plateOn.Value && (clockOn.Value || weekDayOn.Value) && !techPanelHere && LazyWindowsStackController.ActiveWindow == null;
         }
 
         private bool NumbersWanted(float now)
@@ -354,7 +357,7 @@ namespace GK2Hud.Hud
 
         private void UpdateClock()
         {
-            if (!clockOn.Value && !weekDayOn.Value) return;   // texto em dia mesmo escondida: o fade-in já mostra a hora certa
+            if (!plateOn.Value || (!clockOn.Value && !weekDayOn.Value)) return;   // texto em dia mesmo escondida: o fade-in já mostra a hora certa
             bool showClock = clockOn.Value, showDay = weekDayOn.Value;
             EnvironmentData env = MainGame.Instance.GameSave.environmentData;
             string day = showDay && dayIdByNumber.TryGetValue(env.CurrentDayNumber, out string id) ? HudL10n.Day(id) : null;

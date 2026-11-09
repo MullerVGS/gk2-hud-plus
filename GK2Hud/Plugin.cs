@@ -1,5 +1,6 @@
 using BepInEx;
 using BepInEx.Configuration;
+using GK2Hud.Calendar;
 using GK2Hud.Hud;
 using GK2Hud.Tooltips;
 using GK2Hud.World;
@@ -10,15 +11,15 @@ namespace GK2Hud
 {
     /// <summary>
     /// Mod de jogador com cara nativa: tooltips enriquecidos, fixáveis e aninhados (pasta Tooltips/) e informações
-    /// extras no HUD (pasta Hud/: dia da semana, hora, números de energia/insanidade) e tooltip de coisas em andamento no
-    /// mundo (pasta World/). Cada feature tem ciclo Update/Dispose.
+    /// extras no HUD (pasta Hud/: números de energia/insanidade, placa opcional de dia/hora), tooltip de coisas em andamento
+    /// no mundo (pasta World/) e calendário (pasta Calendar/: hora e popup no medalhão, aba no TAB). Cada feature tem ciclo Update/Dispose.
     /// </summary>
     [BepInPlugin(Guid, Name, Version)]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "arthur.gk2.hud";
         public const string Name = "GK2 Hud";
-        public const string Version = "0.2.2";
+        public const string Version = "0.3.0";
 
         internal static BepInEx.Logging.ManualLogSource Log;
 
@@ -30,6 +31,10 @@ namespace GK2Hud
         internal HudFeature HudInfo { get; private set; }
 
         internal WorldHoverFeature WorldHover { get; private set; }
+
+        internal WheelFeature Wheel { get; private set; }
+
+        internal CalendarTab CalendarTab { get; private set; }
 
         private readonly LeakSweeper leakSweeper = new LeakSweeper();
 
@@ -55,6 +60,8 @@ namespace GK2Hud
                 WorldHover = new WorldHoverFeature(worldDelay);
             }
             ConfigEntry<bool> hudOn = Config.Bind("Hud", "Enabled", true, "Informações extras no HUD (dia da semana, hora, números de energia e insanidade).");
+            ConfigEntry<bool> plateOn = Config.Bind("Hud", "DayPlate", false,
+                "Placa fixa com dia e hora sob a felicidade (desde a 0.3.0 a hora aparece no hover do medalhão; Clock/WeekDay escolhem o conteúdo da placa).");
             ConfigEntry<bool> clockOn = Config.Bind("Hud", "Clock", true, "Hora do dia (relógio de 24 h derivado do timeOfDay) na placa sob a felicidade.");
             ConfigEntry<bool> weekDayOn = Config.Bind("Hud", "WeekDay", true, "Nome do dia da semana na placa sob a felicidade.");
             ConfigEntry<int> clockStep = Config.Bind("Hud", "ClockStepMinutes", 10,
@@ -66,7 +73,20 @@ namespace GK2Hud
                 new AcceptableValueRange<float>(0f, 2f)));
             if (hudOn.Value)
             {
-                HudInfo = new HudFeature(clockOn, weekDayOn, barsMode, barsMax, clockStep, fade);
+                HudInfo = new HudFeature(plateOn, clockOn, weekDayOn, barsMode, barsMax, clockStep, fade);
+            }
+            ConfigEntry<bool> calendarOn = Config.Bind("Calendar", "Enabled", true, "Calendário: aba no TAB, hora e popup no medalhão dos dias.");
+            ConfigEntry<HudNumbersMode> wheelClock = Config.Bind("Calendar", "WheelClockMode", HudNumbersMode.Hover,
+                "Hora em cima do medalhão. Hover: com o mouse sobre o medalhão; Always: sempre; Off: nunca.");
+            ConfigEntry<bool> wheelPopup = Config.Bind("Calendar", "WheelPopup", true,
+                "Mouse parado sobre o medalhão mostra a semana; sobre um sigilo, o que acontece naquele dia.");
+            ConfigEntry<float> wheelDelay = Config.Bind("Calendar", "HoverDelay", 0.35f,
+                new ConfigDescription("Segundos com o mouse parado sobre o medalhão até o popup aparecer.", new AcceptableValueRange<float>(0f, 5f)));
+            ConfigEntry<bool> tabOn = Config.Bind("Calendar", "Tab", true, "Aba Calendário na janela do TAB.");
+            if (calendarOn.Value)
+            {
+                Wheel = new WheelFeature(wheelClock, clockStep, wheelDelay, fade, wheelPopup);
+                if (tabOn.Value) CalendarTab = new CalendarTab(harmony);
             }
             leakSweeper.Sweep();   // vazamentos da 0.1.0 (o hotfix entra por hot-reload, com o jogo aberto)
             Log.LogInfo($"{Name} {Version} carregado");
@@ -78,6 +98,8 @@ namespace GK2Hud
             Tooltips?.Update();
             WorldHover?.Update();
             HudInfo?.Update();
+            Wheel?.Update();
+            CalendarTab?.Update();
         }
 
         private void OnDestroy()
@@ -88,6 +110,10 @@ namespace GK2Hud
             Tooltips = null;
             HudInfo?.Dispose();
             HudInfo = null;
+            Wheel?.Dispose();
+            Wheel = null;
+            CalendarTab?.Dispose();
+            CalendarTab = null;
             harmony?.UnpatchSelf();
         }
     }
