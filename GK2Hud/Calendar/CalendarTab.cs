@@ -38,6 +38,41 @@ namespace GK2Hud.Calendar
             Current = this;
             harmony.Patch(AccessTools.Method(typeof(CharacterWindow), "SwitchPage"), prefix: new HarmonyMethod(typeof(CalendarTab), nameof(SwitchPagePrefix)));
             harmony.Patch(AccessTools.Method(typeof(CharacterWindow), nameof(CharacterWindow.Hide)), prefix: new HarmonyMethod(typeof(CalendarTab), nameof(HidePrefix)));
+            harmony.Patch(AccessTools.Method(typeof(CharacterWindow), nameof(CharacterWindow.Redraw)), postfix: new HarmonyMethod(typeof(CalendarTab), nameof(RedrawPostfix)));
+        }
+
+        private static readonly AccessTools.FieldRef<Dictionary<Type, LazyWidgetBase>> WindowsCache =
+            AccessTools.StaticFieldRefAccess<Dictionary<Type, LazyWidgetBase>>(AccessTools.Field(typeof(LazyUI), "windowsCache"));
+
+        /// <summary>
+        /// A janela sem procurar na cena: <c>LazyUI.GetWindow</c> faz <c>FindObjectsOfType</c> e loga erro quando ela
+        /// não existe (menu principal). Fonte: o cache do LazyUI (preenchido quando o jogo abre a janela) ou o postfix do Redraw.
+        /// </summary>
+        private CharacterWindow FindWindow()
+        {
+            if (seenWindow != null) return seenWindow;
+            try
+            {
+                Dictionary<Type, LazyWidgetBase> cache = WindowsCache();
+                if (cache != null && cache.TryGetValue(typeof(CharacterWindow), out LazyWidgetBase w) && w != null) return (CharacterWindow)w;
+            }
+            catch (Exception) { }
+            return null;
+        }
+
+        private CharacterWindow seenWindow;
+
+        private static void RedrawPostfix(CharacterWindow __instance)
+        {
+            CalendarTab t = Current;
+            if (t == null || __instance == null) return;
+            t.seenWindow = __instance;
+            if (t.window != __instance)
+            {
+                t.nextAttach = 0f;
+                try { t.EnsureAttached(); }   // abre já com a aba (sem esperar o próximo Update)
+                catch (Exception ex) { Plugin.Log.LogWarning("calendário: montar no Redraw: " + ex.Message); }
+            }
         }
 
         public bool IsOpen => open && page != null;
@@ -103,14 +138,13 @@ namespace GK2Hud.Calendar
 
         private bool EnsureAttached()
         {
-            CharacterWindow w = null;
-            try { w = LazyUI.GetWindow<CharacterWindow>(); }
-            catch (Exception) { }
-            if (w != null && w == window && button != null && page != null) return true;
+            if (seenWindow == null && !ReferenceEquals(seenWindow, null)) seenWindow = null;   // destruída (troca de cena)
+            if (window != null && window == FindWindow() && button != null && page != null) return true;
             float now = Time.unscaledTime;
             if (now < nextAttach) return false;
             nextAttach = now + AttachRetry;
-            Detach();
+            CharacterWindow w = FindWindow();
+            if (window != null || button != null || page != null) Detach();
             if (w == null || !CalendarModel.Ready) return false;
             Traverse t = Traverse.Create(w);
             CharPageTabButton prefab = t.Field("charPageTabButtonPrefab").GetValue<CharPageTabButton>();
@@ -222,6 +256,8 @@ namespace GK2Hud.Calendar
         }
 
         internal void TestHover(int? day) => page?.Select(day ?? -1);
+
+        internal void TestOffset(int offset) => page?.SelectOffset(offset);
 
         internal string Describe() => $"window={(window != null ? window.name : "-")} shown={(window != null && window.IsShown)} open={open} " +
                                       $"last={(window != null ? window.LastOpenedPage.ToString() : "-")} page={(page != null ? page.Describe() : "-")}";

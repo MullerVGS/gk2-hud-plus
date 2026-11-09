@@ -219,6 +219,8 @@ namespace GK2Hud.Tooltips
             lines.Add(have);
             string used = UsedInLine(def.id, s);
             if (used != null) lines.Add(used);
+            string journal = Journal.JournalView.ItemLine(def.id);
+            if (journal != null) lines.Add(journal);
             return Widgets(lines, s);
         }
 
@@ -247,6 +249,8 @@ namespace GK2Hud.Tooltips
             float insanityAdd = (worker?.GetPerksInsanityBonusValue(cd) ?? 0f) - (hasTool ? tool.Definition.GetGameResOnUse("insanity") : 0f);
             AddPerTick(lines, s, "energy", cd.energyPerTick, energyAdd, ticks);
             AddPerTick(lines, s, "insanity", cd.insanityPerTick, insanityAdd, ticks);
+            string journal = Journal.JournalView.CraftLine(cd.id);
+            if (journal != null) lines.Add(journal);
             List<LazyWidgetDataBase> w = Widgets(lines, s);
             // Na janela da própria estação, "Crafted at: <ela mesma>" não diz nada.
             bool onlyHere = e.Wgo != null && cd.craftsIn != null && cd.craftsIn.Count == 1 && cd.craftsIn[0] == e.Wgo.id;
@@ -293,6 +297,8 @@ namespace GK2Hud.Tooltips
                 IEnumerable<string> parts = p.addGameResPerTick.List.Select(a => ResIcon(a.type) + Num(s, Signed(a.value)));
                 lines.Add(L10n.T("every", PerkSystemData.GetFormattedDuration(p.tickRate)) + ": " + string.Join(" ", parts));
             }
+            string journal = Journal.JournalView.PerkLine(p.id);
+            if (journal != null) lines.Add(journal);
             List<LazyWidgetDataBase> w = Widgets(lines, s);
             List<ItemDef> sources = index.PerkSources(p.id);
             if (sources != null && sources.Count > 0)
@@ -320,6 +326,8 @@ namespace GK2Hud.Tooltips
                     + string.Join(", ", parents.Select(p => Links.Wrap(Links.Station, p.id, LLBase.L(p.id))));
                 w.Add(new UITooltipTextWidgetData(t, TextAlignmentOptions.Center, s.Small));
             }
+            string journal = Journal.JournalView.StationLine(e.Id);
+            if (journal != null) w.Add(new UITooltipTextWidgetData(journal, TextAlignmentOptions.Center, s.Small));
             return w;
         }
 

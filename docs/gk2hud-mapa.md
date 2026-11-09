@@ -283,3 +283,37 @@ contagem regressiva), hora em cima do medalhão no hover, HUD simples e nada de 
   `gk2hud-calendario-abas.cs` (transições com as abas nativas e fechar/reabrir), `tab-abrir.cs` (abre o TAB numa página).
 - Config `[Calendar]`: `Enabled`, `WheelClockMode` (Hover|Always|Off), `WheelPopup`, `HoverDelay` (0,35 s), `Tab`.
   `[Hud] DayPlate` (falso desde a 0.3.0) liga a placa antiga de dia/hora sob a felicidade.
+
+## Diário (pasta `Journal/`, 0.4.0, 09/11)
+
+Pedido: changelog por dia do que foi desbloqueado e das quests concluídas, nos dias passados da aba Calendar e
+nos tooltips de item/receita/perk/estação; o que já existia antes do diário vira uma linha "antes do diário".
+
+- **O jogo não guarda datas de desbloqueio**: o mod anota. `JournalTracker` varre a cada 2 s (contagens primeiro; só monta
+  o conjunto quando alguma lista cresceu) `KnowledgeSystem.unlockedTechs/Crafts/Buildings/TownBuildings/AlchemyFormulas/
+  MapDayIcons/Tutorials`, perks permanentes (`activePerks`, `PerkType.Default`; buffs fora) e quests `Completed` com
+  `QuestDef.hasPosInBalance` (as 241 da árvore; as outras ~300 são técnicas). Zonas e talentos não têm nome (`LLBase.L` devolve o id).
+- **Arquivo** `BepInEx/config/arthur.gk2.hud/journal-<slot>.json` (Newtonsoft do jogo; `UnityEngine.JsonUtility` não está
+  nas referências), gravado 3 s depois da mudança (tmp + move) e no Dispose. Slot = `SaveSystem.RelevantSlot.slotName` sem
+  `_backup_N` (o jogo gira 3 backups; carregar um é a mesma partida mais atrás).
+- **Ao carregar** (troca do objeto `GameSave`): descarta anotações depois do (dia, hora) carregado; se o dia carregado é
+  anterior ao início do diário ou sumiu muita coisa "que só cresce" (quests, techs, construções, receitas, fórmulas;
+  > max(5, 10%)), recomeça com novo baseline; sumiços pequenos só tiram as linhas. O que existe e o diário não viu entra
+  com `a=true` ("notado ao carregar", hora com `~`). Provado no green: save da cutscene às 00:43, 5 anotações
+  posteriores descartadas, 11 mantidas.
+- **O jogo também salva em eventos de quest** (cutscene da quest `28_base_fairy_summon` mostrou "Saving game"), não só ao dormir.
+- **Construções**: o desbloqueio é o canteiro (`..._place_p`, `wgoId ..._place`), que vira a estação de
+  `BuildingDef.customWgoPlacePreview`; `buildableWgos` tem as duas (`X → X_p`, `X_place → X_place_p`).
+- **Tooltips**: `TooltipContent` acrescenta "Recipe: Day N [sigilo]" no item (primeira receita que o produz),
+  "Unlocked" na receita e na estação, "Gained" na perk; "before Day N" para o baseline. `CraftDef.TryGetResultingItemDef`
+  loga "No data for object [ItemDef] with id = ''" nas receitas sem item: cachear o resultado por receita.
+- **Aba**: lista da esquerda rola (ScrollRect + RectMask2D; hover/clique com componente próprio, não `EventTrigger`, que
+  engole o scroll): "antes do diário", dias passados com anotação e a semana. Direita rola: eventos do dia + "Hoje até
+  agora" / diário do dia passado ("Concluído" e "Desbloqueado", linha com tipo · hora), cada linha abre o tooltip completo
+  do GK2Hud (`TooltipContent.Build(Entity)`); tech mostra "Veio junto" (receitas/construções do mesmo instante, como links).
+- **Armadilha (bug da 0.3.0)**: `LazyUI.GetWindow<T>()` faz `FindObjectsOfType` e loga erro quando a janela não existe
+  (menu principal) — chamado por frame encheu o log do green (18 937 linhas). Ler o cache privado `LazyUI.windowsCache` e
+  capturar a janela num postfix de `CharacterWindow.Redraw`.
+- Cenários: `gk2hud-diario.cs` (libera tech + receitas/construções, perk, conclui quest da árvore; `virar` passa o dia —
+  muda o save, volte com `gk2 save reset`), `gk2hud-diario-hover.cs` (escolhe dia e passa o mouse numa linha),
+  `recarregar.cs` (menu → Continue, descarta o não salvo).

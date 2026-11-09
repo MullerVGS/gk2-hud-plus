@@ -160,6 +160,13 @@ namespace GK2Hud.World
         /// <summary>Gameplay livre com mouse: sem janela, sem gamepad, sem cutscene/diálogo/sono, sem mira/ataque, sem construir nem carregar objeto para plantar/colocar.</summary>
         private static bool Ready()
         {
+            // Na abertura do jogo (antes de existir partida) algum getter abaixo lança NRE: não é erro, só "não pronto".
+            try { return ReadyUnsafe(); }
+            catch (NullReferenceException) { return false; }
+        }
+
+        private static bool ReadyUnsafe()
+        {
             if (LazyInput.IsGamepadActive) return false;
             MainGame game = MainGame.Instance;
             PlayerController pc = MainGame.PlayerController;

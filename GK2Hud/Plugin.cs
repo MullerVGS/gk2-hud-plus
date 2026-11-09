@@ -2,6 +2,7 @@ using BepInEx;
 using BepInEx.Configuration;
 using GK2Hud.Calendar;
 using GK2Hud.Hud;
+using GK2Hud.Journal;
 using GK2Hud.Tooltips;
 using GK2Hud.World;
 using HarmonyLib;
@@ -19,7 +20,7 @@ namespace GK2Hud
     {
         public const string Guid = "arthur.gk2.hud";
         public const string Name = "GK2 Hud";
-        public const string Version = "0.3.0";
+        public const string Version = "0.4.0";
 
         internal static BepInEx.Logging.ManualLogSource Log;
 
@@ -35,6 +36,8 @@ namespace GK2Hud
         internal WheelFeature Wheel { get; private set; }
 
         internal CalendarTab CalendarTab { get; private set; }
+
+        internal JournalTracker Journal { get; private set; }
 
         private readonly LeakSweeper leakSweeper = new LeakSweeper();
 
@@ -83,8 +86,11 @@ namespace GK2Hud
             ConfigEntry<float> wheelDelay = Config.Bind("Calendar", "HoverDelay", 0.35f,
                 new ConfigDescription("Segundos com o mouse parado sobre o medalhão até o popup aparecer.", new AcceptableValueRange<float>(0f, 5f)));
             ConfigEntry<bool> tabOn = Config.Bind("Calendar", "Tab", true, "Aba Calendário na janela do TAB.");
+            ConfigEntry<bool> journalOn = Config.Bind("Calendar", "Journal", true,
+                "Diário por save (desbloqueios e quests de cada dia) no calendário e nos tooltips. Fica em BepInEx/config/" + Guid + "/; o save do jogo não é tocado.");
             if (calendarOn.Value)
             {
+                if (journalOn.Value) Journal = new JournalTracker();
                 Wheel = new WheelFeature(wheelClock, clockStep, wheelDelay, fade, wheelPopup);
                 if (tabOn.Value) CalendarTab = new CalendarTab(harmony);
             }
@@ -98,6 +104,7 @@ namespace GK2Hud
             Tooltips?.Update();
             WorldHover?.Update();
             HudInfo?.Update();
+            Journal?.Update();
             Wheel?.Update();
             CalendarTab?.Update();
         }
@@ -114,6 +121,8 @@ namespace GK2Hud
             Wheel = null;
             CalendarTab?.Dispose();
             CalendarTab = null;
+            Journal?.Dispose();
+            Journal = null;
             harmony?.UnpatchSelf();
         }
     }

@@ -11,7 +11,7 @@ using UnityEngine;
 // REVELAR = true mostra eventos ainda não descobertos (só para ver o layout; o padrão do mod é sem spoiler).
 public static class Snippet
 {
-    static string ALVO = "medalhao";
+    static string ALVO = "aba";
     const int DIA = 0;
     const bool REVELAR = false;
 
