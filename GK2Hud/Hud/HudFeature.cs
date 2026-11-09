@@ -18,7 +18,11 @@ namespace GK2Hud.Hud
     ///   para esse painel no modo de janela Small);
     /// - números de energia e insanidade dentro da barra dupla (energia enche da esquerda, insanidade da direita), com o
     ///   TextStyle nativo de texto sobre barra <c>tiny_font-inspiration-plate_bar_progress</c>.
-    /// Atualiza no máximo 4×/s e só mexe no texto quando o valor muda. A placa some enquanto há janela aberta.
+    /// Valores no máximo 4×/s, só mexendo no texto quando mudam. Aparecer/sumir é fade de alpha (<see cref="HudFader"/>,
+    /// duração e curva do <c>UISaveOverlay</c> do jogo): a placa some com janela aberta; os números, no modo Hover, só
+    /// aparecem com o mouse sobre a barra ou os ícones das pontas. O hover é medido por geometria
+    /// (<c>RectangleContainsScreenPoint</c> nos rects nativos), sem Graphic nem raycast: o <c>UIMouseTooltip</c> nativo dos
+    /// ícones segue recebendo os eventos de pointer como antes.
     /// </summary>
     internal sealed class HudFeature : IDisposable
     {
@@ -27,13 +31,15 @@ namespace GK2Hud.Hud
         private const float AttachRetry = 1f;
         private const string BarTextStyle = "tiny_font-inspiration-plate_bar_progress";
         private const int BarTextInset = 5;
+        private const float HoverLinger = 0.3f;
         private const int PlatePadLeft = 7, PlatePadRight = 7, PlateHeight = 20, LabelHeight = 16, LabelCenterY = -11;
 
         private readonly ConfigEntry<bool> clockOn;
         private readonly ConfigEntry<bool> weekDayOn;
-        private readonly ConfigEntry<bool> barsOn;
+        private readonly ConfigEntry<HudNumbersMode> barsMode;
         private readonly ConfigEntry<bool> barsShowMax;
         private readonly ConfigEntry<int> clockStep;
+        private readonly ConfigEntry<float> fadeDuration;
 
         private float nextTick;
         private float nextAttach;
@@ -46,6 +52,14 @@ namespace GK2Hud.Hud
         private TextMeshProUGUI clockLabel;
         private TextMeshProUGUI energyLabel;
         private TextMeshProUGUI insanityLabel;
+        private GameObject numbers;
+        private HudFader clockFader;
+        private HudFader numbersFader;
+        private RectTransform barRect;
+        private RectTransform energyIconRect;
+        private RectTransform insanityIconRect;
+        private Camera uiCamera;
+        private float lastOver = float.NegativeInfinity;
         private readonly Dictionary<int, string> dayIdByNumber = new Dictionary<int, string>();
 
         private string lang;
@@ -53,35 +67,48 @@ namespace GK2Hud.Hud
         private string energyText;
         private string insanityText;
 
-        public HudFeature(ConfigEntry<bool> clockOn, ConfigEntry<bool> weekDayOn, ConfigEntry<bool> barsOn, ConfigEntry<bool> barsShowMax, ConfigEntry<int> clockStep)
+        /// <summary>Modo de teste (cenários gk2hud-hud-*.cs): no green o mouse não mexe e o cursor fica oculto.</summary>
+        internal Vector2? VirtualMouse { get; set; }
+
+        public HudFeature(ConfigEntry<bool> clockOn, ConfigEntry<bool> weekDayOn, ConfigEntry<HudNumbersMode> barsMode, ConfigEntry<bool> barsShowMax,
+            ConfigEntry<int> clockStep, ConfigEntry<float> fadeDuration)
         {
             this.clockOn = clockOn;
             this.weekDayOn = weekDayOn;
-            this.barsOn = barsOn;
+            this.barsMode = barsMode;
             this.barsShowMax = barsShowMax;
             this.clockStep = clockStep;
-            LazyWindowsStackController.OnWindowOpened += OnWindowChanged;
-            LazyWindowsStackController.OnWindowClosed += OnWindowChanged;
+            this.fadeDuration = fadeDuration;
         }
 
         public void Update()
         {
             float now = Time.unscaledTime;
-            if (now < nextTick) return;
-            nextTick = now + Interval;
             try
             {
-                if (!EnsureAttached()) return;
-                if (LLBase.CurrentLang != lang)
+                if (now >= nextTick)
                 {
-                    lang = LLBase.CurrentLang;
-                    Restyle(clockLabel);
-                    Restyle(energyLabel);
-                    Restyle(insanityLabel);
-                    clockText = energyText = insanityText = null;
+                    nextTick = now + Interval;
+                    if (!EnsureAttached()) return;
+                    if (LLBase.CurrentLang != lang)
+                    {
+                        lang = LLBase.CurrentLang;
+                        Restyle(clockLabel);
+                        Restyle(energyLabel);
+                        Restyle(insanityLabel);
+                        clockText = energyText = insanityText = null;
+                    }
+                    UpdateClock();
+                    UpdateBars();
                 }
-                UpdateClock();
-                UpdateBars();
+                if (hud == null || clock == null || numbers == null) return;
+                // Por frame: só comparações e geometria, sem alocação.
+                float fade = Mathf.Clamp(fadeDuration.Value, 0f, 2f);
+                float dt = Time.unscaledDeltaTime;
+                clockFader.Set(ClockWanted());
+                clockFader.Step(dt, fade);
+                numbersFader.Set(NumbersWanted(now));
+                numbersFader.Step(dt, fade);
             }
             catch (Exception e)
             {
@@ -92,23 +119,24 @@ namespace GK2Hud.Hud
 
         public void Dispose()
         {
-            LazyWindowsStackController.OnWindowOpened -= OnWindowChanged;
-            LazyWindowsStackController.OnWindowClosed -= OnWindowChanged;
+            VirtualMouse = null;
             DestroyAll();
         }
 
-        /// <summary>Janelas abrem por cima do HUD e cobririam a placa só em parte: some no mesmo frame em que a janela abre.</summary>
-        private void OnWindowChanged(LazyWidgetBase _)
+        /// <summary>Estado para os cenários de teste.</summary>
+        internal string Describe()
         {
-            if (clock != null) RefreshClockVisibility();
+            if (hud == null) return "HUD não montado";
+            return $"placa alvo={clockFader.Target} alpha={clockFader.Alpha:0.00} | números modo={barsMode.Value} alvo={numbersFader.Target} " +
+                   $"alpha={numbersFader.Alpha:0.00} ativo={numbers.activeSelf} sobre={MouseOverBar()} cursor={Cursor.visible} mouse={VirtualMouse?.ToString("0") ?? "real"}";
         }
 
         // ---------------- montagem ----------------
 
         private bool EnsureAttached()
         {
-            if (hud != null && clock != null && energyLabel != null && insanityLabel != null) return true;
-            if (clock != null || energyLabel != null || insanityLabel != null) DestroyAll();
+            if (hud != null && clock != null && numbers != null && energyLabel != null && insanityLabel != null) return true;
+            if (clock != null || numbers != null) DestroyAll();
             hud = null;
             float now = Time.unscaledTime;
             if (now < nextAttach) return false;
@@ -151,11 +179,31 @@ namespace GK2Hud.Hud
             BuildClock(leftUp.transform, panel, smallRight, bar.transform.parent);
             if (clock == null) return;
 
+            // Contêiner do tamanho da barra (mesmas âncoras para os rótulos) com o CanvasGroup do fade, logo acima dos
+            // sliders e abaixo dos ícones (que o jogo põe por último).
+            numbers = new GameObject(Prefix + "Numbers", typeof(RectTransform));
+            numbers.transform.SetParent(bar.transform, false);
+            numbers.transform.SetSiblingIndex(insanitySlider.GetSiblingIndex() + 1);
+            RectTransform nr = (RectTransform)numbers.transform;
+            nr.anchorMin = Vector2.zero;
+            nr.anchorMax = Vector2.one;
+            nr.pivot = ((RectTransform)bar.transform).pivot;
+            nr.offsetMin = nr.offsetMax = Vector2.zero;
+            numbersFader = new HudFader(numbers);
+            clockFader = new HudFader(clock);
+
             int left = Mathf.RoundToInt(energySlider.anchoredPosition.x);
             int right = left + Mathf.RoundToInt(energySlider.sizeDelta.x);
-            int sibling = insanitySlider.GetSiblingIndex() + 1;
-            energyLabel = BarLabel(bar.transform, "Energy", barStyle, left + BarTextInset, 0f, TextAlignmentOptions.Left, sibling);
-            insanityLabel = BarLabel(bar.transform, "Insanity", barStyle, right - BarTextInset, 1f, TextAlignmentOptions.Right, sibling + 1);
+            energyLabel = BarLabel(nr, "Energy", barStyle, left + BarTextInset, 0f, TextAlignmentOptions.Left);
+            insanityLabel = BarLabel(nr, "Insanity", barStyle, right - BarTextInset, 1f, TextAlignmentOptions.Right);
+
+            barRect = (RectTransform)bar.transform;
+            energyIconRect = bar.transform.Find("EnergyIcon") as RectTransform;
+            insanityIconRect = bar.transform.Find("InsanityIcon") as RectTransform;
+            Canvas root = bar.GetComponentInParent<Canvas>();
+            if (root != null) root = root.rootCanvas;
+            uiCamera = root != null && root.renderMode != RenderMode.ScreenSpaceOverlay ? root.worldCamera : null;
+            lastOver = float.NegativeInfinity;
 
             hud = h;
             techPanel = panel;
@@ -208,11 +256,10 @@ namespace GK2Hud.Hud
             clockLabel = label;
         }
 
-        private static TextMeshProUGUI BarLabel(Transform parent, string name, TextStyle style, int x, float pivotX, TextAlignmentOptions align, int sibling)
+        private static TextMeshProUGUI BarLabel(Transform parent, string name, TextStyle style, int x, float pivotX, TextAlignmentOptions align)
         {
-            GameObject go = new GameObject(Prefix + name, typeof(RectTransform));
+            GameObject go = new GameObject(name, typeof(RectTransform));
             go.transform.SetParent(parent, false);
-            go.transform.SetSiblingIndex(Mathf.Min(sibling, parent.childCount - 1));
             RectTransform rt = (RectTransform)go.transform;
             rt.anchorMin = rt.anchorMax = new Vector2(0f, 0.5f);
             rt.pivot = new Vector2(pivotX, 0.5f);
@@ -249,32 +296,65 @@ namespace GK2Hud.Hud
         private void DestroyAll()
         {
             if (clock != null) Object.Destroy(clock);
-            if (energyLabel != null) Object.Destroy(energyLabel.gameObject);
-            if (insanityLabel != null) Object.Destroy(insanityLabel.gameObject);
+            if (numbers != null) Object.Destroy(numbers);
             clock = null;
             clockRect = null;
             clockLabel = null;
+            numbers = null;
             energyLabel = null;
             insanityLabel = null;
+            clockFader = null;
+            numbersFader = null;
+            barRect = energyIconRect = insanityIconRect = null;
+            uiCamera = null;
             techPanel = null;
             hud = null;
         }
 
         // ---------------- valores ----------------
 
-        private bool RefreshClockVisibility()
+        /// <summary>Janelas abrem por cima do HUD e cobririam a placa só em parte: com janela aberta ela some (fade).</summary>
+        private bool ClockWanted()
         {
             // No modo de janela Small o painel de tech points desce para este mesmo lugar (HUD.GetTechPointsRightAnchor).
             bool techPanelHere = GUIElements.Instance != null && GUIElements.Instance.UIWindowSizeType == UIWindowSizeType.Small
                 && techPanel != null && techPanel.gameObject.activeSelf;
-            bool visible = (clockOn.Value || weekDayOn.Value) && !techPanelHere && LazyWindowsStackController.ActiveWindow == null;
-            if (clock.activeSelf != visible) clock.SetActive(visible);
-            return visible;
+            return (clockOn.Value || weekDayOn.Value) && !techPanelHere && LazyWindowsStackController.ActiveWindow == null;
+        }
+
+        private bool NumbersWanted(float now)
+        {
+            switch (barsMode.Value)
+            {
+                case HudNumbersMode.Always: return true;
+                case HudNumbersMode.Off: return false;
+            }
+            // Hover: só com mouse de verdade em uso (sem janela por cima, sem gamepad, cursor visível). O cursor some
+            // sozinho após 4 s parado em gameplay (CursorController.mouseAutohideTime); no teste o mouse virtual manda.
+            bool usable = LazyWindowsStackController.ActiveWindow == null && !LazyInput.IsGamepadActive && (VirtualMouse.HasValue || Cursor.visible);
+            if (!usable)
+            {
+                lastOver = float.NegativeInfinity;
+                return false;
+            }
+            if (MouseOverBar()) lastOver = now;
+            return now - lastOver < HoverLinger;
+        }
+
+        private bool MouseOverBar()
+        {
+            Vector2 mouse = VirtualMouse ?? (Vector2)Input.mousePosition;
+            return Contains(barRect, mouse) || Contains(energyIconRect, mouse) || Contains(insanityIconRect, mouse);
+        }
+
+        private bool Contains(RectTransform rect, Vector2 screen)
+        {
+            return rect != null && rect.gameObject.activeInHierarchy && RectTransformUtility.RectangleContainsScreenPoint(rect, screen, uiCamera);
         }
 
         private void UpdateClock()
         {
-            if (!RefreshClockVisibility()) return;
+            if (!clockOn.Value && !weekDayOn.Value) return;   // texto em dia mesmo escondida: o fade-in já mostra a hora certa
             bool showClock = clockOn.Value, showDay = weekDayOn.Value;
             EnvironmentData env = MainGame.Instance.GameSave.environmentData;
             string day = showDay && dayIdByNumber.TryGetValue(env.CurrentDayNumber, out string id) ? HudL10n.Day(id) : null;
@@ -301,10 +381,7 @@ namespace GK2Hud.Hud
 
         private void UpdateBars()
         {
-            bool on = barsOn.Value;
-            if (energyLabel.gameObject.activeSelf != on) energyLabel.gameObject.SetActive(on);
-            if (insanityLabel.gameObject.activeSelf != on) insanityLabel.gameObject.SetActive(on);
-            if (!on) return;
+            if (barsMode.Value == HudNumbersMode.Off) return;
 
             PlayerData pd = MainGame.PlayerData;
             if (pd == null) return;

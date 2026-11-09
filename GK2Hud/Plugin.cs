@@ -18,7 +18,7 @@ namespace GK2Hud
     {
         public const string Guid = "arthur.gk2.hud";
         public const string Name = "GK2 Hud";
-        public const string Version = "0.2.0";
+        public const string Version = "0.2.1";
 
         internal static BepInEx.Logging.ManualLogSource Log;
 
@@ -59,11 +59,14 @@ namespace GK2Hud
             ConfigEntry<bool> weekDayOn = Config.Bind("Hud", "WeekDay", true, "Nome do dia da semana na placa sob a felicidade.");
             ConfigEntry<int> clockStep = Config.Bind("Hud", "ClockStepMinutes", 10,
                 new ConfigDescription("Passo do relógio em minutos de jogo (1 minuto de jogo ≈ 0,3 s real).", new AcceptableValueRange<int>(1, 60)));
-            ConfigEntry<bool> barsOn = Config.Bind("Hud", "EnergyInsanityNumbers", true, "Números de energia e insanidade dentro da barra.");
+            ConfigEntry<HudNumbersMode> barsMode = HudConfig.BindNumbersMode(Config);
             ConfigEntry<bool> barsMax = Config.Bind("Hud", "EnergyInsanityShowMax", false, "Mostra atual/máximo em vez de só o atual.");
+            ConfigEntry<float> fade = Config.Bind("Hud", "FadeDuration", 0.25f, new ConfigDescription(
+                "Segundos do fade ao aparecer/sumir (placa e números). 0,25 = o fade do HUD do jogo (UISaveOverlay); 0 = sem animação.",
+                new AcceptableValueRange<float>(0f, 2f)));
             if (hudOn.Value)
             {
-                HudInfo = new HudFeature(clockOn, weekDayOn, barsOn, barsMax, clockStep);
+                HudInfo = new HudFeature(clockOn, weekDayOn, barsMode, barsMax, clockStep, fade);
             }
             leakSweeper.Sweep();   // vazamentos da 0.1.0 (o hotfix entra por hot-reload, com o jogo aberto)
             Log.LogInfo($"{Name} {Version} carregado");

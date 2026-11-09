@@ -198,4 +198,24 @@ grava ao construir; `DropData.EnsureSpawnDay` grava. Durações de craft no bala
   7/7/2/0) + `tiny_font-perk_techpoint_cost`; aparece 5 s à direita da barra (Big) ou desce para (352,134) sob a
   felicidade no modo Small (`HUD.cs:830-846`). Texto sobre barra nativo: `tiny_font-inspiration-plate_bar_progress`.
 - Dump do canto: `docs/referencia/hud-canto.txt`; cenários `hud-exterior-dia.cs`, `hud-interior-noite.cs`,
-  `gk2hud-recursos.cs`, `gk2hud-hud-config.cs`.
+  `gk2hud-recursos.cs`, `gk2hud-hud-config.cs`, `gk2hud-hud-hover.cs`, `gk2hud-hud-fade.cs`.
+- **HUD sutil (0.2.1)**: aparecer/sumir é fade de alpha num `CanvasGroup` (`HudFader`, sem DOTween — o projeto não
+  referencia o `DOTween.dll`): **0,25 s, OutQuad, tempo não escalado**, o mesmo do `UISaveOverlay` (ícone de salvar
+  sobre o HUD, `UISaveOverlay.cs:50` e `:80`, `fadeDuration` 0,25 lido em runtime, `SetUpdate(true)`, sem `SetEase` →
+  `DOTween.defaultEaseType` = OutQuad). Outras medidas: número flutuante de recurso `UIResElement` 0,3 in / 0,2 out
+  (`UIResElement.cs:77,80`); `UINotificator` desliza 0,2 s linear (`:110`); painel de tech points desliza 0,25 s
+  OutCubic/InCubic (`HUD.cs:769,783`); `LazyWindow` e `UITooltip` aparecem sem animação (`UITooltip.cs:334`, duração 0).
+  O jogo não mexe em `Time.timeScale` com janela aberta, mas o fade usa `unscaledDeltaTime` de qualquer jeito.
+- Placa: some (fade) com janela aberta e no modo Small com o painel de tech points no lugar; o texto segue atualizado
+  escondida. Números: `[Hud] EnergyInsanityNumbersMode` = `Hover` (padrão) | `Always` | `Off` (migrado do booleano
+  `EnergyInsanityNumbers` da 0.2.0: `false` → `Off`, chave antiga removida do arquivo via `ConfigFile.OrphanedEntries`);
+  `FadeDuration` (0,25; 0 = corte). Ficam num contêiner `GK2Hud.Numbers` do tamanho da barra, acima dos sliders e abaixo
+  dos ícones.
+- Hover dos números: geometria, não evento. A cada frame `RectTransformUtility.RectangleContainsScreenPoint` no rect do
+  `UIEnergySanityBar` (212,28 280×44, cobre a barra e os dois ícones) e nos `EnergyIcon`/`InsanityIcon` (câmera null:
+  canvas overlay). Nada do mod é Graphic com raycast nem tem `CanvasGroup.blocksRaycasts`: o raycast do EventSystem no
+  ícone continua dando só `EnergyIcon`/`InsanityIcon` e o `UIMouseTooltip` nativo (`hud_energy`/`hud_insanity`) abre
+  igual. Some 0,3 s depois que o mouse sai. Escondidos com janela aberta, `LazyInput.IsGamepadActive` ou `!Cursor.visible`
+  (o jogo esconde o cursor após 4 s parado em gameplay: `CursorController.cs:79`). Teste: `HudFeature.VirtualMouse`
+  (ignora o cursor oculto, que no green está sempre oculto). Abrir/fechar janela custa um frame longo: o primeiro passo
+  do fade da placa já sai em ~0,4–0,6 de alpha.
