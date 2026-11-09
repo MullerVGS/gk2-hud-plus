@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using GK2Hud.Hud;
+using GK2Hud.Journal;
 using GK2Hud.Tooltips;
 using LazyBearTechnology;
 using TMPro;
@@ -81,6 +82,87 @@ namespace GK2Hud.Calendar
                 string extra = Extra(o);
                 if (extra != null) list.Add(Text(extra, s.Small, TextAlignmentOptions.Center));
             }
+            return list;
+        }
+
+        /// <summary>Uma marca da linha do tempo: o evento, quando (com contagem) e a regra.</summary>
+        public static List<LazyWidgetDataBase> Occurrence(Occurrence o)
+        {
+            Styles s = Styles.Read();
+            if (s == null || !CalendarModel.Ready) return null;
+            double now = CalendarModel.Now;
+            int today = (int)Math.Floor(now);
+            bool past = CalendarModel.State(o, now) == OccState.Past;
+            int off = o.Day - today;
+            string rel = off >= 0 ? CalendarL10n.Relative(off) : off == -1 ? CalendarL10n.T("yesterday") : CalendarL10n.T("days_ago", -off);
+            var list = new List<LazyWidgetDataBase>
+            {
+                Text(o.Def.Title, s.Header, TextAlignmentOptions.Center),
+                Text(DayHeader(o.Day) + " · " + rel + " · " + CalendarL10n.T("day_n", o.Day), s.Small, TextAlignmentOptions.Center),
+                new UITooltipSeparatorWidgetData(),
+                Text(Window(o) + (off >= 0 ? " · " + Remaining(o, now) : ""), past ? s.Small : s.SmallSelected, TextAlignmentOptions.Center),
+            };
+            string desc = o.Def.Description;
+            if (desc != null) list.Add(Text(desc, s.Description, TextAlignmentOptions.Center));
+            string extra = off >= 0 ? Extra(o) : null;
+            if (extra != null) list.Add(Text(extra, s.Small, TextAlignmentOptions.Center));
+            return list;
+        }
+
+        /// <summary>A janela do evento, sem contagem: "13:12", "00:14–23:45", "a qualquer hora do dia".</summary>
+        public static string Window(Occurrence o)
+        {
+            if (o.AllDay) return CalendarL10n.T("any_time");
+            if (o.Instant) return o.Def.NoClock ? CalendarL10n.T("at_dawn") : CalendarModel.Clock(o.Start);
+            return CalendarModel.Clock(o.Start) + " - " + CalendarModel.Clock(o.End);
+        }
+
+        /// <summary>Só a contagem (o horário vem de <see cref="Window"/>): "começa em 3:10", "acaba em 1:02", "passou".</summary>
+        public static string Remaining(Occurrence o, double now)
+        {
+            OccState st = CalendarModel.State(o, now);
+            if (st == OccState.Upcoming) return CalendarL10n.T(o.Instant ? "in" : "starts_in", CalendarModel.Countdown(o.StartAbs - now));
+            if (st == OccState.Active) return o.Instant ? CalendarL10n.T("now") : CalendarL10n.T("ends_in", CalendarModel.Countdown(o.EndAbs - now));
+            return CalendarL10n.T(o.Instant ? "passed" : "ended");
+        }
+
+        /// <summary>Várias anotações do diário no mesmo ponto da linha do tempo, uma por linha com o tipo e a hora.</summary>
+        public static List<LazyWidgetDataBase> JournalCluster(List<JournalLine> lines)
+        {
+            Styles s = Styles.Read();
+            if (s == null || lines.Count == 0) return null;
+            int day = lines[0].Day;
+            var list = new List<LazyWidgetDataBase>
+            {
+                Text(CalendarL10n.T("journal"), s.Header, TextAlignmentOptions.Center),
+                Text(DayHeader(day) + " · " + CalendarL10n.T("day_n", day), s.Small, TextAlignmentOptions.Center),
+                new UITooltipSeparatorWidgetData(),
+            };
+            const int Max = 8;
+            foreach (JournalLine l in lines.Take(Max))
+                list.Add(Text(l.Name + "  " + s.Small.ApplyStyleToString(JournalView.KindLabel(l.Kind) + " · " + (l.Approx ? "~" : "") + CalendarModel.Clock(l.Tod)),
+                    s.Description, TextAlignmentOptions.Left));
+            if (lines.Count > Max) list.Add(Text(CalendarL10n.T("and_more", lines.Count - Max), s.SmallSelected, TextAlignmentOptions.Center));
+            list.Add(new UITooltipSeparatorWidgetData());
+            list.Add(Text(CalendarL10n.T("click_day"), s.Small, TextAlignmentOptions.Center));
+            return list;
+        }
+
+        /// <summary>A marca da coluna "antes do diário": o que já era conhecido quando ele começou, por tipo.</summary>
+        public static List<LazyWidgetDataBase> Baseline(Dictionary<string, int> counts, IEnumerable<string> kinds, int startDay)
+        {
+            Styles s = Styles.Read();
+            if (s == null) return null;
+            var list = new List<LazyWidgetDataBase>
+            {
+                Text(CalendarL10n.T("before_journal"), s.Header, TextAlignmentOptions.Center),
+                Text(CalendarL10n.T("j_before", startDay), s.Small, TextAlignmentOptions.Center),
+                new UITooltipSeparatorWidgetData(),
+            };
+            foreach (string k in kinds)
+                if (counts.TryGetValue(k, out int n)) list.Add(Text(CalendarL10n.Count(k, n), s.Description, TextAlignmentOptions.Center));
+            list.Add(new UITooltipSeparatorWidgetData());
+            list.Add(Text(CalendarL10n.T("click_day"), s.Small, TextAlignmentOptions.Center));
             return list;
         }
 
