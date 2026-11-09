@@ -65,7 +65,7 @@ namespace GK2Hud.Tooltips
             int n = 0;
             foreach (UITooltip t in Object.FindObjectsByType<UITooltip>(FindObjectsInactive.Include, FindObjectsSortMode.None))
             {
-                if (t != null && t.name.StartsWith(Prefix)) { Object.Destroy(t.gameObject); n++; }
+                if (t != null && t.name.StartsWith(Prefix)) { DestroyClone(t.gameObject); n++; }
             }
             return n;
         }
@@ -83,6 +83,7 @@ namespace GK2Hud.Tooltips
             var tip = template.GetComponent<UITooltip>();
             var container = template.GetComponent<LazyWidgetContainer>();
             var used = (List<LazyWidgetBase>)Native.UsedWidgetsField.GetValue(container);
+            ReleaseWidgets(template);
             foreach (LazyWidgetBase w in used)
                 if (w != null) Object.DestroyImmediate(w.gameObject);
             used.Clear();
@@ -162,9 +163,37 @@ namespace GK2Hud.Tooltips
 
         private static float Even(float v) => Mathf.Round(v / 2f) * 2f;
 
+        /// <summary>Todo clone sai por aqui: libera os widgets como o jogo faria e só então destrói.</summary>
+        public static void DestroyClone(GameObject go)
+        {
+            if (go == null) return;
+            ReleaseWidgets(go);
+            Object.Destroy(go);
+        }
+
+        /// <summary>
+        /// UITooltipCraftItemCell (ingredientes do UITooltipNeedsItemWidget) se inscreve em PlayerData.inventory.OnItemsAdd/
+        /// OnItemsRemove no Draw e só sai no Flush. Destruir o clone com a célula inscrita deixa um handler morto que lança NRE
+        /// no meio de transferências de item (duplica o item). Aqui: Flush em toda célula e Hide nos widgets de ingredientes,
+        /// que devolvem as células ao UIPrefabsPooler (elas saem do clone e continuam vivas no pool do jogo).
+        /// </summary>
+        public static void ReleaseWidgets(GameObject go)
+        {
+            foreach (UITooltipCraftItemCell cell in go.GetComponentsInChildren<UITooltipCraftItemCell>(true))
+            {
+                try { cell.Flush(); }
+                catch (System.Exception ex) { Plugin.Log.LogWarning("Flush de célula de ingrediente: " + ex.Message); }
+            }
+            foreach (UITooltipNeedsItemWidget w in go.GetComponentsInChildren<UITooltipNeedsItemWidget>(true))
+            {
+                try { w.Hide(); }
+                catch (System.Exception ex) { Plugin.Log.LogWarning("Hide de widget de ingredientes: " + ex.Message); }
+            }
+        }
+
         public void Destroy(Bubble b)
         {
-            if (b?.Rt != null) Object.Destroy(b.Rt.gameObject);
+            if (b?.Rt != null) DestroyClone(b.Rt.gameObject);
         }
 
         /// <summary>
@@ -209,7 +238,7 @@ namespace GK2Hud.Tooltips
         public void Dispose()
         {
             CloseAll();
-            if (template != null) Object.Destroy(template);
+            if (template != null) DestroyClone(template);
             template = null;
         }
     }

@@ -16,7 +16,7 @@ namespace GK2Hud
     {
         public const string Guid = "arthur.gk2.hud";
         public const string Name = "GK2 Hud";
-        public const string Version = "0.1.0";
+        public const string Version = "0.1.1";
 
         internal static BepInEx.Logging.ManualLogSource Log;
 
@@ -26,6 +26,8 @@ namespace GK2Hud
         internal TooltipFeature Tooltips { get; private set; }
 
         internal HudFeature HudInfo { get; private set; }
+
+        private readonly LeakSweeper leakSweeper = new LeakSweeper();
 
         private void Awake()
         {
@@ -51,11 +53,13 @@ namespace GK2Hud
             {
                 HudInfo = new HudFeature(clockOn, weekDayOn, barsOn, barsMax, clockStep);
             }
+            leakSweeper.Sweep();   // vazamentos da 0.1.0 (o hotfix entra por hot-reload, com o jogo aberto)
             Log.LogInfo($"{Name} {Version} carregado");
         }
 
         private void Update()
         {
+            leakSweeper.Tick();
             Tooltips?.Update();
             HudInfo?.Update();
         }
