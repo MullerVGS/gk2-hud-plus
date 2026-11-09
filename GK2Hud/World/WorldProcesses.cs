@@ -31,20 +31,23 @@ namespace GK2Hud.World
 
         public static float TickElapsed(CraftComponent cc) => TickTime(cc);
 
+        private static readonly HashSet<WgoData> Seen = new HashSet<WgoData>();
+
         /// <summary>Wgos carregados na cena com algo em andamento (crafts ativos registrados no CraftSystem).</summary>
-        public static IEnumerable<KeyValuePair<WgoData, Wgo>> WgosWithProcess()
+        public static void WgosWithProcess(List<KeyValuePair<WgoData, Wgo>> into)
         {
             CraftSystemData csd = MainGame.Instance?.GameSave?.craftSystemData;
-            if (csd?.activeCrafts == null) yield break;
-            var seen = new HashSet<WgoData>();
+            if (csd?.activeCrafts == null) return;
+            Seen.Clear();
             foreach (CraftComponent cc in csd.activeCrafts)
             {
-                if (cc == null || !(cc.CraftableObject is WgoData w) || !seen.Add(w)) continue;
+                if (cc == null || !(cc.CraftableObject is WgoData w) || !Seen.Add(w)) continue;
                 if (!HasCraftProcess(cc)) continue;
                 Wgo view = GameScene.GetWgoViewGlobal(w.UniqueId);
                 if (view == null || !view.isActiveAndEnabled || !view.HasData || view.Data != w) continue;
-                yield return new KeyValuePair<WgoData, Wgo>(w, view);
+                into.Add(new KeyValuePair<WgoData, Wgo>(w, view));
             }
+            Seen.Clear();
         }
 
         /// <summary>
@@ -52,10 +55,10 @@ namespace GK2Hud.World
         /// DropSystem.CustomUpdate (DropSystem.cs:137-160, delta de jogo a cada 0,2 s, MainGame.cs:204): ao zerar, o corpo
         /// some e vira "body_drop_grave_object". Só corpos têm timer (DropData.cs:196).
         /// </summary>
-        public static IEnumerable<KeyValuePair<DropData, Component>> DropsWithProcess()
+        public static void DropsWithProcess(List<KeyValuePair<DropData, DropView>> into)
         {
             GameSceneManager gsm = LazySingleton<GameSceneManager>.Instance;
-            if (gsm?.LoadedGameScenes == null) yield break;
+            if (gsm?.LoadedGameScenes == null) return;
             foreach (GameScene scene in gsm.LoadedGameScenes)
             {
                 List<DropData> drops = scene?.GameSceneData?.droppedItems;
@@ -63,8 +66,8 @@ namespace GK2Hud.World
                 foreach (DropData d in drops)
                 {
                     if (!IsRotting(d)) continue;
-                    if (scene.TryGetDropView(d.Item, out DropView view) && view != null && view.isActiveAndEnabled)
-                        yield return new KeyValuePair<DropData, Component>(d, view);
+                    if (scene.TryGetDropView(d.Item, out DropView view) && view != null && view.isActiveAndEnabled && view.Data == d)
+                        into.Add(new KeyValuePair<DropData, DropView>(d, view));
                 }
             }
         }

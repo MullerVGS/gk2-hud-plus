@@ -247,6 +247,15 @@ namespace GK2Hud.Tooltips
             Stack.RefreshLive(Styles.Read(), World.WorldContent.Signature);
         }
 
+        /// <summary>
+        /// O tooltip de mundo usa um proxy único que muda de objeto: quando o alvo do mundo troca, a supressão do objeto
+        /// recém-fixado não vale para o próximo (senão o proxy, já sob o mouse no vizinho, nunca sai da supressão).
+        /// </summary>
+        internal void ReleaseSuppress(RectTransform rt)
+        {
+            if (rt != null && suppressTarget == rt) suppressTarget = null;
+        }
+
         private Bubble PinnedAt(Vector2 mouse)
         {
             for (int i = Stack.Pinned.Count - 1; i >= 0; i--)

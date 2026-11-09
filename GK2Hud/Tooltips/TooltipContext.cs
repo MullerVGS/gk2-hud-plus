@@ -71,6 +71,8 @@ namespace GK2Hud.Tooltips
 
         public static RectTransform TargetOf(UITooltip t) => t == null ? null : (RectTransform)TargetField.GetValue(t);
 
+        public static void SetTarget(UITooltip t, RectTransform target) => TargetField.SetValue(t, target);
+
         public static CanvasGroup GroupOf(UITooltip t) => (CanvasGroup)CanvasGroupField.GetValue(t);
 
         public static IEnumerable<UIBubbleCorner> Corners(UITooltip t) => (List<UIBubbleCorner>)CornersField.GetValue(t);

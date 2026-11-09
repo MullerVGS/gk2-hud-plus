@@ -128,6 +128,10 @@ namespace GK2Hud.Tooltips
             // Longe antes de mostrar: o UIBasicBubble usa DOMove quando a distância é pequena e sobrescreveria a posição.
             b.Rt.position = new Vector3(-10000f, -10000f, 0f);
             RectTransform target = b.Parent != null ? b.Parent.Rt : (RectTransform)Native.Instance.transform;
+            // ShowAtTarget toca gui_hover_light quando "!activeSelf || this.target != target" (UITooltip.cs:152,166) e
+            // follow=false zera o target do clone: num redesenho (bolha já aberta, conteúdo ao vivo) o alvo é gravado antes
+            // para o som ficar só na abertura.
+            if (b.Tip.gameObject.activeSelf) Native.SetTarget(b.Tip, target);
             Native.ShowAt.Invoke(b.Tip, new object[] { data, target, UIBasicBubble.ForceCornerPosition.Auto, false, Vector2.zero, TooltipPlacementPriority.TopRight });
             if (g != null) { g.alpha = 1f; g.interactable = true; g.blocksRaycasts = true; }
             RectTransform image = PlaceImage(b);

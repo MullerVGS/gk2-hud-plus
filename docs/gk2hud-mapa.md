@@ -153,6 +153,28 @@ do meio fixa como os outros tooltips. Config `[World] Enabled`, `HoverDelay` (0,
 - **Teste**: `WorldHoverFeature.VirtualMouse` (+ `TooltipFeature.VirtualMouse` para fixar). Cenários
   `gk2hud-mundo-{hover,fixar,camera,janela,craft,plantar,corpo}.cs`.
 
+### Revisão 0.2.2 (09/11)
+
+- Som: `ShowAtTarget` toca `gui_hover_light` com `!activeSelf || this.target != target` (`UITooltip.cs:152,166`) e o
+  render das bolhas usa `follow=false` (zera o `target`): no redesenho de bolha já aberta o mod grava o `target` do clone
+  antes do Invoke (`Native.SetTarget`). Medido com `gk2hud-mundo-som.cs` (patch temporário em `LazyAudio.PlayAndForget`):
+  antes 7 sons em 6 s com bolha de forno fixada; depois 0, com o tempo mudando na bolha fixada e no tooltip de hover.
+- Supressão: o proxy é único; ao trocar o alvo do mundo, `TooltipFeature.ReleaseSuppress(proxy)` (forno fixado → moinho
+  ao lado, retângulo do moinho dentro do do forno: antes o moinho nunca abria).
+- Bolha fixada viva mostra "Done"/"Concluído" quando a fila acaba ou o objeto foi trocado, "Out of range"/"Fora de
+  alcance" quando o objeto existe no save mas não está carregado (`WorldContent.BuildLive`).
+- Zumbi: golpes/s simulando a recorrência da `ZombieCraftActivity.Update` no passo de 0,2 s (um golpe por update no
+  máximo, `p += mod·p`); canteiro com `clamp(clamp(M/L,0,max_cells_per_one_hit),0,3)`; zumbi artesão com ordem →
+  "Parado: o zumbi está ocupado"; fila inteira sempre "~" (+1,6 s entre itens, aviso "retirando na hora" quando o item
+  para em ReadyToFinishAutoCraft); craft estrela/autópsia descontam `CraftStartTicks`.
+- Corpo: `Alive` exige DropView ativa, não despawnando e `view.Data == drop` (DropView é poolable).
+- Não dispara construindo (ByBuilding + `BuildController.cachedInstance.IsBuildModeActive`) nem com item na mão
+  (`PlantingPlayerState`), conferido com `gk2hud-mundo-construcao.cs`.
+- Custo (`gk2hud-mundo-custo.cs`, horta, 112 Wgo tratados como candidatos): reconstrução 3,3–3,4 ms → 0,07–0,14 ms
+  (1,1 ms com cache frio), escolha 0,64–0,79 ms → 0,24–0,31 ms. Renderers em cache por GameObject (refeitos se
+  `hierarchyCount` muda, um renderer some ou após 10 s), só candidatos a ≤ 600 px da tela, bolha nativa medida só com o
+  mouse por perto, listas reaproveitadas.
+
 ### Processos do mundo (fonte: `decomp/`, levantamento de 08/11)
 
 Tempo: todo temporizador anda em segundos de jogo = `Time.deltaTime × UpdateManager.TimeMultiplier` (50 dormindo,

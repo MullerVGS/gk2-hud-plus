@@ -39,6 +39,46 @@ namespace GK2Hud.World
             return list.Count == 0 ? null : list;
         }
 
+        /// <summary>
+        /// Conteúdo da bolha fixada: o normal enquanto o processo segue; senão uma linha curta no lugar do tempo congelado.
+        /// "Concluído" quando o processo acabou ou o objeto foi trocado/removido; "Fora de alcance" quando o objeto ainda
+        /// existe no save mas a cena/visual dele não está carregada.
+        /// </summary>
+        public List<LazyWidgetDataBase> BuildLive(WorldTarget t)
+        {
+            if (t == null) return null;
+            if (t.Alive)
+            {
+                List<LazyWidgetDataBase> list = Build(t);
+                if (list != null) return list;
+                return StatusOnly(t, L10n.T(t.Drop != null ? "w_gone" : "w_done"));
+            }
+            bool exists = t.Drop != null
+                ? !t.Drop.IsRemoving && (MainGame.WorldData?.GetGameSceneDataById(t.Drop.WorldId)?.droppedItems?.Contains(t.Drop) ?? false)
+                : t.Data != null && MainGame.WorldData?.GetWgoData(t.Data.UniqueId) == t.Data && WorldProcesses.HasCraftProcess(t.Data.CraftComponent);
+            if (exists) return StatusOnly(t, L10n.T("w_out_of_range"));
+            return StatusOnly(t, L10n.T(t.Drop != null ? "w_gone" : "w_done"));
+        }
+
+        private static List<LazyWidgetDataBase> StatusOnly(WorldTarget t, string line)
+        {
+            Styles s = Styles.Read();
+            if (s == null) return null;
+            string header;
+            if (t.Drop != null)
+            {
+                ItemDef def = t.Drop.Item?.Definition;
+                header = def != null ? def.GetHeader() : t.Drop.Id;
+            }
+            else header = t.Data != null ? WgoName(t.Data) : "?";
+            return new List<LazyWidgetDataBase>
+            {
+                Text(header, s.Header),
+                new UITooltipSeparatorWidgetData(),
+                Text(line, s.Description),
+            };
+        }
+
         // ---------------- corpo no chão ----------------
 
         /// <summary>Corpo largado no chão: some quando o timer zera (DropSystem.cs:137-160) e vira body_drop_grave_object.</summary>
@@ -89,7 +129,17 @@ namespace GK2Hud.World
             try { mastery = el.ParamsData.MasteryValue; lockv = Mathf.Max(1, el.ParamsData.MasteryLock); }
             catch { }
             bool zombie = w.Worker is ZombieWgoData;
-            float cells = mastery >= lockv ? Mathf.Clamp(mastery / lockv, 1, 3) : zombie ? Mathf.Clamp01(mastery / (float)lockv) : 1f;
+            // Como o jogo (CraftComponent.cs:1397-1408): M ≥ L → clamp(clamp(M/L, 0, max_cells_per_one_hit), 0, 3) células
+            // boas; senão sorteio de 1 boa com chance M/L. Sem zumbi, um tick de 0 células ainda avança 1 (falha,
+            // CraftElementBase.Update :506); com zumbi, 0 não avança.
+            float cells;
+            if (mastery >= lockv)
+            {
+                int maxCells = ConstDef.Get("max_cells_per_one_hit").IntValue;
+                cells = Mathf.Clamp(Mathf.Clamp(mastery / lockv, 0, maxCells), 0, 3);
+            }
+            else cells = zombie ? Mathf.Clamp01(mastery / (float)lockv) : 0f;
+            if (!zombie && cells < 1f) cells = 1f;
             if (done >= total) lines.Add(L10n.T("w_finishing"));
             else if (cc.IsWorkPausedByMove()) lines.Add(L10n.T("w_paused_move"));
             else if (cells > 0f)
@@ -262,6 +312,9 @@ namespace GK2Hud.World
             else if (ready) state = L10n.T("w_finishing");
             else if (!started) state = L10n.T(cc.NeedsZombieOperatorToStartCraft ? "w_wait_zombie_start" : "w_not_started");
             else if (cc.IsWorkPausedByMove()) state = L10n.T("w_paused_move");
+            // Zumbi artesão com ordem pendente para o craft: CraftComponent.Update sai cedo no autocraft (:721) e a
+            // ZombieCraftActivity não bate no manual (ZombieCraftActivity.cs:99).
+            else if (zombie != null && zombie.CrafterOrders.Count > 0) state = L10n.T("w_zombie_busy");
             else if (auto)
             {
                 float left = AutoSecondsLeft(cc, el);
@@ -283,9 +336,10 @@ namespace GK2Hud.World
             List<CraftElementBase> queue = cc.CraftElementsQueue;
             if (auto && queue.Count > 0)
             {
-                float all = QueueSecondsLeft(cc, w, el, out bool infinite);
+                float all = QueueSecondsLeft(cc, w, el, out bool infinite, out bool collect);
                 if (infinite) lines.Add(Label(s, L10n.T("w_queue_time")) + L10n.T("w_infinite"));
-                else if (all > 0f && (queue.Count > 1 || el.Count > 1)) lines.Add(Label(s, L10n.T("w_queue_time")) + Clock(s, all));
+                else if (all > 0f && (queue.Count > 1 || el.Count > 1))
+                    lines.Add(Label(s, L10n.T("w_queue_time")) + Clock(s, all, approx: true) + (collect ? " " + L10n.T("w_collect_each") : ""));
             }
 
             // Quem trabalha.
@@ -342,10 +396,18 @@ namespace GK2Hud.World
             return Mathf.Max(0f, left * per - WorldProcesses.TickElapsed(cc));
         }
 
-        /// <summary>Atual (com repetições) + elementos seguintes da fila, cada um com duração do balanço + perks (CraftElementBase.Start :482).</summary>
-        private static float QueueSecondsLeft(CraftComponent cc, WgoData w, CraftElementBase cur, out bool infinite)
+        /// <summary>Espera fixa entre itens da fila: segura 0,6 s antes de concluir (FINISH_HELD_TIME, CraftComponent.cs:23,825) e tenta reiniciar a cada 1 s (QueueDelayed, :725-744).</summary>
+        private const float BetweenItemsSeconds = 1.6f;
+
+        /// <summary>
+        /// Estimativa (sempre "~"): atual (com repetições) + seguintes da fila, cada um com duração do balanço + perks
+        /// (CraftElementBase.Start :482) e a espera entre itens. Autocraft visível sem autoFinishAutoCraft para em
+        /// ReadyToFinishAutoCraft até alguém retirar (CraftComponent.cs:871): <paramref name="collect"/> avisa isso.
+        /// </summary>
+        private static float QueueSecondsLeft(CraftComponent cc, WgoData w, CraftElementBase cur, out bool infinite, out bool collect)
         {
             infinite = false;
+            collect = false;
             float per = WorldProcesses.SecondsPerTick(cc);
             float sum = 0f;
             if (cur.IsStarted) sum += AutoSecondsLeft(cc, cur);
@@ -353,25 +415,37 @@ namespace GK2Hud.World
             {
                 if (q == null || q.Def == null || q.Count <= 0) continue;
                 if (q.IsInfinite) { infinite = true; return 0f; }
+                if (q.Def.isAuto && !q.Def.isHidden && !q.Def.autoFinishAutoCraft) collect = true;
                 int reps = q == cur && cur.IsStarted ? q.Count - 1 : q.Count;
                 if (reps <= 0) continue;
                 if (!q.Def.isAuto) continue;
-                sum += reps * DurationTicks(q, w) * per;
+                sum += reps * (DurationTicks(q, w) * per + BetweenItemsSeconds);
             }
             return sum;
         }
 
+        /// <summary>
+        /// Ticks que o item ainda vai andar ao começar: duração + perks, menos o adiantamento com que craft estrela e de
+        /// autópsia começam (CraftStartTicks, CraftElementBase.Start :478).
+        /// </summary>
         private static int DurationTicks(CraftElementBase q, WgoData w)
         {
             if (q.Def.duration == null || !q.Def.duration.HasExpression) return 0;
-            int add = 0;
-            try { add = q.ParamsData != null ? q.ParamsData.PerksCraftAddTotalProgressTicksValue : 0; }
-            catch { add = 0; }
-            return Mathf.Max(0, q.Def.duration.EvaluateInt(w) + add);
+            int add = 0, head = 0;
+            try
+            {
+                if (q.ParamsData != null)
+                {
+                    add = q.ParamsData.PerksCraftAddTotalProgressTicksValue;
+                    if (q.Def.isStarCraft || q.Def.isAutopsyCraft) head = q.ParamsData.CraftStartTicks;
+                }
+            }
+            catch { add = head = 0; }
+            return Mathf.Max(0, q.Def.duration.EvaluateInt(w) + add - head);
         }
 
         /// <summary>
-        /// Segundos por tick com zumbi (craft comum): golpe a cada 1 s × (1 + modificador da ferramenta), a cada
+        /// Segundos por tick com zumbi (craft comum): golpes por segundo simulados (ZombieHitsPerSecond), a cada
         /// zombie_craft_sub_ticks_count golpes soma clamp(max(maestria, trava)/trava, 0, max_cells_per_one_hit)
         /// (ZombieCraftActivity.cs:83-150 e GetActionDamage :160). Craft estrela é aleatório: estimativa pela média.
         /// </summary>
@@ -394,10 +468,39 @@ namespace GK2Hud.World
             if (cells <= 0f) return -1f;
             float mod = 0f;
             Item hand = z.Hand;
-            if (hand != null && !hand.IsEmpty && el.Def is CraftDef cd && cd.zombieSpeedItemModificators != null)
+            if (hand != null && !hand.IsEmpty && hand.Definition != null && hand.Definition.isTool && !el.Def.isAuto
+                && el.Def is CraftDef cd && cd.zombieSpeedItemModificators != null)
                 foreach (GameResAtom a in cd.zombieSpeedItemModificators.List)
                     if (a.type == hand.id) { mod = a.value; break; }
-            return sub / ((1f + mod) * cells);
+            float hitsPerSecond = ZombieHitsPerSecond(mod);
+            return hitsPerSecond > 0f ? sub / (hitsPerSecond * cells) : -1f;
+        }
+
+        private static readonly Dictionary<float, float> HitsPerSecondCache = new Dictionary<float, float>();
+
+        /// <summary>
+        /// Golpes (sub-ticks) por segundo de jogo simulando a recorrência da ZombieCraftActivity.Update (:114-145) no passo
+        /// do CraftSystem (0,2 s, MainGame.cs:204): p += dt; p += mod·p; se p ≥ 1, p -= floor(p) e conta UM golpe
+        /// (UseTool soma 1 sub-tick por chamada, :231-246). Em float, como o jogo.
+        /// </summary>
+        private static float ZombieHitsPerSecond(float mod)
+        {
+            if (HitsPerSecondCache.TryGetValue(mod, out float v)) return v;
+            const float dt = 0.2f;
+            const int steps = 3000;   // 600 s de jogo
+            float p = 0f;
+            int hits = 0;
+            for (int i = 0; i < steps; i++)
+            {
+                p += dt;
+                p += mod * p;
+                if (!(p >= 1f)) continue;
+                p -= Mathf.FloorToInt(p);
+                hits++;
+            }
+            v = hits / (steps * dt);
+            HitsPerSecondCache[mod] = v;
+            return v;
         }
 
         private static string WorkerText(CraftComponent cc, WgoData w, ZombieWgoData zombie, bool auto)
@@ -464,7 +567,7 @@ namespace GK2Hud.World
                 string amount = string.Equals(d.GetHeader(), label, System.StringComparison.OrdinalIgnoreCase)
                     ? Links.Wrap(Links.Item, d.id, Num(s, have.ToString()))
                     : ItemLink(d) + " " + Num(s, have.ToString());
-                return Label(s, label) + amount + " · " + L10n.T("w_fuel_crafts", Num(s, (have / per).ToString()));
+                return Label(s, label) + amount + " · " + L10n.T(have / per == 1 ? "w_fuel_craft1" : "w_fuel_crafts", Num(s, (have / per).ToString()));
             }
             return null;
         }

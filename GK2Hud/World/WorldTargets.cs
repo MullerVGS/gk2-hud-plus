@@ -1,25 +1,33 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace GK2Hud.World
 {
     /// <summary>
     /// Um objeto do mundo com algo em andamento: o Wgo (estação, canteiro...) ou um item no chão (corpo apodrecendo).
-    /// Guarda os renderers para projetar o retângulo de tela a cada frame enquanto é o alvo.
+    /// Os renderers vêm do cache de <see cref="WorldTargets"/>; o retângulo de tela é projetado a cada escolha/frame.
     /// </summary>
     internal sealed class WorldTarget
     {
         public Wgo View;
         public WgoData Data;
         public DropData Drop;
-        public Component DropView;   // DropView do item no chão
+        public DropView DropView;
         public Renderer[] Renderers;
         public Rect Rect;            // px de tela: objeto ∪ bolha nativa
         public Rect BodyRect;        // px de tela: só o objeto
         public Vector2 Center;       // px de tela: centro visual do objeto
         public bool RayHit;          // atingido pelo raycast físico do mouse nesta escolha
 
-        public bool Alive => Drop != null ? DropView != null : View != null && View.isActiveAndEnabled && View.HasData && View.Data == Data;
+        /// <summary>
+        /// Wgo: view ativa e ainda ligada a este WgoData. Corpo: DropView é poolable (DropView.cs:11,195,225), então exige
+        /// view ativa, não despawnando e ainda mostrando este DropData.
+        /// </summary>
+        public bool Alive => Drop != null
+            ? DropView != null && DropView.isActiveAndEnabled && !DropView.IsDespawning && DropView.Data == Drop
+            : View != null && View.isActiveAndEnabled && View.HasData && View.Data == Data;
 
         public static bool Same(WorldTarget a, WorldTarget b)
         {
@@ -27,18 +35,30 @@ namespace GK2Hud.World
             return a.Drop != null ? a.Drop == b.Drop : a.Data != null && a.Data == b.Data;
         }
 
-        public void UpdateRect()
+        public Vector3 Pivot => Drop != null ? DropView.transform.position : View.transform.position;
+
+        /// <summary>Retângulo do objeto; a bolha nativa só entra quando <paramref name="withBubble"/> (alvo atual ou mouse perto).</summary>
+        public void UpdateBody()
         {
             BodyRect = WorldTargets.ProjectRenderers(Renderers, out Center);
             if (BodyRect.width <= 0f)
             {
-                Vector3 p = Drop != null ? DropView.transform.position : View.transform.position;
-                Vector2 s = WorldTargets.Project(p);
+                Vector2 s = WorldTargets.Project(Pivot);
                 BodyRect = new Rect(s.x - 24f, s.y, 48f, 48f);
                 Center = BodyRect.center;
             }
             Rect = BodyRect;
-            if (View != null && WorldTargets.NativeBubbleRect(Data, out Rect b)) Rect = WorldTargets.Union(Rect, b);
+        }
+
+        public void UpdateRect()
+        {
+            UpdateBody();
+            AddBubble();
+        }
+
+        public void AddBubble()
+        {
+            if (View != null && WorldTargets.NativeBubbleRect(Data, out Rect b)) Rect = WorldTargets.Union(BodyRect, b);
         }
 
         public string Describe()
@@ -49,20 +69,43 @@ namespace GK2Hud.World
     }
 
     /// <summary>
-    /// Candidatos (objetos com algo em andamento na cena, refeitos a cada 1 s) e escolha do alvo sob o mouse: entre os
-    /// que contêm o cursor no retângulo (objeto ∪ bolha nativa) ou foram atingidos pelo raycast físico (layers 6 e 16),
-    /// vence o de centro mais próximo do cursor. O raycast sozinho erra (o vizinho da frente rouba), o retângulo
-    /// sozinho também (renderers grandes): a combinação resolve os dois.
+    /// Candidatos (objetos com algo em andamento na cena, refeitos a cada 1 s, só os perto da tela) e escolha do alvo sob
+    /// o mouse: entre os que contêm o cursor no retângulo (objeto ∪ bolha nativa) ou foram atingidos pelo raycast físico
+    /// (layers 6 e 16), vence o de centro mais próximo do cursor. O raycast sozinho erra (o vizinho da frente rouba), o
+    /// retângulo sozinho também (renderers grandes): a combinação resolve os dois.
+    /// Custo: renderers por Wgo em cache (refeito só se a hierarquia muda, um renderer some ou a cada 10 s), listas
+    /// reaproveitadas, bolha nativa medida só para candidatos com o mouse por perto.
     /// </summary>
     internal sealed class WorldTargets
     {
         private const float RebuildInterval = 1f;
+        private const float RendererCacheSeconds = 10f;
+        private const float ScreenMargin = 600f;   // px fora da tela que ainda contam (a câmera anda entre reconstruções)
+        private const float BubbleReachX = 160f, BubbleReachUp = 260f;   // px: a bolha nativa fica sobre o objeto
         private const int RayMask = (1 << 6) | (1 << 16);
         private const float RayBonus = 24f;   // px: o objeto que o raio físico atinge ganha desempate
 
-        private readonly List<WorldTarget> candidates = new List<WorldTarget>();
-        private readonly Dictionary<WgoData, WorldTarget> byData = new Dictionary<WgoData, WorldTarget>();
-        private readonly Dictionary<DropData, WorldTarget> byDrop = new Dictionary<DropData, WorldTarget>();
+        private sealed class RendererCache
+        {
+            public Renderer[] Renderers;
+            public int HierarchyCount;
+            public float Expires;
+        }
+
+        private List<WorldTarget> candidates = new List<WorldTarget>();
+        private List<WorldTarget> spare = new List<WorldTarget>();
+        private Dictionary<WgoData, WorldTarget> byData = new Dictionary<WgoData, WorldTarget>();
+        private Dictionary<WgoData, WorldTarget> byDataNext = new Dictionary<WgoData, WorldTarget>();
+        private Dictionary<DropData, WorldTarget> byDrop = new Dictionary<DropData, WorldTarget>();
+        private Dictionary<DropData, WorldTarget> byDropNext = new Dictionary<DropData, WorldTarget>();
+        private static readonly Dictionary<int, RendererCache> RendererCaches = new Dictionary<int, RendererCache>();
+        private static readonly Dictionary<Type, bool> SkippedRendererTypes = new Dictionary<Type, bool>();
+        private static readonly List<Renderer> TmpRenderers = new List<Renderer>();
+        private static readonly List<Renderer> TmpSolid = new List<Renderer>();
+        private static readonly List<Renderer> TmpFlat = new List<Renderer>();
+        private static readonly List<Graphic> TmpGraphics = new List<Graphic>();
+        private readonly List<KeyValuePair<WgoData, Wgo>> wgoBuffer = new List<KeyValuePair<WgoData, Wgo>>();
+        private readonly List<KeyValuePair<DropData, DropView>> dropBuffer = new List<KeyValuePair<DropData, DropView>>();
         private readonly RaycastHit[] hits = new RaycastHit[32];
         private float nextRebuild;
         private static readonly Vector3[] Corners = new Vector3[4];
@@ -90,8 +133,11 @@ namespace GK2Hud.World
             foreach (WorldTarget c in candidates)
             {
                 if (!c.Alive) continue;
-                c.UpdateRect();
-                if (c.Rect.xMax < 0f || c.Rect.xMin > sw || c.Rect.yMax < 0f || c.Rect.yMin > sh) continue;
+                c.UpdateBody();
+                Rect b = c.BodyRect;
+                if (b.xMax < -BubbleReachX || b.xMin > sw + BubbleReachX || b.yMax < 0f || b.yMin > sh) continue;
+                if (mouse.x >= b.xMin - BubbleReachX && mouse.x <= b.xMax + BubbleReachX && mouse.y >= b.yMin && mouse.y <= b.yMax + BubbleReachUp)
+                    c.AddBubble();
                 if (!c.RayHit && !c.Rect.Contains(mouse)) continue;
                 float score = (c.Center - mouse).magnitude - (c.RayHit ? RayBonus : 0f);
                 if (score < bestScore) { bestScore = score; best = c; }
@@ -104,47 +150,115 @@ namespace GK2Hud.World
         private void Rebuild()
         {
             nextRebuild = Time.unscaledTime + RebuildInterval;
-            var keepData = new Dictionary<WgoData, WorldTarget>();
-            var keepDrop = new Dictionary<DropData, WorldTarget>();
-            candidates.Clear();
-            foreach (KeyValuePair<WgoData, Wgo> kv in WorldProcesses.WgosWithProcess())
+            float sw = Screen.width, sh = Screen.height;
+            spare.Clear();
+            byDataNext.Clear();
+            byDropNext.Clear();
+
+            wgoBuffer.Clear();
+            WorldProcesses.WgosWithProcess(wgoBuffer);
+            foreach (KeyValuePair<WgoData, Wgo> kv in wgoBuffer)
             {
+                if (!NearScreen(kv.Value.transform.position, sw, sh)) continue;
                 if (!byData.TryGetValue(kv.Key, out WorldTarget t) || t.View != kv.Value)
                     t = new WorldTarget { View = kv.Value, Data = kv.Key };
-                t.Renderers = RenderersOf(kv.Value.gameObject);   // partes do objeto mudam (estágios do canteiro, AddWgoPart)
-                keepData[kv.Key] = t;
-                candidates.Add(t);
+                t.Renderers = RenderersCached(kv.Value.gameObject);
+                byDataNext[kv.Key] = t;
+                spare.Add(t);
             }
-            foreach (KeyValuePair<DropData, Component> kv in WorldProcesses.DropsWithProcess())
+            dropBuffer.Clear();
+            WorldProcesses.DropsWithProcess(dropBuffer);
+            foreach (KeyValuePair<DropData, DropView> kv in dropBuffer)
             {
+                if (!NearScreen(kv.Value.transform.position, sw, sh)) continue;
                 if (!byDrop.TryGetValue(kv.Key, out WorldTarget t) || t.DropView != kv.Value)
                     t = new WorldTarget { Drop = kv.Key, DropView = kv.Value };
-                t.Renderers = RenderersOf(kv.Value.gameObject);
-                keepDrop[kv.Key] = t;
-                candidates.Add(t);
+                t.Renderers = RenderersCached(kv.Value.gameObject);
+                byDropNext[kv.Key] = t;
+                spare.Add(t);
             }
-            byData.Clear();
-            foreach (var kv in keepData) byData[kv.Key] = kv.Value;
-            byDrop.Clear();
-            foreach (var kv in keepDrop) byDrop[kv.Key] = kv.Value;
+            (candidates, spare) = (spare, candidates);
+            (byData, byDataNext) = (byDataNext, byData);
+            (byDrop, byDropNext) = (byDropNext, byDrop);
+            if (RendererCaches.Count > 512) RendererCaches.Clear();
         }
 
-        private static Renderer[] RenderersOf(GameObject go)
+        private static bool NearScreen(Vector3 world, float sw, float sh)
         {
-            // Sombras (sprites "_sh" deitados no chão), máscaras "blackout", luzes falsas e partículas aumentam muito o
-            // retângulo sem ser o objeto: ficam de fora. Objeto todo chato (canteiro, corpo): usa o que houver.
-            var solid = new List<Renderer>();
-            var flat = new List<Renderer>();
-            foreach (Renderer r in go.GetComponentsInChildren<Renderer>())
+            Vector2 s = Project(world);
+            return s.x > -ScreenMargin && s.x < sw + ScreenMargin && s.y > -ScreenMargin && s.y < sh + ScreenMargin;
+        }
+
+        /// <summary>
+        /// Renderers que formam o objeto, em cache por GameObject. Sombras ("_sh"), máscaras "blackout", luzes falsas e
+        /// partículas aumentam muito o retângulo sem ser o objeto: ficam de fora. Objeto todo chato (canteiro, corpo): usa o
+        /// que houver. Refeito quando a hierarquia muda (AddWgoPart, estágios), um renderer some ou o cache vence.
+        /// </summary>
+        internal static Renderer[] RenderersCached(GameObject go)
+        {
+            int id = go.GetInstanceID();
+            int hc = go.transform.hierarchyCount;
+            float now = Time.unscaledTime;
+            if (RendererCaches.TryGetValue(id, out RendererCache c) && c.HierarchyCount == hc && now < c.Expires && AllAlive(c.Renderers))
+                return c.Renderers;
+            TmpRenderers.Clear();
+            TmpSolid.Clear();
+            TmpFlat.Clear();
+            go.GetComponentsInChildren(TmpRenderers);
+            foreach (Renderer r in TmpRenderers)
             {
-                string tn = r.GetType().Name;
-                if (tn == "ParticleSystemRenderer" || tn == "TrailRenderer" || tn == "LineRenderer") continue;
+                Type t = r.GetType();
+                if (!SkippedRendererTypes.TryGetValue(t, out bool skip))
+                {
+                    string tn = t.Name;
+                    SkippedRendererTypes[t] = skip = tn == "ParticleSystemRenderer" || tn == "TrailRenderer" || tn == "LineRenderer";
+                }
+                if (skip) continue;
                 string n = r.name;
-                if (n.EndsWith("_sh") || n.Contains("blackout") || n.Contains("LightFaker") || n.Contains("shadow")) continue;
-                if (r.bounds.size.y < 0.25f) flat.Add(r);
-                else solid.Add(r);
+                if (n.EndsWith("_sh", StringComparison.Ordinal) || n.Contains("blackout") || n.Contains("LightFaker") || n.Contains("shadow")) continue;
+                if (r.bounds.size.y < 0.25f) TmpFlat.Add(r);
+                else TmpSolid.Add(r);
             }
-            return (solid.Count > 0 ? solid : flat).ToArray();
+            Renderer[] arr = (TmpSolid.Count > 0 ? TmpSolid : TmpFlat).ToArray();
+            if (c == null) RendererCaches[id] = c = new RendererCache();
+            c.Renderers = arr;
+            c.HierarchyCount = hc;
+            c.Expires = now + RendererCacheSeconds;
+            return arr;
+        }
+
+        private static bool AllAlive(Renderer[] rs)
+        {
+            foreach (Renderer r in rs) if (r == null) return false;
+            return true;
+        }
+
+        /// <summary>
+        /// Usado só pelo cenário gk2hud-mundo-custo.cs: o caminho de reconstrução + escolha aplicado a uma lista arbitrária
+        /// de Wgos (estresse: como se todos estivessem rebrotando).
+        /// </summary>
+        internal string StressMeasure(List<Wgo> wgos, Vector2 mouse)
+        {
+            var sw = System.Diagnostics.Stopwatch.StartNew();
+            var list = new List<WorldTarget>(wgos.Count);
+            float w = Screen.width, h = Screen.height;
+            int near = 0;
+            foreach (Wgo g in wgos)
+            {
+                if (g == null || !NearScreen(g.transform.position, w, h)) continue;
+                near++;
+                list.Add(new WorldTarget { View = g, Data = g.Data, Renderers = RenderersCached(g.gameObject) });
+            }
+            double rebuild = sw.Elapsed.TotalMilliseconds;
+            sw.Restart();
+            int bubbles = 0;
+            foreach (WorldTarget c in list)
+            {
+                c.UpdateBody();
+                Rect b = c.BodyRect;
+                if (mouse.x >= b.xMin - BubbleReachX && mouse.x <= b.xMax + BubbleReachX && mouse.y >= b.yMin && mouse.y <= b.yMax + BubbleReachUp) { c.AddBubble(); bubbles++; }
+            }
+            return $"{wgos.Count} Wgo ({near} perto da tela) · reconstrução {rebuild:0.00} ms · escolha {sw.Elapsed.TotalMilliseconds:0.00} ms ({bubbles} bolhas medidas)";
         }
 
         // ---------------- projeção ----------------
@@ -196,7 +310,9 @@ namespace GK2Hud.World
             if (mgr == null || data == null || !mgr.TryGetDisplayedBubble(data.UniqueId, out UIObjectBubble bubble) || bubble == null) return false;
             if (!bubble.gameObject.activeInHierarchy || bubble.IsOutOfScreen) return false;
             bool any = false;
-            foreach (UnityEngine.UI.Graphic g in bubble.GetComponentsInChildren<UnityEngine.UI.Graphic>())
+            TmpGraphics.Clear();
+            bubble.GetComponentsInChildren(TmpGraphics);
+            foreach (Graphic g in TmpGraphics)
             {
                 if (!g.isActiveAndEnabled || g.color.a <= 0.01f) continue;
                 g.rectTransform.GetWorldCorners(Corners);
@@ -205,6 +321,7 @@ namespace GK2Hud.World
                 rect = any ? Union(rect, r) : r;
                 any = true;
             }
+            TmpGraphics.Clear();
             return any;
         }
 

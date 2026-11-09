@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using BepInEx.Configuration;
 using GK2Hud.Tooltips;
+using HarmonyLib;
 using LazyBearTechnology;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -110,6 +111,7 @@ namespace GK2Hud.World
                 if (!WorldTarget.Same(picked, target))
                 {
                     HideOwn();
+                    TooltipFeature.Current?.ReleaseSuppress(proxy);
                     target = picked;
                     targetSince = now;
                     dismissed = false;
@@ -155,7 +157,7 @@ namespace GK2Hud.World
             dismissed = false;
         }
 
-        /// <summary>Gameplay livre com mouse: sem janela, sem gamepad, sem cutscene/diálogo/sono, sem mira/ataque.</summary>
+        /// <summary>Gameplay livre com mouse: sem janela, sem gamepad, sem cutscene/diálogo/sono, sem mira/ataque, sem construir nem carregar objeto para plantar/colocar.</summary>
         private static bool Ready()
         {
             if (LazyInput.IsGamepadActive) return false;
@@ -167,9 +169,16 @@ namespace GK2Hud.World
             if (!pc.IsControlsEnabledExcept(TakenControlType.ByWork)) return false;
             if (PlayerInputHandler.IsAttackFocusHeld()) return false;
             SSMState st = pc.Ssm?.CurState;
-            if (st != null && st.GetType().Name.StartsWith("Attack", StringComparison.Ordinal)) return false;
+            if (st != null && (st is PlantingPlayerState || st.GetType().Name.StartsWith("Attack", StringComparison.Ordinal))) return false;
+            // Modo de construção (BuildManager já tira o controle por ByBuilding; o campo direto evita o getter Instance,
+            // que procura na cena e loga erro quando não acha).
+            BuildController bc = BuildControllerRef();
+            if (bc != null && bc.IsBuildModeActive) return false;
             return Native.Instance != null;
         }
+
+        private static readonly AccessTools.FieldRef<BuildController> BuildControllerRef =
+            AccessTools.StaticFieldRefAccess<BuildController>(AccessTools.Field(typeof(BuildController), "cachedInstance"));
 
         /// <summary>
         /// Ponteiro sobre UI (HUD, bolhas fixadas...). Raycast próprio em vez de IsPointerOverGameObject para valer também
@@ -244,7 +253,7 @@ namespace GK2Hud.World
         {
             if (tooltipTarget == null || tooltipTarget != proxy || target == null) return null;
             WorldTarget t = target;
-            return () => t.Alive ? Content.Build(t) : null;
+            return () => Content.BuildLive(t);
         }
 
         internal bool IsProxy(RectTransform rt) => rt != null && rt == proxy;
