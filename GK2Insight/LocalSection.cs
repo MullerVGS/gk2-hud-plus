@@ -38,6 +38,19 @@ namespace GK2Insight
             }
         }
 
+        /// <summary>Qualidade da zona somada à mão, sem gravar wz_* no save.</summary>
+        public static float TotalQuality(WorldZoneData wz)
+        {
+            List<SGuid> ids = wz.Definition != null && wz.Definition.hasCustomQualityZones ? wz.customQualityWgoDataList : wz.wgoDataList;
+            float total = wz.additionalQuality;
+            foreach (SGuid g in ids)
+            {
+                WgoData w = MainGame.WorldData.GetWgoData(g);
+                if (w != null) total += w.Quality;
+            }
+            return total;
+        }
+
         private static void WriteQuality(Panel p, WorldZoneData wz)
         {
             List<SGuid> ids = wz.Definition != null && wz.Definition.hasCustomQualityZones ? wz.customQualityWgoDataList : wz.wgoDataList;

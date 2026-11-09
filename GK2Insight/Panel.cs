@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace GK2Insight
 {
-    /// <summary>Painel de texto de debug: fonte monoespaçada, seções e colunas alinhadas.</summary>
+    /// <summary>Texto de um painel de debug: seções e colunas alinhadas (desenhado por PanelView).</summary>
     internal class Panel
     {
         private static readonly Regex Tag = new Regex("<[^>]+>", RegexOptions.Compiled);
@@ -17,10 +17,6 @@ namespace GK2Insight
         public static string Col(string hex, string s) => $"<color={hex}>{s}</color>";
 
         private readonly StringBuilder sb = new StringBuilder(2048);
-        private GUIStyle style;
-        private int styleSize;
-        private Texture2D background;
-        private Font mono;
 
         public string Text { get; private set; } = "";
 
@@ -61,45 +57,6 @@ namespace GK2Insight
             }
         }
 
-        /// <summary>x é a borda esquerda, ou a direita quando alignRight.</summary>
-        public void Draw(float x, float y, int fontSize, float maxHeight, bool alignRight = false)
-        {
-            if (string.IsNullOrEmpty(Text)) return;
-            EnsureStyle(fontSize);
-            GUIContent content = new GUIContent(Text);
-            Vector2 size = style.CalcSize(content);
-            if (alignRight) x -= size.x;
-            GUI.Box(new Rect(x, y, size.x, Mathf.Min(size.y, maxHeight)), content, style);
-        }
-
         private static int VisibleLength(string s) => s == null ? 0 : Tag.Replace(s, "").Length;
-
-        private void EnsureStyle(int fontSize)
-        {
-            if (style != null && styleSize == fontSize) return;
-            if (background == null)
-            {
-                background = new Texture2D(1, 1);
-                background.SetPixel(0, 0, new Color(0.04f, 0.04f, 0.06f, 0.78f));
-                background.Apply();
-            }
-            if (mono == null)
-            {
-                mono = Font.CreateDynamicFontFromOSFont(new[] { "Consolas", "Cascadia Mono", "Courier New" }, fontSize);
-            }
-            style = new GUIStyle(GUI.skin.box)
-            {
-                font = mono,
-                fontSize = fontSize,
-                alignment = TextAnchor.UpperLeft,
-                richText = true,
-                wordWrap = false,
-                clipping = TextClipping.Clip,
-                padding = new RectOffset(10, 10, 8, 8)
-            };
-            style.normal.background = background;
-            style.normal.textColor = new Color(0.9f, 0.89f, 0.85f);
-            styleSize = fontSize;
-        }
     }
 }

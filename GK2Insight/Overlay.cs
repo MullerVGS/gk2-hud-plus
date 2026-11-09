@@ -39,10 +39,29 @@ namespace GK2Insight
         private readonly List<Collider> hitboxes = new List<Collider>();
         private readonly List<Vector3> lineBuffer = new List<Vector3>(4096);
         private readonly List<Color> colorBuffer = new List<Color>(2048);
+        private readonly Collider[] wideBuffer = new Collider[4096];
         private float nextScan;
+        private Matrix4x4 viewProj, worldToCam;
+        private Rect pixelRect;
+        private bool useRenderTarget;
+        private readonly Vector3[] corners = new Vector3[8], projected = new Vector3[8], sortBuf = new Vector3[8], foot = new Vector3[4];
+        private readonly float[] keys = new float[8], angles = new float[4];
+        private static readonly float[] CircleCos = new float[21], CircleSin = new float[21];
+
+        static Overlay()
+        {
+            for (int i = 0; i <= 20; i++)
+            {
+                CircleCos[i] = Mathf.Cos(i * Mathf.PI * 2f / 20);
+                CircleSin[i] = Mathf.Sin(i * Mathf.PI * 2f / 20);
+            }
+        }
         private Material material;
         private Camera cam;
         private MainCamera mainCamera;
+
+        /// <summary>Retângulos de tela (origem embaixo à esquerda) onde o overlay não desenha: os painéis.</summary>
+        public readonly List<Rect> Masks = new List<Rect>(2);
 
         public float Radius = 9f;
         public bool ShowColliders = true, ShowPaths = true, ShowDocks = true, ShowHitboxes = true;
@@ -53,9 +72,10 @@ namespace GK2Insight
         public int HurtCount => hurtboxes.Count;
         public int ActiveHitCount { get; private set; }
 
-        public void Refresh()
+        /// <summary>Varre em volta do jogador a cada 0,3 s; true quando varreu.</summary>
+        public bool Refresh()
         {
-            if (Time.unscaledTime < nextScan || MainGame.PlayerController == null) return;
+            if (Time.unscaledTime < nextScan || MainGame.PlayerController == null) return false;
             nextScan = Time.unscaledTime + 0.3f;
             Vector3 center = MainGame.PlayerController.transform.position;
             colliders.Clear();
@@ -75,19 +95,19 @@ namespace GK2Insight
             }
             if (ShowHitboxes)
             {
+                // Consulta física local em vez de FindObjectsByType (varria a cena inteira: picos de ~25 ms medidos).
                 hurtboxes.Clear();
                 hitboxes.Clear();
-                foreach (HitZone hz in UnityEngine.Object.FindObjectsByType<HitZone>(FindObjectsSortMode.None))
+                int m = Physics.OverlapSphereNonAlloc(center, Radius * 2f, wideBuffer, ~0, QueryTriggerInteraction.Collide);
+                for (int i = 0; i < m; i++)
                 {
-                    Collider c = hz.GetComponent<Collider>();
-                    if (c != null && (c.bounds.center - center).sqrMagnitude < Radius * Radius * 4f) hurtboxes.Add(c);
-                }
-                foreach (SwordHitBox hb in UnityEngine.Object.FindObjectsByType<SwordHitBox>(FindObjectsSortMode.None))
-                {
-                    Collider c = hb.GetComponent<Collider>();
-                    if (c != null) hitboxes.Add(c);
+                    Collider c = wideBuffer[i];
+                    if (c == null) continue;
+                    if (c.TryGetComponent(out HitZone _)) hurtboxes.Add(c);
+                    else if (c.TryGetComponent(out SwordHitBox _)) hitboxes.Add(c);
                 }
             }
+            return true;
         }
 
         /// <summary>Chamar no OnGUI.</summary>
@@ -98,6 +118,7 @@ namespace GK2Insight
             if (system == null || system.WorldCamera == null) return;
             cam = system.WorldCamera;
             mainCamera = system.MainCamera;
+            BeginProjection();
             lineBuffer.Clear();
             colorBuffer.Clear();
 
@@ -184,9 +205,10 @@ namespace GK2Insight
                 {
                     Transform t = box.transform;
                     Vector3 h = box.size * 0.5f;
-                    Vector3[] k = new Vector3[8];
+                    Vector3[] k = corners;
+                    Matrix4x4 m = t.localToWorldMatrix;
                     for (int i = 0; i < 8; i++)
-                        k[i] = t.TransformPoint(box.center + new Vector3((i & 1) == 0 ? -h.x : h.x, (i & 2) == 0 ? -h.y : h.y, (i & 4) == 0 ? -h.z : h.z));
+                        k[i] = m.MultiplyPoint3x4(box.center + new Vector3((i & 1) == 0 ? -h.x : h.x, (i & 2) == 0 ? -h.y : h.y, (i & 4) == 0 ? -h.z : h.z));
                     if (footprint) AddFootprint(k, color);
                     else AddBox(k, color);
                     break;
@@ -215,7 +237,7 @@ namespace GK2Insight
                 default:
                 {
                     Bounds bb = c.bounds;
-                    Vector3[] k = new Vector3[8];
+                    Vector3[] k = corners;
                     for (int i = 0; i < 8; i++)
                         k[i] = bb.center + new Vector3((i & 1) == 0 ? -bb.extents.x : bb.extents.x, (i & 2) == 0 ? -bb.extents.y : bb.extents.y, (i & 4) == 0 ? -bb.extents.z : bb.extents.z);
                     color.a *= 0.7f;
@@ -226,32 +248,42 @@ namespace GK2Insight
             }
         }
 
+        private static readonly int[] BoxEdges = { 0, 1, 2, 3, 4, 5, 6, 7, 0, 2, 1, 3, 4, 6, 5, 7, 0, 4, 1, 5, 2, 6, 3, 7 };
+
         private void AddBox(Vector3[] k, Color color)
         {
-            int[] e = { 0, 1, 2, 3, 4, 5, 6, 7, 0, 2, 1, 3, 4, 6, 5, 7, 0, 4, 1, 5, 2, 6, 3, 7 };
-            for (int i = 0; i < e.Length; i += 2) AddLine(k[e[i]], k[e[i + 1]], color);
+            for (int i = 0; i < 8; i++) projected[i] = Project(k[i]);
+            for (int i = 0; i < BoxEdges.Length; i += 2) AddScreenLine(projected[BoxEdges[i]], projected[BoxEdges[i + 1]], color);
         }
 
         /// <summary>Face de baixo da caixa: os 4 cantos com menor Y no mundo.</summary>
         private void AddFootprint(Vector3[] k, Color color)
         {
-            Vector3[] sorted = (Vector3[])k.Clone();
-            System.Array.Sort(sorted, (a, b) => a.y.CompareTo(b.y));
-            Vector3[] f = { sorted[0], sorted[1], sorted[2], sorted[3] };
-            Vector3 c = (f[0] + f[1] + f[2] + f[3]) * 0.25f;
-            System.Array.Sort(f, (a, b) => Mathf.Atan2(a.z - c.z, a.x - c.x).CompareTo(Mathf.Atan2(b.z - c.z, b.x - c.x)));
-            for (int i = 0; i < 4; i++) AddLine(f[i], f[(i + 1) % 4], color);
+            for (int i = 0; i < 8; i++)
+            {
+                sortBuf[i] = k[i];
+                keys[i] = k[i].y;
+            }
+            System.Array.Sort(keys, sortBuf, 0, 8);
+            Vector3 c = (sortBuf[0] + sortBuf[1] + sortBuf[2] + sortBuf[3]) * 0.25f;
+            for (int i = 0; i < 4; i++)
+            {
+                foot[i] = sortBuf[i];
+                angles[i] = Mathf.Atan2(foot[i].z - c.z, foot[i].x - c.x);
+            }
+            System.Array.Sort(angles, foot, 0, 4);
+            for (int i = 0; i < 4; i++) projected[i] = Project(foot[i]);
+            for (int i = 0; i < 4; i++) AddScreenLine(projected[i], projected[(i + 1) % 4], color);
         }
 
         private void AddCircle(Vector3 c, float r, Vector3 u, Vector3 v, Color color)
         {
             const int seg = 20;
-            Vector3 prev = c + u * r;
+            Vector3 prev = Project(c + u * r);
             for (int i = 1; i <= seg; i++)
             {
-                float a = i * Mathf.PI * 2f / seg;
-                Vector3 next = c + (u * Mathf.Cos(a) + v * Mathf.Sin(a)) * r;
-                AddLine(prev, next, color);
+                Vector3 next = Project(c + (u * CircleCos[i] + v * CircleSin[i]) * r);
+                AddScreenLine(prev, next, color);
                 prev = next;
             }
         }
@@ -262,19 +294,38 @@ namespace GK2Insight
             AddLine(p - Vector3.forward * s, p + Vector3.forward * s, color);
         }
 
-        private void AddLine(Vector3 a, Vector3 b, Color color)
+        private void AddLine(Vector3 a, Vector3 b, Color color) => AddScreenLine(Project(a), Project(b), color);
+
+        private void AddScreenLine(Vector3 sa, Vector3 sb, Color color)
         {
-            Vector3 sa = Project(a), sb = Project(b);
             if (sa.z < 0f || sb.z < 0f) return;
             lineBuffer.Add(sa);
             lineBuffer.Add(sb);
             colorBuffer.Add(color);
         }
 
-        private Vector3 Project(Vector3 world)
+        /// <summary>Uma vez por desenho: a projeção vira matemática gerenciada em vez de WorldToScreenPoint por vértice.</summary>
+        private void BeginProjection()
         {
-            Vector3 v = cam.WorldToScreenPoint(world);
-            return mainCamera != null && mainCamera.RenderTexture != null ? mainCamera.RenderTargetToScreen(v) : v;
+            worldToCam = cam.worldToCameraMatrix;
+            viewProj = cam.projectionMatrix * worldToCam;
+            pixelRect = cam.pixelRect;
+            useRenderTarget = mainCamera != null && mainCamera.RenderTexture != null;
+        }
+
+        /// <summary>Equivale a Camera.WorldToScreenPoint (z = profundidade na câmera) + RenderTargetToScreen.</summary>
+        private Vector3 Project(Vector3 p)
+        {
+            Matrix4x4 m = viewProj;
+            float x = m.m00 * p.x + m.m01 * p.y + m.m02 * p.z + m.m03;
+            float y = m.m10 * p.x + m.m11 * p.y + m.m12 * p.z + m.m13;
+            float w = m.m30 * p.x + m.m31 * p.y + m.m32 * p.z + m.m33;
+            if (Mathf.Abs(w) < 1e-6f) w = 1e-6f;
+            Vector3 v = new Vector3(
+                pixelRect.x + (x / w * 0.5f + 0.5f) * pixelRect.width,
+                pixelRect.y + (y / w * 0.5f + 0.5f) * pixelRect.height,
+                -(worldToCam.m20 * p.x + worldToCam.m21 * p.y + worldToCam.m22 * p.z + worldToCam.m23));
+            return useRenderTarget ? mainCamera.RenderTargetToScreen(v) : v;
         }
 
         private void Flush()
@@ -294,15 +345,58 @@ namespace GK2Insight
             GL.PushMatrix();
             GL.LoadPixelMatrix();
             GL.Begin(GL.LINES);
+            Color last = new Color(-1f, 0f, 0f, 0f);
             for (int i = 0; i < colorBuffer.Count; i++)
             {
-                GL.Color(colorBuffer[i]);
-                Vector3 a = lineBuffer[i * 2], b = lineBuffer[i * 2 + 1];
-                GL.Vertex3(a.x, a.y, 0f);
-                GL.Vertex3(b.x, b.y, 0f);
+                Color c = colorBuffer[i];
+                if (c != last)
+                {
+                    GL.Color(c);
+                    last = c;
+                }
+                Emit(lineBuffer[i * 2], lineBuffer[i * 2 + 1], 0);
             }
             GL.End();
             GL.PopMatrix();
+        }
+
+        /// <summary>Desenha o segmento menos as partes dentro dos painéis (o IMGUI desenha por cima do Canvas).</summary>
+        private void Emit(Vector3 a, Vector3 b, int mask)
+        {
+            if (mask >= Masks.Count)
+            {
+                GL.Vertex3(a.x, a.y, 0f);
+                GL.Vertex3(b.x, b.y, 0f);
+                return;
+            }
+            Rect r = Masks[mask];
+            float dx = b.x - a.x, dy = b.y - a.y, t0 = 0f, t1 = 1f;
+            if (!Clip(-dx, a.x - r.xMin, ref t0, ref t1) || !Clip(dx, r.xMax - a.x, ref t0, ref t1) ||
+                !Clip(-dy, a.y - r.yMin, ref t0, ref t1) || !Clip(dy, r.yMax - a.y, ref t0, ref t1))
+            {
+                Emit(a, b, mask + 1);
+                return;
+            }
+            if (t0 > 0f) Emit(a, Vector3.Lerp(a, b, t0), mask + 1);
+            if (t1 < 1f) Emit(Vector3.Lerp(a, b, t1), b, mask + 1);
+        }
+
+        /// <summary>Liang–Barsky: estreita [t0, t1] ao trecho dentro de um dos lados; false = nada dentro.</summary>
+        private static bool Clip(float p, float q, ref float t0, ref float t1)
+        {
+            if (Mathf.Approximately(p, 0f)) return q >= 0f;
+            float t = q / p;
+            if (p < 0f)
+            {
+                if (t > t1) return false;
+                if (t > t0) t0 = t;
+            }
+            else
+            {
+                if (t < t0) return false;
+                if (t < t1) t1 = t;
+            }
+            return true;
         }
 
         public void Dispose()

@@ -1,5 +1,8 @@
 using BepInEx;
+using System;
+using System.Collections.Generic;
 using BepInEx.Configuration;
+using GK2Insight.Telemetry;
 using UnityEngine;
 
 namespace GK2Insight
@@ -13,7 +16,7 @@ namespace GK2Insight
     {
         public const string Guid = "arthur.gk2.insight";
         public const string Name = "GK2 Insight";
-        public const string Version = "0.2.0";
+        public const string Version = "0.3.0";
 
         internal static BepInEx.Logging.ManualLogSource Log;
 
@@ -28,7 +31,12 @@ namespace GK2Insight
         private ConfigEntry<float> overlayRadius;
         private ConfigEntry<bool> showColliders, showPaths, showDocks, showHitboxes;
 
+        private ConfigEntry<bool> telemetryEnabled;
+        private ConfigEntry<string> telemetryUrl, telemetryToken;
+
         private Hud hud;
+        private Telemetry.Telemetry telemetry;
+        private static readonly HashSet<string> Warned = new HashSet<string>();
 
         private void Awake()
         {
@@ -46,17 +54,34 @@ namespace GK2Insight
             showHitboxes = Config.Bind("Tech", "Hitboxes", true, "Desenhar hurtboxes e hitboxes de arma.");
             fontSize = Config.Bind("General", "FontSize", 14, "Tamanho da fonte dos painéis.");
             dumpKey = Config.Bind("Dump", "DumpKey", new KeyboardShortcut(KeyCode.F7, KeyCode.LeftControl), "Exporta dados do jogo (GameBalance e textos) em JSON.");
-            hud = new Hud();
+            telemetryEnabled = Config.Bind("Telemetry", "Enabled", true, "Mede desempenho e estado do jogo; envia à VPS quando há token.");
+            telemetryUrl = Config.Bind("Telemetry", "Url", "https://metrics-ingest.example.com", "Base do vmauth (import Prometheus e jsonline).");
+            telemetryToken = Config.Bind("Telemetry", "Token", "", "Bearer do usuário gk2-client no vmauth. Vazio = só mede, não envia.");
+            Warned.Clear();
+            if (telemetryEnabled.Value)
+            {
+                telemetry = new Telemetry.Telemetry(telemetryUrl.Value, telemetryToken.Value);
+                telemetry.LayersVisible = () => (localVisible.Value, techVisible.Value);
+            }
+            hud = new Hud(telemetry?.Cost, fontSize.Value);
             Log.LogInfo($"{Name} {Version} carregado");
         }
 
         private void OnDestroy()
         {
             hud?.Dispose();
+            telemetry?.Dispose();
+        }
+
+        internal static void WarnOnce(string where, Exception e)
+        {
+            if (Warned.Add(where + e.Message)) Log.LogWarning($"{where}: {e}");
         }
 
         private void Update()
         {
+            telemetry?.OnFrame();
+            long t0 = SelfCost.Now();
             if (dumpKey.Value.IsDown()) Dumper.DumpAll();
             else if (techKey.Value.IsDown()) techVisible.Value = !techVisible.Value;
             else if (localKey.Value.IsDown()) localVisible.Value = !localVisible.Value;
@@ -67,12 +92,8 @@ namespace GK2Insight
             o.ShowPaths = showPaths.Value;
             o.ShowDocks = showDocks.Value;
             o.ShowHitboxes = showHitboxes.Value;
-            if (localVisible.Value || techVisible.Value) hud.Refresh(localVisible.Value, techVisible.Value);
-        }
-
-        private void OnGUI()
-        {
-            if (localVisible.Value || techVisible.Value) hud.Draw(localVisible.Value, techVisible.Value, localX.Value, localY.Value, fontSize.Value);
+            hud.Tick(localVisible.Value, techVisible.Value, localX.Value, localY.Value, fontSize.Value);
+            telemetry?.Cost.Stop(SelfCost.Part.Update, t0);
         }
     }
 }

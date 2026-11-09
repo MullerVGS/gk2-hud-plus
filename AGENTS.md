@@ -31,6 +31,16 @@ não foram vistas em print (precisa de luta).
 Critérios: não repetir o que a UI nativa já mostra; texto curto, colunas alinhadas, sem cobrir o centro da tela;
 custo baixo por frame (atualizar listas a cada 0,25–1 s, nunca varrer a cena inteira por frame).
 
+**Telemetria** (`GK2Insight/Telemetry/`, desde 0.3.0): 1 amostra/s para o VictoriaMetrics e eventos para o
+VictoriaLogs da VPS, por `metrics-ingest.example.com` (vmauth, usuário `gk2-client`, só import). Token em
+`[Telemetry] Token` do `BepInEx/config/arthur.gk2.insight.cfg` de cada instância (vazio = mede e não envia); rótulo
+`instance=blue|green` vem do *productName*. Dashboard `vps · Graveyard Keeper 2` (uid `vps-gk2`,
+pasta Jogos, versionado em `pessoal-tools`). Métricas `gk2_*`: frames (fps, p50/p99/max, travadas), GC, memória,
+custo do próprio Insight por parte (`gk2_insight_seconds{part}`), recursos do jogador, reputação, zona. Eventos
+(`app:gk2`): session, game_state, save_load, save_write, new_day, sleep_start/end, scene, zone, hitch (≥250 ms, com
+GC/save/painel). Envio em thread própria; nada de rede na thread do jogo. `dormir.cs` gera sono + save no green.
+Para comparar custo, ligue as camadas com `insight-camadas.cs` e leia `gk2_insight_seconds` por janela.
+
 ## Blue-green
 
 | | Blue | Green |

@@ -5,7 +5,7 @@ Guia completo (arquitetura, CLI `tools/gk2`, regras de design nativo): [AGENTS.m
 
 | Projeto | O quê |
 | --- | --- |
-| `GK2Insight/` | informações na tela e dump de dados (F7 / Shift+F7 / Ctrl+F7). v0.1 ainda com painel IMGUI provisório |
+| `GK2Insight/` | ferramenta de debug: painéis F7 / Shift+F7 (uGUI), dump Ctrl+F7 e telemetria para o Grafana da VPS |
 | `GK2DevBridge/` | ponte HTTP de desenvolvimento, só na instância green |
 | `GK2HotLoader/` | aplica mods promovidos com o jogo aberto e avisa com a notificação nativa |
 | `Shared/` | código comum (troca de plugin em execução) |
