@@ -314,6 +314,13 @@ nos tooltips de item/receita/perk/estação; o que já existia antes do diário 
 - **Armadilha (bug da 0.3.0)**: `LazyUI.GetWindow<T>()` faz `FindObjectsOfType` e loga erro quando a janela não existe
   (menu principal) — chamado por frame encheu o log do green (18 937 linhas). Ler o cache privado `LazyUI.windowsCache` e
   capturar a janela num postfix de `CharacterWindow.Redraw`.
+- **Sermões (0.5.0)**: evento, não desbloqueio. O jogo troca `PlayerData.currentSermon` (`SermonResultData`, salvo no save,
+  só o último) no `UIPrayWindowData.StartCraft`, com o sucesso já sorteado; o diário anota cada objeto novo (tipo `sermon`,
+  campo `s` com paroquianos, sucesso, doações/bônus em bronze, fé/bônus, qualidade de igreja e cemitério usadas e buff).
+  Contas iguais às da janela `UIPrayReportWindow` (`Money`, `FaithOnly*`). O último sermão do save carregado não tem data
+  e não entra. Na aba: grupo "Sermão" no topo do dia (linha com resultado · paroquianos · dinheiro · fé), resumo da lista
+  com o dinheiro, tooltip com as linhas do relatório nativo (`ui_pray_result_*`). Nome: `ItemDef.GetHeader()` (o id
+  `prayer_base:1` não tem texto próprio).
 - Cenários: `gk2hud-diario.cs` (libera tech + receitas/construções, perk, conclui quest da árvore; `virar` passa o dia —
   muda o save, volte com `gk2 save reset`), `gk2hud-diario-hover.cs` (escolhe dia e passa o mouse numa linha),
-  `recarregar.cs` (menu → Continue, descarta o não salvo).
+  `recarregar.cs` (menu → Continue, descarta o não salvo), `gk2hud-sermao.cs` (simula um sermão: novo `currentSermon`).

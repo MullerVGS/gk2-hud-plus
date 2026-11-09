@@ -16,6 +16,8 @@ namespace GK2Hud.Journal
         public string Name;
         public float Tod;
         public bool Approx;
+        public int Day;
+        public SermonNote Sermon;
     }
 
     /// <summary>Nomes, agrupamento e tooltips das linhas do diário; a linha "desbloqueado no dia N" dos tooltips.</summary>
@@ -34,6 +36,12 @@ namespace GK2Hud.Journal
                     if (cd == null || id.StartsWith("mix")) return null;
                     string n = TooltipContent.CraftName(cd);
                     return n == cd.id ? null : n;
+                }
+                case JournalKinds.Sermon:
+                {
+                    ItemDef def = GameBalance.Me.GetDataOrNull<ItemDef>(id);
+                    string n = def != null ? def.GetHeader() : LLBase.L(id.Split(':')[0]);
+                    return string.IsNullOrEmpty(n) || n == id ? CalendarL10n.T("jk_sermon") : n;
                 }
                 case JournalKinds.DayIcon:
                 {
@@ -57,7 +65,7 @@ namespace GK2Hud.Journal
                 string n = Name(e.k, e.id);
                 if (n == null) continue;
                 if (e.k == JournalKinds.Quest && list.Any(l => l.Kind == e.k && l.Name == n)) continue;
-                list.Add(new JournalLine { Kind = e.k, Id = e.id, Name = n, Tod = e.t, Approx = e.a });
+                list.Add(new JournalLine { Kind = e.k, Id = e.id, Name = n, Tod = e.t, Approx = e.a, Day = e.d, Sermon = e.s });
             }
             return list;
         }
@@ -66,15 +74,55 @@ namespace GK2Hud.Journal
         public static string Summary(List<JournalLine> lines, int max = 2)
         {
             if (lines.Count == 0) return CalendarL10n.T("nothing_short");
-            string s = string.Join(" · ", lines.Take(max).Select(l => l.Name));
+            string s = string.Join(" · ", lines.Take(max).Select(l => l.Sermon != null ? l.Name + " " + Money(l.Sermon.Money) : l.Name));
             return lines.Count > max ? s + " · +" + (lines.Count - max) : s;
         }
+
+        public static string Money(int bronze) => Trading.FormatMoney(bronze, printZero: true);
+
+        /// <summary>Linha curta do resultado do sermão: "Sucesso · ☺10 · 4 · ✝10".</summary>
+        public static string SermonDetail(SermonNote n) =>
+            LLBase.L(n.ok ? "ui_pray_success_text" : "ui_pray_fail_text") + " · " + "happiness_cross".FontIcon() + n.n + " · " + Money(n.Money) + " · " + "faith".FontIcon() + n.Faith;
+
+        /// <summary>Tooltip do sermão: as mesmas linhas da janela de relatório do jogo e com que qualidade ele foi feito.</summary>
+        private static List<LazyWidgetDataBase> SermonTooltip(JournalLine l, Styles s)
+        {
+            SermonNote n = l.Sermon;
+            var list = new List<LazyWidgetDataBase> { new UITooltipTextWidgetData(l.Name, TextAlignmentOptions.Center, s.Header), new UITooltipSeparatorWidgetData() };
+            list.Add(new UITooltipTextWidgetData(LLBase.L(n.ok ? "ui_pray_success_text" : "ui_pray_fail_text"), TextAlignmentOptions.Center, s.HeaderBold ?? s.Description));
+            var lines = new List<string>
+            {
+                LLBase.L("ui_pray_result_visitors") + " " + Num(s, "happiness_cross".FontIcon() + n.n),
+                LLBase.L("ui_pray_result_money") + " " + Num(s, Money(n.m)),
+            };
+            if (n.ok) lines.Add(LLBase.L("ui_pray_result_money_bonus") + " " + Num(s, Money(n.mb)));
+            lines.Add(LLBase.L("ui_pray_result_faith") + " " + Num(s, "faith".FontIcon() + n.f));
+            if (n.ok) lines.Add(LLBase.L("ui_pray_result_faith_bonus") + " " + Num(s, "faith".FontIcon() + n.fb));
+            if (n.buff != null)
+            {
+                string b = LLBase.L(n.buff);
+                lines.Add(LLBase.L("ui_sermon_tooltip_buff") + " " + (b == n.buff ? Num(s, b) : Links.Wrap(Links.Perk, n.buff, b)));
+            }
+            list.Add(new UITooltipTextWidgetData(string.Join("\n", lines), TextAlignmentOptions.Center, s.Description));
+            list.Add(new UITooltipSeparatorWidgetData());
+            list.Add(new UITooltipTextWidgetData(CalendarL10n.T("j_sermon_total") + " " + Num(s, Money(n.Money)) + "  " + Num(s, "faith".FontIcon() + n.Faith),
+                TextAlignmentOptions.Center, s.Description));
+            list.Add(new UITooltipTextWidgetData(CalendarL10n.T("j_sermon_quality") + " " + "cross".FontIcon() + n.cq + "  " + "wskull".FontIcon() + n.gq,
+                TextAlignmentOptions.Center, s.Small));
+            list.Add(new UITooltipSeparatorWidgetData());
+            list.Add(new UITooltipTextWidgetData(KindLabel(l.Kind) + " · " + CalendarL10n.T("j_day", l.Day, CalendarModel.DayIdOf(l.Day)?.FontIcon() ?? "") + " · " +
+                (l.Approx ? "~" : "") + CalendarModel.Clock(l.Tod), TextAlignmentOptions.Center, s.Small));
+            return list;
+        }
+
+        private static string Num(Styles s, string v) => s.Description.ApplyStyleToString(v) ?? v;
 
         /// <summary>Conteúdo do tooltip de uma linha: o tooltip completo do GK2Hud quando a coisa tem um.</summary>
         public static List<LazyWidgetDataBase> Tooltip(JournalLine l)
         {
             Styles s = Styles.Read();
             if (s == null) return null;
+            if (l.Sermon != null) return SermonTooltip(l, s);
             Entity e = EntityFor(l.Kind, l.Id);
             if (e != null && TooltipFeature.Current != null)
             {

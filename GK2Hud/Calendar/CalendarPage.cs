@@ -26,7 +26,7 @@ namespace GK2Hud.Calendar
     internal sealed class CalendarPage
     {
         private const string Name = "GK2Hud.CalendarPage";
-        private const int LeftX = 4, LeftW = 216, RightX = 228, HeaderH = 26, RowTop = 30, RowH = 50, Pad = 10, ListRows = 6, LineH = 22;
+        private const int LeftX = 4, LeftW = 216, RightX = 228, HeaderH = 26, RowTop = 30, RowH = 50, Pad = 10, ListRows = 6, LineH = 22, SermonDetailH = 18;
         private const float DimAlpha = 0.4f;   // UIHUDWheelElement.iconColorInactive
         private const int Baseline = int.MinValue;
 
@@ -576,12 +576,20 @@ namespace GK2Hud.Calendar
         /// <summary>Diário de um dia: "Concluído" (quests) e "Desbloqueado" (o resto), uma linha por coisa, com tooltip.</summary>
         private int JournalSection(List<JournalLine> lines, int w, int y)
         {
+            List<JournalLine> sermons = lines.Where(l => l.Kind == JournalKinds.Sermon).ToList();
             List<JournalLine> quests = lines.Where(l => l.Kind == JournalKinds.Quest).ToList();
-            List<JournalLine> unlocks = lines.Where(l => l.Kind != JournalKinds.Quest).ToList();
-            if (quests.Count > 0) y = JournalGroup(CalendarL10n.T("j_completed_h"), quests, w, y);
+            List<JournalLine> unlocks = lines.Where(l => l.Kind != JournalKinds.Quest && l.Kind != JournalKinds.Sermon).ToList();
+            bool any = false;
+            if (sermons.Count > 0) { y = JournalGroup(CalendarL10n.T("j_sermon_h"), sermons, w, y); any = true; }
+            if (quests.Count > 0)
+            {
+                if (any) y += 6;
+                y = JournalGroup(CalendarL10n.T("j_completed_h"), quests, w, y);
+                any = true;
+            }
             if (unlocks.Count > 0)
             {
-                if (quests.Count > 0) y += 6;
+                if (any) y += 6;
                 y = JournalGroup(CalendarL10n.T("j_unlocked_h"), unlocks, w, y);
             }
             return y;
@@ -600,7 +608,8 @@ namespace GK2Hud.Calendar
                 var go = new GameObject("Line_" + l.Kind + "_" + l.Id, typeof(RectTransform));
                 go.transform.SetParent(rightContent, false);
                 RectTransform rt = (RectTransform)go.transform;
-                TopLeft(rt, Pad, y, w - 2 * Pad, LineH);
+                int lineH = l.Sermon != null ? LineH + SermonDetailH : LineH;
+                TopLeft(rt, Pad, y, w - 2 * Pad, lineH);
                 Hover hv = AddHover(go);
                 hv.OnEnter = () => ShowTooltip(line, rt);
                 hv.OnExit = () => HideTooltip(rt);
@@ -611,7 +620,13 @@ namespace GK2Hud.Calendar
                 name.text = l.Name;
                 TMP_Text kind = Label(go.transform, "Kind", "tiny_font-effects_timer", w - 2 * Pad - rightLabelW, 5, rightLabelW, TextAlignmentOptions.Right, false);
                 kind.text = JournalView.KindLabel(l.Kind) + " · " + (l.Approx ? "~" : "") + CalendarModel.Clock(l.Tod);
-                y += LineH;
+                if (l.Sermon != null)
+                {
+                    TMP_Text detail = Label(go.transform, "Detail", "small_font-effects_regular_text", 0, LineH - 2, w - 2 * Pad, TextAlignmentOptions.Left, false);
+                    detail.overflowMode = TextOverflowModes.Ellipsis;
+                    detail.text = JournalView.SermonDetail(l.Sermon);
+                }
+                y += lineH;
             }
             return y;
         }

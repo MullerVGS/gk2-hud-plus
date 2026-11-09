@@ -18,8 +18,36 @@ namespace GK2Hud.Journal
         public string id;
         public bool a;       // aproximado: notado ao carregar (aconteceu enquanto o mod não registrava)
 
+        [Newtonsoft.Json.JsonProperty(NullValueHandling = Newtonsoft.Json.NullValueHandling.Ignore)]
+        public SermonNote s; // só nos sermões: o resultado (o save só guarda o último)
+
         [Newtonsoft.Json.JsonIgnore]
         public double When => d + (double)t;
+    }
+
+    /// <summary>Resultado de um sermão, copiado do <c>SermonResultData</c> do jogo (mesmas contas da janela de relatório).</summary>
+    [Serializable]
+    internal sealed class SermonNote
+    {
+        public int n;        // paroquianos
+        public bool ok;      // sucesso
+        public int m, mb;    // dinheiro em bronze (doações) e bônus
+        public int f, fb;    // fé dos paroquianos e bônus
+        public int cq, gq;   // qualidade da igreja e do cemitério usadas na conta
+        public string buff;  // buff do sucesso
+
+        [Newtonsoft.Json.JsonIgnore]
+        public int Money => m + mb;
+
+        [Newtonsoft.Json.JsonIgnore]
+        public int Faith => f + fb;
+
+        public static SermonNote From(SermonResultData r) => new SermonNote
+        {
+            n = r.parishionersCount, ok = r.success, m = r.MoneyOnlyParishioners, mb = r.MoneyOnlyBonus,
+            f = r.FaithOnlyParishioners, fb = r.FaithOnlyBonus, cq = r.churchQuality, gq = r.graveyardQuality,
+            buff = r.success && !string.IsNullOrEmpty(r.Definition?.successRewardBuff) ? r.Definition.successRewardBuff : null,
+        };
     }
 
     [Serializable]
@@ -36,10 +64,10 @@ namespace GK2Hud.Journal
     internal static class JournalKinds
     {
         public const string Quest = "quest", Tech = "tech", Building = "building", Town = "town", Craft = "craft", Alchemy = "alchemy",
-            Perk = "perk", DayIcon = "dayicon", Tutorial = "tutorial";
+            Perk = "perk", DayIcon = "dayicon", Tutorial = "tutorial", Sermon = "sermon";
 
         /// <summary>Ordem de exibição dentro do dia.</summary>
-        public static readonly string[] Order = { Quest, Tech, Building, Town, Craft, Alchemy, Perk, DayIcon, Tutorial };
+        public static readonly string[] Order = { Sermon, Quest, Tech, Building, Town, Craft, Alchemy, Perk, DayIcon, Tutorial };
 
         /// <summary>Tipos que só crescem no jogo: se um some, o save carregado é outra linha do tempo.</summary>
         public static readonly string[] Monotonic = { Quest, Tech, Building, Craft, Alchemy };
@@ -51,6 +79,8 @@ namespace GK2Hud.Journal
     /// hora. Fica em <c>BepInEx/config/arthur.gk2.hud/journal-&lt;slot&gt;.json</c> (o save do jogo não é tocado).
     /// O jogo só salva ao dormir: ao carregar um save, o que o diário anotou depois daquele ponto é descartado; se algo
     /// "que só cresce" sumiu, é outro jogo no mesmo slot e o diário recomeça.
+    /// Sermões são eventos, não desbloqueios: cada <c>PlayerData.currentSermon</c> novo (o jogo troca o objeto quando o
+    /// sermão começa, com o resultado já sorteado) vira uma anotação com o resultado.
     /// </summary>
     internal sealed class JournalTracker : IDisposable
     {
@@ -62,6 +92,7 @@ namespace GK2Hud.Journal
         private JournalFile file;
         private string path;
         private GameSave gameSave;
+        private SermonResultData lastSermon;
         private readonly HashSet<string> seen = new HashSet<string>();
         private readonly Dictionary<string, int> counts = new Dictionary<string, int>();
         private float nextTick, writeAt = -1f;
@@ -99,7 +130,7 @@ namespace GK2Hud.Journal
                     return;
                 }
                 if (gs != gameSave) Attach(gs);
-                else Scan(false);
+                else { Scan(false); CheckSermon(); }
             }
             catch (Exception ex)
             {
@@ -115,6 +146,7 @@ namespace GK2Hud.Journal
             Flush();
             gameSave = gs;
             // Os backups que o jogo gira (Steam_1_backup_1..3) são a mesma partida, mais atrás no tempo: mesmo diário.
+            lastSermon = MainGame.PlayerData.currentSermon;   // o último sermão do save carregado: sem data, não entra
             string slot = System.Text.RegularExpressions.Regex.Replace(SaveSystem.RelevantSlot?.slotName ?? "", "_backup_[0-9]+$", "");
             if (string.IsNullOrEmpty(slot)) slot = "default";
             path = Path.Combine(Path.Combine(Paths.ConfigPath, Plugin.Guid), "journal-" + Safe(slot) + ".json");
@@ -187,6 +219,20 @@ namespace GK2Hud.Journal
             changed |= Count(JournalKinds.Quest, CompletedQuestCount());
             if (!changed) return;
             if (AddNew(Snapshot(), approx: false) > 0) version++;
+        }
+
+        private void CheckSermon()
+        {
+            if (file == null) return;
+            SermonResultData cur = MainGame.PlayerData.currentSermon;
+            if (cur == null || ReferenceEquals(cur, lastSermon)) return;
+            lastSermon = cur;
+            EnvironmentData env = gameSave.environmentData;
+            SermonNote note = SermonNote.From(cur);
+            file.entries.Add(new JournalEntry { d = env.Day, t = env.TimeOfDay, k = JournalKinds.Sermon, id = cur.id, s = note });
+            Dirty();
+            version++;
+            Plugin.Log.LogInfo($"diário: sermão {cur.id} no dia {env.Day}: {note.n} paroquianos, {(note.ok ? "sucesso" : "falha")}, {note.Money} b, fé {note.Faith}");
         }
 
         private bool Count(string kind, int n)
@@ -316,6 +362,8 @@ namespace GK2Hud.Journal
             return null;
         }
 
+        public List<JournalEntry> Sermons() => file == null ? new List<JournalEntry>() : file.entries.Where(e => e.k == JournalKinds.Sermon && e.s != null).ToList();
+
         public List<JournalEntry> OnDay(int day) => file == null ? new List<JournalEntry>() : file.entries.Where(e => e.d == day).ToList();
 
         /// <summary>Dias com anotação, do mais antigo ao mais novo.</summary>
@@ -337,7 +385,8 @@ namespace GK2Hud.Journal
         internal string Describe()
         {
             Scan(true);
-            return file == null ? "sem diário" : $"slot={file.slot} início=dia {file.startDay} baseline={file.baseline.Count} anotações={file.entries.Count} arquivo={path}";
+            CheckSermon();
+            return file == null ? "sem diário" : $"slot={file.slot} início=dia {file.startDay} baseline={file.baseline.Count} anotações={file.entries.Count} sermões={Sermons().Count} arquivo={path}";
         }
     }
 }
