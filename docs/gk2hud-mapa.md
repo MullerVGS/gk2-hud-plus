@@ -136,3 +136,20 @@ Alvo nativo é por proximidade (`PlayerInteractionComponent.cs:98`, máscara 656
 rouba; fogão sem collider próprio). Alternativa: projetar `wgo.BubbleDrawablePosition` e escolher o mais próximo do
 cursor. Bolha ancorada: `IBubbleDrawable` próprio (SGuid novo) + `UIObjectBubbleManager.Instance.Display/Hide`.
 Cenário: `docs/cenarios/hover-mundo.cs`.
+
+## HUD (pasta `Hud/`, 08/11)
+
+- Medalhão = `UIHUDWheel` (`UIHUDWheel.cs`): slot de baixo, sob `CurrentDay` (`hud-day_dial-curren_day_selector`), é o
+  dia atual (`:500`, `CurrentDayNumber`); a seta acesa aponta o próximo (`NextDayNumber`, `:501`). Sol/lua giram com
+  ângulo `timeOfDay*360-90` (`:188`): 0 = meia-noite embaixo, 0,5 = meio-dia em cima; casas/estrelas de dia em
+  0,25–0,8 (`:201`), `GetTimeOfDayType` dia em 0,25–0,75 (`EnvironmentEngine.cs:303`). O jogo não tem relógio nem
+  nome de dia: ids `day_*` (`LazyConsts.cs:356`) com números gluttony=1, sloth=2, lust=3, envy=4, pride=5, wrath=6
+  (`ConstDef.Get(id).IntValue`); `LLBase.L("day_*")` devolve a chave. pt-br oficial dos pecados: `sin_orbe_*`.
+- Energia/insanidade: barra dupla (`UIEnergySanityBar.cs:90`) — energia enche da esquerda, insanidade da direita, ambas
+  `GetRes(id)/100` (`UIEnergySanityBarData.cs:26-27`). Máximo da energia = `100 - insanity`, da insanidade
+  `80 - 10*perk_ironwill` (`gameResSystemDefs`): o vão escuro entre as duas é a energia perdida para a insanidade.
+- Painel de tech points (`HUD.techPointsPanel`): moldura `hud-gameres_frame` (9-slice 6/0/6/0, 20 de altura, HLG pad
+  7/7/2/0) + `tiny_font-perk_techpoint_cost`; aparece 5 s à direita da barra (Big) ou desce para (352,134) sob a
+  felicidade no modo Small (`HUD.cs:830-846`). Texto sobre barra nativo: `tiny_font-inspiration-plate_bar_progress`.
+- Dump do canto: `docs/referencia/hud-canto.txt`; cenários `hud-exterior-dia.cs`, `hud-interior-noite.cs`,
+  `gk2hud-recursos.cs`, `gk2hud-hud-config.cs`.

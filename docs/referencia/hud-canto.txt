@@ -1,0 +1,64 @@
+# HUD nativo, canto superior esquerdo (gk2 ui LeftUpHudWidget 8 1, 1920x1080, scaleFactor 2; rect = x,y,w,h em px de tela a partir do canto superior esquerdo)
+# TechPoints fica inativo fora dos 5 s em que aparece; GK2Hud.* filtrados.
+UI/UIRoot/HUD/LeftUpHudWidget
+LeftUpHudWidget rect=-2,-2,240,240 CanvasRenderer
+  TechPoints rect=264,30,174,40 CanvasRenderer,Image,HorizontalLayoutGroup,ContentSizeFitter sprite=hud-gameres_frame type=Sliced ppu=50 border=[6,0,6,0] color=#FFFFFFFF
+    Red rect=278,36,40,32 CanvasRenderer,TextMeshProUGUI,TextStyleComponent,LanguageRtlLabelState text="<sprite name=\"tech_red\">91" font=tiny_font size=16 color=#D2B479FF align=Left ts=tiny_font-perk_techpoint_cost
+      New Game Object rect=278,36,40,32 LayoutElement,CanvasRenderer,TMP_SubMeshUI
+    Green rect=324,36,52,32 CanvasRenderer,TextMeshProUGUI,TextStyleComponent,LanguageRtlLabelState text="<sprite name=\"tech_green\">234" font=tiny_font size=16 color=#D2B479FF align=Left ts=tiny_font-perk_techpoint_cost
+      New Game Object rect=324,36,52,32 LayoutElement,CanvasRenderer,TMP_SubMeshUI
+    Blue rect=382,36,42,32 CanvasRenderer,TextMeshProUGUI,TextStyleComponent,LanguageRtlLabelState text="<sprite name=\"tech_blue\">24" font=tiny_font size=16 color=#D2B479FF align=Left ts=tiny_font-perk_techpoint_cost
+      New Game Object rect=382,36,42,32 LayoutElement,CanvasRenderer,TMP_SubMeshUI
+  TechPointRightPoint rect=494,50,0,0 
+  TechPointRightLeft rect=264,50,0,0 
+  TechPointsSmallLeftPoint rect=352,50,0,0 
+  TechPointsSmallRightPoint rect=352,134,0,0 
+  BarsBack rect=184,8,328,104 CanvasRenderer,Image sprite=hud-bar-bg type=Simple ppu=50 color=#FFFFFFFF
+    SmilesLabel rect=290,78,124,32 CanvasRenderer,TextMeshProUGUI,TextStyleComponent,LanguageRtlLabelState,UIMouseTooltip text="<sprite name=\"happiness\">0/10" font=small_font size=16 color=#FFBD00FF align=Center ts=small_font-fuel_value
+      New Game Object rect=290,78,124,32 LayoutElement,CanvasRenderer,TMP_SubMeshUI
+    UIEnergySanityBar rect=212,28,280,44 UIEnergySanityBar
+      CurrentEnergy rect=266,38,172,24 Slider
+        ProgressBar rect=266,38,108,24 CanvasRenderer,Image sprite=hud-bar-energy type=Sliced ppu=50 border=[4,0,4,0] color=#FFFFFFFF
+          Glare rect=362,38,6,24 CanvasRenderer,Image sprite=hud-bar-glare type=Simple ppu=50 color=#FFFFFFFF
+      Insanity rect=266,38,172,24 Slider
+        ProgressBar rect=392,38,46,24 CanvasRenderer,Image sprite=hud-bar-insanity type=Sliced ppu=50 border=[4,0,4,0] color=#FFFFFFFF
+          Glare rect=426,38,6,24 CanvasRenderer,Image sprite=hud-bar-glare type=Simple ppu=50 color=#FFFFFFFF
+      EnergyIcon rect=224,38,22,24 CanvasRenderer,Image,UIMouseTooltip sprite=energy type=Simple ppu=50 color=#FFFFFFFF
+      InsanityIcon rect=456,38,26,24 CanvasRenderer,Image,UIMouseTooltip sprite=insanity type=Simple ppu=50 color=#FFFFFFFF
+  Picture rect=-2,-2,240,240 CanvasRenderer
+    Sky rect=-2,-2,240,240 
+      Sky rect=62,66,112,104 CanvasRenderer,Image sprite=hud-day_dial-time_of_day-sky type=Simple ppu=50 color=#0091B5FF
+      Stars rect=62,66,112,104 CanvasRenderer,Image sprite=hud-day_dial-time_of_day-sky-stars type=Simple ppu=50 color=#FFFFFFFF
+      Stars1 rect=88,88,60,60 
+    Sun rect=72,58,60,60 
+      Glow_1 rect=72,58,60,60 CanvasRenderer,Image sprite=hud-day_dial-time_of_day-sky-glow-smooth type=Simple ppu=50 color=#FFB300CC
+      Sun rect=72,58,60,60 CanvasRenderer,Image sprite=hud-day_dial-time_of_day-sky-sun-smooth type=Simple ppu=50 color=#FFFFFFFF
+      Glow_2 rect=72,58,60,60 CanvasRenderer,Image sprite=hud-day_dial-time_of_day-sky-glow-smooth type=Simple ppu=50 color=#FFB300CC
+    Moon rect=104,118,60,60 
+      Sun rect=104,118,60,60 CanvasRenderer,Image sprite=hud-day_dial-time_of_day-sky-moon-smooth type=Simple ppu=50 color=#FFFFFFFF
+      Glow_1 rect=104,118,60,60 CanvasRenderer,Image sprite=hud-day_dial-time_of_day-sky-glow-smooth type=Simple ppu=50 color=#008AFFCC
+    Horizon rect=62,66,112,104 CanvasRenderer,Image sprite=hud-day_dial-time_of_day-horizont type=Simple ppu=50 color=#54E8FFFF
+    Houses rect=-2,-2,240,240 
+      DayHouses rect=62,66,112,104 CanvasRenderer,Image sprite=hud-day_dial-time_of_day-city_day type=Simple ppu=50 color=#FFFFFFFF
+      NightHouses rect=62,66,112,104 CanvasRenderer,Image sprite=hud-day_dial-time_of_day-city_night type=Simple ppu=50 color=#FFFFFF00
+  Wheel rect=-2,-2,240,240 CanvasRenderer,Image,UIHUDWheel sprite=hud-day_dial-bg type=Simple ppu=50 color=#FFFFFFFF
+    UnderInnerBorder rect=-2,-2,240,240 
+      Pos2 rect=162,58,44,44 CanvasRenderer,Image,UIHUDWheelElement sprite=day_wrath type=Simple ppu=50 color=#FFFFFF66
+      Pos3 rect=96,20,44,44 CanvasRenderer,Image,UIHUDWheelElement sprite=day_gluttony type=Simple ppu=50 color=#FFFFFF66
+      Pos4 rect=30,58,44,44 CanvasRenderer,Image,UIHUDWheelElement sprite=day_sloth type=Simple ppu=50 color=#FFFFFF66
+      Pos5 rect=30,134,44,44 CanvasRenderer,Image,UIHUDWheelElement sprite=day_lust type=Simple ppu=50 color=#FFFFFF66
+    InnerBorder rect=58,58,120,120 CanvasRenderer,Image sprite=hud-day_dial-time_of_day-border type=Simple ppu=50 color=#FFFFFFFF
+    OverInnerBorder rect=-2,-2,240,240 
+      Pos6 rect=96,172,44,44 CanvasRenderer,Image,UIHUDWheelElement sprite=day_envy type=Simple ppu=50 color=#FFFFFFFF
+      Pos1 rect=162,134,44,44 CanvasRenderer,Image,UIHUDWheelElement sprite=day_pride type=Simple ppu=50 color=#FFFFFFFF
+    CurrentDay rect=78,154,80,72 CanvasRenderer,Image sprite=hud-day_dial-curren_day_selector type=Simple ppu=50 color=#FFFFFFFF
+    Arrow1 rect=-2,-2,240,240 CanvasRenderer,Image sprite=hud-day_dial-next_day_1 type=Simple ppu=50 color=#FFFFFF00
+    Arrow2 rect=-2,-2,240,240 CanvasRenderer,Image sprite=hud-day_dial-next_day_3 type=Simple ppu=50 color=#FFFFFFFF
+    Arrow3 rect=-2,-2,240,240 CanvasRenderer,Image sprite=hud-day_dial-next_day_2 type=Simple ppu=50 color=#FFFFFF00
+    Arrow4 rect=-2,-2,240,240 CanvasRenderer,Image sprite=hud-day_dial-next_day_1 type=Simple ppu=50 color=#FFFFFF00
+    Arrow5 rect=-2,-2,240,240 CanvasRenderer,Image sprite=hud-day_dial-next_day_5 type=Simple ppu=50 color=#FFFFFF00
+    Arrow6 rect=-2,-2,240,240 CanvasRenderer,Image sprite=hud-day_dial-next_day_4 type=Simple ppu=50 color=#FFFFFF00
+  TutorialButton rect=0,194,88,88 LazyButton,Canvas,GraphicRaycaster
+    Back rect=0,194,88,88 CanvasRenderer,Image sprite=hud-tutorial_button_bg type=Simple ppu=50 color=#FFFFFFFF
+    BtnImage rect=18,210,52,52 CanvasRenderer,Image sprite=comm-btn-simple_red-active type=Sliced ppu=50 border=[10,10,10,10] color=#FFFFFFFF
+      Icon rect=30,220,28,32 CanvasRenderer,Image sprite=btn_i-question type=Simple ppu=50 color=#FFFFFFFF

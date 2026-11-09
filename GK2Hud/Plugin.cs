@@ -1,5 +1,6 @@
 using BepInEx;
 using BepInEx.Configuration;
+using GK2Hud.Hud;
 using GK2Hud.Tooltips;
 using HarmonyLib;
 using UnityEngine;
@@ -7,8 +8,8 @@ using UnityEngine;
 namespace GK2Hud
 {
     /// <summary>
-    /// Mod de jogador com cara nativa. Hoje: tooltips enriquecidos, fixáveis e aninhados (pasta Tooltips/).
-    /// A HUD (hora, números de energia/sanidade) entra como outra feature ao lado, com o mesmo ciclo Update/Dispose.
+    /// Mod de jogador com cara nativa: tooltips enriquecidos, fixáveis e aninhados (pasta Tooltips/) e informações
+    /// extras no HUD (pasta Hud/: dia da semana, hora, números de energia/insanidade). Cada feature tem ciclo Update/Dispose.
     /// </summary>
     [BepInPlugin(Guid, Name, Version)]
     public class Plugin : BaseUnityPlugin
@@ -24,6 +25,8 @@ namespace GK2Hud
         /// <summary>Acessado por reflexão nos cenários de teste (docs/cenarios/gk2hud-*.cs).</summary>
         internal TooltipFeature Tooltips { get; private set; }
 
+        internal HudFeature HudInfo { get; private set; }
+
         private void Awake()
         {
             Log = Logger;
@@ -37,18 +40,32 @@ namespace GK2Hud
             {
                 Tooltips = new TooltipFeature(harmony, pinKey, hoverDelay, maxDepth);
             }
+            ConfigEntry<bool> hudOn = Config.Bind("Hud", "Enabled", true, "Informações extras no HUD (dia da semana, hora, números de energia e insanidade).");
+            ConfigEntry<bool> clockOn = Config.Bind("Hud", "Clock", true, "Hora do dia (relógio de 24 h derivado do timeOfDay) na placa sob a felicidade.");
+            ConfigEntry<bool> weekDayOn = Config.Bind("Hud", "WeekDay", true, "Nome do dia da semana na placa sob a felicidade.");
+            ConfigEntry<int> clockStep = Config.Bind("Hud", "ClockStepMinutes", 10,
+                new ConfigDescription("Passo do relógio em minutos de jogo (1 minuto de jogo ≈ 0,3 s real).", new AcceptableValueRange<int>(1, 60)));
+            ConfigEntry<bool> barsOn = Config.Bind("Hud", "EnergyInsanityNumbers", true, "Números de energia e insanidade dentro da barra.");
+            ConfigEntry<bool> barsMax = Config.Bind("Hud", "EnergyInsanityShowMax", false, "Mostra atual/máximo em vez de só o atual.");
+            if (hudOn.Value)
+            {
+                HudInfo = new HudFeature(clockOn, weekDayOn, barsOn, barsMax, clockStep);
+            }
             Log.LogInfo($"{Name} {Version} carregado");
         }
 
         private void Update()
         {
             Tooltips?.Update();
+            HudInfo?.Update();
         }
 
         private void OnDestroy()
         {
             Tooltips?.Dispose();
             Tooltips = null;
+            HudInfo?.Dispose();
+            HudInfo = null;
             harmony?.UnpatchSelf();
         }
     }
