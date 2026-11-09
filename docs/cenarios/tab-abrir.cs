@@ -4,7 +4,7 @@ using UnityEngine;
 // Abre a janela do TAB (CharacterWindow) na página PAGINA, como o jogo faz; "fechar" fecha.
 public static class Snippet
 {
-    static string PAGINA = "Main";   // Main | TechTree | Inspiration | QuestTree | Map | fechar
+    static string PAGINA = "fechar";   // Main | TechTree | Inspiration | QuestTree | Map | fechar
 
     public static object Run()
     {
