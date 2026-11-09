@@ -20,7 +20,7 @@ namespace GK2Hud
     {
         public const string Guid = "arthur.gk2.hud";
         public const string Name = "GK2 Hud";
-        public const string Version = "0.6.0";
+        public const string Version = "0.7.0";
 
         internal static BepInEx.Logging.ManualLogSource Log;
 
@@ -34,6 +34,8 @@ namespace GK2Hud
         internal WorldHoverFeature WorldHover { get; private set; }
 
         internal WheelFeature Wheel { get; private set; }
+
+        internal WheelSpinFeature WheelSpin { get; private set; }
 
         internal CalendarTab CalendarTab { get; private set; }
 
@@ -74,9 +76,12 @@ namespace GK2Hud
             ConfigEntry<float> fade = Config.Bind("Hud", "FadeDuration", 0.25f, new ConfigDescription(
                 "Segundos do fade ao aparecer/sumir (placa e números). 0,25 = o fade do HUD do jogo (UISaveOverlay); 0 = sem animação.",
                 new AcceptableValueRange<float>(0f, 2f)));
+            ConfigEntry<bool> wheelSpinOn = Config.Bind("Hud", "WheelRotation", true,
+                "Medalhão dos dias gira com a hora: cada dia tem sua fatia (divisórias de bronze) e passa sob o seletor de baixo, que fica parado; ao meio-dia tudo fica na posição do jogo.");
             if (hudOn.Value)
             {
                 HudInfo = new HudFeature(plateOn, clockOn, weekDayOn, barsMode, barsMax, clockStep, fade);
+                WheelSpin = new WheelSpinFeature(wheelSpinOn);
             }
             ConfigEntry<bool> calendarOn = Config.Bind("Calendar", "Enabled", true, "Calendário: aba no TAB, hora e popup no medalhão dos dias.");
             ConfigEntry<HudNumbersMode> wheelClock = Config.Bind("Calendar", "WheelClockMode", HudNumbersMode.Hover,
@@ -104,6 +109,7 @@ namespace GK2Hud
             Tooltips?.Update();
             WorldHover?.Update();
             HudInfo?.Update();
+            WheelSpin?.Update();
             Journal?.Update();
             Wheel?.Update();
             CalendarTab?.Update();
@@ -117,6 +123,8 @@ namespace GK2Hud
             Tooltips = null;
             HudInfo?.Dispose();
             HudInfo = null;
+            WheelSpin?.Dispose();
+            WheelSpin = null;
             Wheel?.Dispose();
             Wheel = null;
             CalendarTab?.Dispose();
