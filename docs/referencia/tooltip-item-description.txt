@@ -1,0 +1,461 @@
+{
+  "screen": {
+    "width": 1920,
+    "height": 1080
+  },
+  "truncated": false,
+  "nodes": 17,
+  "roots": [
+    {
+      "path": "UI/UIRoot/UITooltip",
+      "node": {
+        "name": "UITooltip",
+        "rect": [
+          598.0,
+          82.0,
+          364.0,
+          168.0
+        ],
+        "size": [
+          182.0,
+          84.0
+        ],
+        "layout": {
+          "kind": "VerticalLayoutGroup",
+          "spacing": 2.0,
+          "padding": [
+            14,
+            14,
+            14,
+            14
+          ],
+          "align": "MiddleCenter"
+        },
+        "image": {
+          "sprite": "hint-frame",
+          "texture": "hint-frame",
+          "spriteRect": [
+            0.0,
+            0.0,
+            156.0,
+            114.0
+          ],
+          "border": [
+            20.0,
+            20.0,
+            20.0,
+            20.0
+          ],
+          "ppu": 50.0,
+          "ppuMultiplier": 1.0,
+          "type": "Sliced",
+          "color": "#FFFFFFFF",
+          "raycast": true
+        },
+        "components": [
+          "UITooltip",
+          "Canvas",
+          "CanvasGroup",
+          "VerticalLayoutGroup",
+          "ContentSizeFitter",
+          "LazyWidgetContainer",
+          "CanvasRenderer",
+          "Image",
+          "OverrideLayoutElement"
+        ],
+        "children": [
+          {
+            "name": "UITooltipTextWidget(Clone)",
+            "rect": [
+              750.0,
+              110.0,
+              60.0,
+              24.0
+            ],
+            "size": [
+              30.0,
+              12.0
+            ],
+            "text": {
+              "value": "Board",
+              "font": "small_font",
+              "material": "en:[small_font-hint_header]",
+              "fontSize": 16.0,
+              "autoSize": false,
+              "color": "#5E2100FF",
+              "style": "Normal",
+              "align": "Center",
+              "characterSpacing": 0.0,
+              "lineSpacing": 0.0
+            },
+            "textStyle": "small_font-hint_header",
+            "components": [
+              "UITooltipTextWidget",
+              "CanvasRenderer",
+              "TextMeshProUGUI",
+              "TextStyleComponent",
+              "LanguageRtlLabelState"
+            ]
+          },
+          {
+            "name": "UITooltipSeparatorWidget(Clone)",
+            "rect": [
+              626.0,
+              138.0,
+              308.0,
+              12.0
+            ],
+            "size": [
+              154.0,
+              6.0
+            ],
+            "layout": {
+              "kind": "VerticalLayoutGroup",
+              "spacing": 0.0,
+              "padding": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "align": "MiddleCenter"
+            },
+            "components": [
+              "UITooltipSeparatorWidget",
+              "VerticalLayoutGroup",
+              "ContentSizeFitter"
+            ],
+            "children": [
+              {
+                "name": "SpaceUp",
+                "rect": [
+                  680.0,
+                  138.0,
+                  200.0,
+                  0.0
+                ],
+                "size": [
+                  100.0,
+                  0.0
+                ],
+                "components": []
+              },
+              {
+                "name": "Icon",
+                "rect": [
+                  684.0,
+                  138.0,
+                  192.0,
+                  12.0
+                ],
+                "size": [
+                  96.0,
+                  6.0
+                ],
+                "image": {
+                  "sprite": "hint-text_separator",
+                  "texture": "hint-text_separator",
+                  "spriteRect": [
+                    0.0,
+                    0.0,
+                    96.0,
+                    6.0
+                  ],
+                  "ppu": 50.0,
+                  "ppuMultiplier": 1.0,
+                  "type": "Simple",
+                  "color": "#FFFFFFFF",
+                  "raycast": true
+                },
+                "components": [
+                  "CanvasRenderer",
+                  "Image"
+                ]
+              },
+              {
+                "name": "SpaceDown",
+                "rect": [
+                  680.0,
+                  150.0,
+                  200.0,
+                  0.0
+                ],
+                "size": [
+                  100.0,
+                  0.0
+                ],
+                "components": []
+              }
+            ]
+          },
+          {
+            "name": "UITooltipTextWidget(Clone)",
+            "rect": [
+              647.0,
+              154.0,
+              266.0,
+              24.0
+            ],
+            "size": [
+              133.0,
+              12.0
+            ],
+            "text": {
+              "value": "A useful item for crafting",
+              "font": "small_font",
+              "material": "en:[small_font-hint_regular_text]",
+              "fontSize": 16.0,
+              "autoSize": false,
+              "color": "#784F26FF",
+              "style": "Normal",
+              "align": "Center",
+              "characterSpacing": 0.0,
+              "lineSpacing": 0.0
+            },
+            "textStyle": "small_font-hint_regular_text",
+            "components": [
+              "UITooltipTextWidget",
+              "CanvasRenderer",
+              "TextMeshProUGUI",
+              "TextStyleComponent",
+              "LanguageRtlLabelState"
+            ],
+            "children": [
+              {
+                "name": "New Game Object",
+                "rect": [
+                  647.0,
+                  154.0,
+                  266.0,
+                  24.0
+                ],
+                "size": [
+                  133.0,
+                  12.0
+                ],
+                "components": [
+                  "LayoutElement",
+                  "CanvasRenderer",
+                  "TMP_SubMeshUI"
+                ]
+              },
+              {
+                "name": "New Game Object",
+                "rect": [
+                  647.0,
+                  154.0,
+                  266.0,
+                  24.0
+                ],
+                "size": [
+                  133.0,
+                  12.0
+                ],
+                "components": [
+                  "LayoutElement",
+                  "CanvasRenderer",
+                  "TMP_SubMeshUI"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "UITooltipSeparatorWidget(Clone)",
+            "rect": [
+              626.0,
+              182.0,
+              308.0,
+              12.0
+            ],
+            "size": [
+              154.0,
+              6.0
+            ],
+            "layout": {
+              "kind": "VerticalLayoutGroup",
+              "spacing": 0.0,
+              "padding": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "align": "MiddleCenter"
+            },
+            "components": [
+              "UITooltipSeparatorWidget",
+              "VerticalLayoutGroup",
+              "ContentSizeFitter"
+            ],
+            "children": [
+              {
+                "name": "SpaceUp",
+                "rect": [
+                  680.0,
+                  182.0,
+                  200.0,
+                  0.0
+                ],
+                "size": [
+                  100.0,
+                  0.0
+                ],
+                "components": []
+              },
+              {
+                "name": "Icon",
+                "rect": [
+                  684.0,
+                  182.0,
+                  192.0,
+                  12.0
+                ],
+                "size": [
+                  96.0,
+                  6.0
+                ],
+                "image": {
+                  "sprite": "hint-text_separator",
+                  "texture": "hint-text_separator",
+                  "spriteRect": [
+                    0.0,
+                    0.0,
+                    96.0,
+                    6.0
+                  ],
+                  "ppu": 50.0,
+                  "ppuMultiplier": 1.0,
+                  "type": "Simple",
+                  "color": "#FFFFFFFF",
+                  "raycast": true
+                },
+                "components": [
+                  "CanvasRenderer",
+                  "Image"
+                ]
+              },
+              {
+                "name": "SpaceDown",
+                "rect": [
+                  680.0,
+                  194.0,
+                  200.0,
+                  0.0
+                ],
+                "size": [
+                  100.0,
+                  0.0
+                ],
+                "components": []
+              }
+            ]
+          },
+          {
+            "name": "UITooltipTextWidget(Clone)",
+            "rect": [
+              626.0,
+              198.0,
+              308.0,
+              24.0
+            ],
+            "size": [
+              154.0,
+              12.0
+            ],
+            "text": {
+              "value": "<font=\"tiny_font\" material=\"en:tiny_font-hint_additional_text_selected_dynamic\"><color=#784F26>Crafted at: </color></font>Sawhorse, Circular Saw",
+              "font": "tiny_font",
+              "material": "en:[tiny_font-hint_additional_text]",
+              "fontSize": 16.0,
+              "autoSize": false,
+              "color": "#946E44FF",
+              "style": "Normal",
+              "align": "Center",
+              "characterSpacing": 0.0,
+              "lineSpacing": 0.0
+            },
+            "textStyle": "tiny_font-hint_additional_text",
+            "components": [
+              "UITooltipTextWidget",
+              "CanvasRenderer",
+              "TextMeshProUGUI",
+              "TextStyleComponent",
+              "LanguageRtlLabelState"
+            ],
+            "children": [
+              {
+                "name": "New Game Object",
+                "rect": [
+                  626.0,
+                  198.0,
+                  308.0,
+                  24.0
+                ],
+                "size": [
+                  154.0,
+                  12.0
+                ],
+                "components": [
+                  "LayoutElement",
+                  "CanvasRenderer",
+                  "TMP_SubMeshUI"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "BubbleCornerDL",
+            "rect": [
+              622.0,
+              228.0,
+              20.0,
+              20.0
+            ],
+            "size": [
+              10.0,
+              10.0
+            ],
+            "components": [
+              "UIBubbleCorner",
+              "LayoutElement"
+            ],
+            "children": [
+              {
+                "name": "Image",
+                "rect": [
+                  622.0,
+                  230.0,
+                  20.0,
+                  20.0
+                ],
+                "size": [
+                  10.0,
+                  10.0
+                ],
+                "image": {
+                  "sprite": "hint-frame_tail",
+                  "texture": "hint-frame_tail",
+                  "spriteRect": [
+                    0.0,
+                    0.0,
+                    10.0,
+                    10.0
+                  ],
+                  "ppu": 50.0,
+                  "ppuMultiplier": 1.0,
+                  "type": "Simple",
+                  "color": "#FFFFFFFF",
+                  "raycast": true
+                },
+                "components": [
+                  "CanvasRenderer",
+                  "Image"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

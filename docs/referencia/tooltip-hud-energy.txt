@@ -1,0 +1,317 @@
+{
+  "screen": {
+    "width": 1920,
+    "height": 1080
+  },
+  "truncated": false,
+  "nodes": 11,
+  "roots": [
+    {
+      "path": "UI/UIRoot/UITooltip",
+      "node": {
+        "name": "UITooltip",
+        "rect": [
+          207.0,
+          62.0,
+          400.0,
+          172.0
+        ],
+        "size": [
+          200.0,
+          86.0
+        ],
+        "layout": {
+          "kind": "VerticalLayoutGroup",
+          "spacing": 2.0,
+          "padding": [
+            14,
+            14,
+            14,
+            14
+          ],
+          "align": "MiddleCenter"
+        },
+        "image": {
+          "sprite": "hint-frame",
+          "texture": "hint-frame",
+          "spriteRect": [
+            0.0,
+            0.0,
+            156.0,
+            114.0
+          ],
+          "border": [
+            20.0,
+            20.0,
+            20.0,
+            20.0
+          ],
+          "ppu": 50.0,
+          "ppuMultiplier": 1.0,
+          "type": "Sliced",
+          "color": "#FFFFFFFF",
+          "raycast": true
+        },
+        "components": [
+          "UITooltip",
+          "Canvas",
+          "CanvasGroup",
+          "VerticalLayoutGroup",
+          "ContentSizeFitter",
+          "LazyWidgetContainer",
+          "CanvasRenderer",
+          "Image",
+          "OverrideLayoutElement"
+        ],
+        "children": [
+          {
+            "name": "UITooltipTextWidget(Clone)",
+            "rect": [
+              372.0,
+              90.0,
+              70.0,
+              24.0
+            ],
+            "size": [
+              35.0,
+              12.0
+            ],
+            "text": {
+              "value": "Energy",
+              "font": "small_font",
+              "material": "en:[small_font-hint_header]",
+              "fontSize": 16.0,
+              "autoSize": false,
+              "color": "#5E2100FF",
+              "style": "Normal",
+              "align": "Center",
+              "characterSpacing": 0.0,
+              "lineSpacing": 0.0
+            },
+            "textStyle": "small_font-hint_header",
+            "components": [
+              "UITooltipTextWidget",
+              "CanvasRenderer",
+              "TextMeshProUGUI",
+              "TextStyleComponent",
+              "LanguageRtlLabelState"
+            ]
+          },
+          {
+            "name": "UITooltipSeparatorWidget(Clone)",
+            "rect": [
+              235.0,
+              118.0,
+              344.0,
+              12.0
+            ],
+            "size": [
+              172.0,
+              6.0
+            ],
+            "layout": {
+              "kind": "VerticalLayoutGroup",
+              "spacing": 0.0,
+              "padding": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "align": "MiddleCenter"
+            },
+            "components": [
+              "UITooltipSeparatorWidget",
+              "VerticalLayoutGroup",
+              "ContentSizeFitter"
+            ],
+            "children": [
+              {
+                "name": "SpaceUp",
+                "rect": [
+                  307.0,
+                  118.0,
+                  200.0,
+                  0.0
+                ],
+                "size": [
+                  100.0,
+                  0.0
+                ],
+                "components": []
+              },
+              {
+                "name": "Icon",
+                "rect": [
+                  311.0,
+                  118.0,
+                  192.0,
+                  12.0
+                ],
+                "size": [
+                  96.0,
+                  6.0
+                ],
+                "image": {
+                  "sprite": "hint-text_separator",
+                  "texture": "hint-text_separator",
+                  "spriteRect": [
+                    0.0,
+                    0.0,
+                    96.0,
+                    6.0
+                  ],
+                  "ppu": 50.0,
+                  "ppuMultiplier": 1.0,
+                  "type": "Simple",
+                  "color": "#FFFFFFFF",
+                  "raycast": true
+                },
+                "components": [
+                  "CanvasRenderer",
+                  "Image"
+                ]
+              },
+              {
+                "name": "SpaceDown",
+                "rect": [
+                  307.0,
+                  130.0,
+                  200.0,
+                  0.0
+                ],
+                "size": [
+                  100.0,
+                  0.0
+                ],
+                "components": []
+              }
+            ]
+          },
+          {
+            "name": "UITooltipTextWidget(Clone)",
+            "rect": [
+              235.0,
+              134.0,
+              344.0,
+              72.0
+            ],
+            "size": [
+              172.0,
+              36.0
+            ],
+            "text": {
+              "value": "Spent on activities. Restored by sleeping and consuming certain items.",
+              "font": "small_font",
+              "material": "en:[small_font-hint_regular_text]",
+              "fontSize": 16.0,
+              "autoSize": false,
+              "color": "#784F26FF",
+              "style": "Normal",
+              "align": "Center",
+              "characterSpacing": 0.0,
+              "lineSpacing": 0.0
+            },
+            "textStyle": "small_font-hint_regular_text",
+            "components": [
+              "UITooltipTextWidget",
+              "CanvasRenderer",
+              "TextMeshProUGUI",
+              "TextStyleComponent",
+              "LanguageRtlLabelState"
+            ],
+            "children": [
+              {
+                "name": "New Game Object",
+                "rect": [
+                  235.0,
+                  134.0,
+                  344.0,
+                  72.0
+                ],
+                "size": [
+                  172.0,
+                  36.0
+                ],
+                "components": [
+                  "LayoutElement",
+                  "CanvasRenderer",
+                  "TMP_SubMeshUI"
+                ]
+              },
+              {
+                "name": "New Game Object",
+                "rect": [
+                  235.0,
+                  134.0,
+                  344.0,
+                  72.0
+                ],
+                "size": [
+                  172.0,
+                  36.0
+                ],
+                "components": [
+                  "LayoutElement",
+                  "CanvasRenderer",
+                  "TMP_SubMeshUI"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "BubbleCornerUL",
+            "rect": [
+              231.0,
+              60.0,
+              20.0,
+              20.0
+            ],
+            "size": [
+              10.0,
+              10.0
+            ],
+            "components": [
+              "UIBubbleCorner",
+              "LayoutElement"
+            ],
+            "children": [
+              {
+                "name": "Image",
+                "rect": [
+                  231.0,
+                  82.0,
+                  20.0,
+                  -20.0
+                ],
+                "size": [
+                  10.0,
+                  10.0
+                ],
+                "image": {
+                  "sprite": "hint-frame_tail",
+                  "texture": "hint-frame_tail",
+                  "spriteRect": [
+                    0.0,
+                    0.0,
+                    10.0,
+                    10.0
+                  ],
+                  "ppu": 50.0,
+                  "ppuMultiplier": 1.0,
+                  "type": "Simple",
+                  "color": "#FFFFFFFF",
+                  "raycast": true
+                },
+                "components": [
+                  "CanvasRenderer",
+                  "Image"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

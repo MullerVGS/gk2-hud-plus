@@ -1,0 +1,355 @@
+{
+  "screen": {
+    "width": 1920,
+    "height": 1080
+  },
+  "truncated": false,
+  "nodes": 13,
+  "roots": [
+    {
+      "path": "UI/UIRoot/UITooltip",
+      "node": {
+        "name": "UITooltip",
+        "rect": [
+          1350.0,
+          136.0,
+          400.0,
+          244.0
+        ],
+        "size": [
+          200.0,
+          122.0
+        ],
+        "layout": {
+          "kind": "VerticalLayoutGroup",
+          "spacing": 2.0,
+          "padding": [
+            14,
+            14,
+            14,
+            14
+          ],
+          "align": "MiddleCenter"
+        },
+        "image": {
+          "sprite": "hint-frame",
+          "texture": "hint-frame",
+          "spriteRect": [
+            0.0,
+            0.0,
+            156.0,
+            114.0
+          ],
+          "border": [
+            20.0,
+            20.0,
+            20.0,
+            20.0
+          ],
+          "ppu": 50.0,
+          "ppuMultiplier": 1.0,
+          "type": "Sliced",
+          "color": "#FFFFFFFF",
+          "raycast": true
+        },
+        "components": [
+          "UITooltip",
+          "Canvas",
+          "CanvasGroup",
+          "VerticalLayoutGroup",
+          "ContentSizeFitter",
+          "LazyWidgetContainer",
+          "CanvasRenderer",
+          "Image",
+          "OverrideLayoutElement"
+        ],
+        "children": [
+          {
+            "name": "UITooltipTextWidget(Clone)",
+            "rect": [
+              1509.0,
+              164.0,
+              82.0,
+              24.0
+            ],
+            "size": [
+              41.0,
+              12.0
+            ],
+            "text": {
+              "value": "Axeman",
+              "font": "small_font",
+              "material": "en:[small_font-hint_header]",
+              "fontSize": 16.0,
+              "autoSize": false,
+              "color": "#5E2100FF",
+              "style": "Normal",
+              "align": "Center",
+              "characterSpacing": 0.0,
+              "lineSpacing": 0.0
+            },
+            "textStyle": "small_font-hint_header",
+            "components": [
+              "UITooltipTextWidget",
+              "CanvasRenderer",
+              "TextMeshProUGUI",
+              "TextStyleComponent",
+              "LanguageRtlLabelState"
+            ],
+            "children": [
+              {
+                "name": "New Game Object",
+                "rect": [
+                  1509.0,
+                  164.0,
+                  82.0,
+                  24.0
+                ],
+                "size": [
+                  41.0,
+                  12.0
+                ],
+                "components": [
+                  "LayoutElement",
+                  "CanvasRenderer",
+                  "TMP_SubMeshUI"
+                ]
+              },
+              {
+                "name": "New Game Object",
+                "rect": [
+                  1509.0,
+                  164.0,
+                  82.0,
+                  24.0
+                ],
+                "size": [
+                  41.0,
+                  12.0
+                ],
+                "components": [
+                  "LayoutElement",
+                  "CanvasRenderer",
+                  "TMP_SubMeshUI"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "UITooltipSeparatorWidget(Clone)",
+            "rect": [
+              1378.0,
+              192.0,
+              344.0,
+              12.0
+            ],
+            "size": [
+              172.0,
+              6.0
+            ],
+            "layout": {
+              "kind": "VerticalLayoutGroup",
+              "spacing": 0.0,
+              "padding": [
+                0,
+                0,
+                0,
+                0
+              ],
+              "align": "MiddleCenter"
+            },
+            "components": [
+              "UITooltipSeparatorWidget",
+              "VerticalLayoutGroup",
+              "ContentSizeFitter"
+            ],
+            "children": [
+              {
+                "name": "SpaceUp",
+                "rect": [
+                  1450.0,
+                  192.0,
+                  200.0,
+                  0.0
+                ],
+                "size": [
+                  100.0,
+                  0.0
+                ],
+                "components": []
+              },
+              {
+                "name": "Icon",
+                "rect": [
+                  1454.0,
+                  192.0,
+                  192.0,
+                  12.0
+                ],
+                "size": [
+                  96.0,
+                  6.0
+                ],
+                "image": {
+                  "sprite": "hint-text_separator",
+                  "texture": "hint-text_separator",
+                  "spriteRect": [
+                    0.0,
+                    0.0,
+                    96.0,
+                    6.0
+                  ],
+                  "ppu": 50.0,
+                  "ppuMultiplier": 1.0,
+                  "type": "Simple",
+                  "color": "#FFFFFFFF",
+                  "raycast": true
+                },
+                "components": [
+                  "CanvasRenderer",
+                  "Image"
+                ]
+              },
+              {
+                "name": "SpaceDown",
+                "rect": [
+                  1450.0,
+                  204.0,
+                  200.0,
+                  0.0
+                ],
+                "size": [
+                  100.0,
+                  0.0
+                ],
+                "components": []
+              }
+            ]
+          },
+          {
+            "name": "UITooltipTextWidget(Clone)",
+            "rect": [
+              1378.0,
+              208.0,
+              344.0,
+              144.0
+            ],
+            "size": [
+              172.0,
+              72.0
+            ],
+            "text": {
+              "value": "The axe is your friend, and it's a sharp friend! You sometimes get extra logs when chopping trees. You can also make more firewood and wedges from logs. Choppin…",
+              "font": "small_font",
+              "material": "en:[small_font-hint_regular_text]",
+              "fontSize": 16.0,
+              "autoSize": false,
+              "color": "#784F26FF",
+              "style": "Normal",
+              "align": "Center",
+              "characterSpacing": 0.0,
+              "lineSpacing": 0.0
+            },
+            "textStyle": "small_font-hint_regular_text",
+            "components": [
+              "UITooltipTextWidget",
+              "CanvasRenderer",
+              "TextMeshProUGUI",
+              "TextStyleComponent",
+              "LanguageRtlLabelState"
+            ],
+            "children": [
+              {
+                "name": "New Game Object",
+                "rect": [
+                  1378.0,
+                  208.0,
+                  344.0,
+                  144.0
+                ],
+                "size": [
+                  172.0,
+                  72.0
+                ],
+                "components": [
+                  "LayoutElement",
+                  "CanvasRenderer",
+                  "TMP_SubMeshUI"
+                ]
+              },
+              {
+                "name": "New Game Object",
+                "rect": [
+                  1378.0,
+                  208.0,
+                  344.0,
+                  144.0
+                ],
+                "size": [
+                  172.0,
+                  72.0
+                ],
+                "components": [
+                  "LayoutElement",
+                  "CanvasRenderer",
+                  "TMP_SubMeshUI"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "BubbleCornerDL",
+            "rect": [
+              1374.0,
+              358.0,
+              20.0,
+              20.0
+            ],
+            "size": [
+              10.0,
+              10.0
+            ],
+            "components": [
+              "UIBubbleCorner",
+              "LayoutElement"
+            ],
+            "children": [
+              {
+                "name": "Image",
+                "rect": [
+                  1374.0,
+                  360.0,
+                  20.0,
+                  20.0
+                ],
+                "size": [
+                  10.0,
+                  10.0
+                ],
+                "image": {
+                  "sprite": "hint-frame_tail",
+                  "texture": "hint-frame_tail",
+                  "spriteRect": [
+                    0.0,
+                    0.0,
+                    10.0,
+                    10.0
+                  ],
+                  "ppu": 50.0,
+                  "ppuMultiplier": 1.0,
+                  "type": "Simple",
+                  "color": "#FFFFFFFF",
+                  "raycast": true
+                },
+                "components": [
+                  "CanvasRenderer",
+                  "Image"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

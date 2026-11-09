@@ -1,0 +1,193 @@
+{
+  "screen": {
+    "width": 1920,
+    "height": 1080
+  },
+  "truncated": false,
+  "nodes": 6,
+  "roots": [
+    {
+      "path": "UI/UIRoot/UITooltip",
+      "node": {
+        "name": "UITooltip",
+        "rect": [
+          324.0,
+          106.0,
+          400.0,
+          128.0
+        ],
+        "size": [
+          200.0,
+          64.0
+        ],
+        "layout": {
+          "kind": "VerticalLayoutGroup",
+          "spacing": 2.0,
+          "padding": [
+            14,
+            14,
+            14,
+            14
+          ],
+          "align": "MiddleCenter"
+        },
+        "image": {
+          "sprite": "hint-frame",
+          "texture": "hint-frame",
+          "spriteRect": [
+            0.0,
+            0.0,
+            156.0,
+            114.0
+          ],
+          "border": [
+            20.0,
+            20.0,
+            20.0,
+            20.0
+          ],
+          "ppu": 50.0,
+          "ppuMultiplier": 1.0,
+          "type": "Sliced",
+          "color": "#FFFFFFFF",
+          "raycast": true
+        },
+        "components": [
+          "UITooltip",
+          "Canvas",
+          "CanvasGroup",
+          "VerticalLayoutGroup",
+          "ContentSizeFitter",
+          "LazyWidgetContainer",
+          "CanvasRenderer",
+          "Image",
+          "OverrideLayoutElement"
+        ],
+        "children": [
+          {
+            "name": "UITooltipTextWidget(Clone)",
+            "rect": [
+              352.0,
+              134.0,
+              344.0,
+              72.0
+            ],
+            "size": [
+              172.0,
+              36.0
+            ],
+            "text": {
+              "value": "Get <sprite name=\"happiness\"> from <font=\"small_font_bold\" material=\"en:small_font_bold-hint_header_1_dynamic\"><color=#4E3012>Town Gratitude</color></font>, tra…",
+              "font": "small_font",
+              "material": "en:[small_font-hint_regular_text]",
+              "fontSize": 16.0,
+              "autoSize": false,
+              "color": "#784F26FF",
+              "style": "Normal",
+              "align": "Center",
+              "characterSpacing": 0.0,
+              "lineSpacing": 0.0
+            },
+            "textStyle": "small_font-hint_regular_text",
+            "components": [
+              "UITooltipTextWidget",
+              "CanvasRenderer",
+              "TextMeshProUGUI",
+              "TextStyleComponent",
+              "LanguageRtlLabelState"
+            ],
+            "children": [
+              {
+                "name": "New Game Object",
+                "rect": [
+                  352.0,
+                  134.0,
+                  344.0,
+                  72.0
+                ],
+                "size": [
+                  172.0,
+                  36.0
+                ],
+                "components": [
+                  "LayoutElement",
+                  "CanvasRenderer",
+                  "TMP_SubMeshUI"
+                ]
+              },
+              {
+                "name": "New Game Object",
+                "rect": [
+                  352.0,
+                  134.0,
+                  344.0,
+                  72.0
+                ],
+                "size": [
+                  172.0,
+                  36.0
+                ],
+                "components": [
+                  "LayoutElement",
+                  "CanvasRenderer",
+                  "TMP_SubMeshUI"
+                ]
+              }
+            ]
+          },
+          {
+            "name": "BubbleCornerUL",
+            "rect": [
+              348.0,
+              104.0,
+              20.0,
+              20.0
+            ],
+            "size": [
+              10.0,
+              10.0
+            ],
+            "components": [
+              "UIBubbleCorner",
+              "LayoutElement"
+            ],
+            "children": [
+              {
+                "name": "Image",
+                "rect": [
+                  348.0,
+                  126.0,
+                  20.0,
+                  -20.0
+                ],
+                "size": [
+                  10.0,
+                  10.0
+                ],
+                "image": {
+                  "sprite": "hint-frame_tail",
+                  "texture": "hint-frame_tail",
+                  "spriteRect": [
+                    0.0,
+                    0.0,
+                    10.0,
+                    10.0
+                  ],
+                  "ppu": 50.0,
+                  "ppuMultiplier": 1.0,
+                  "type": "Simple",
+                  "color": "#FFFFFFFF",
+                  "raycast": true
+                },
+                "components": [
+                  "CanvasRenderer",
+                  "Image"
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
