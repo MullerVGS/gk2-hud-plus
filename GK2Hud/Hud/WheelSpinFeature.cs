@@ -18,8 +18,10 @@ namespace GK2Hud.Hud
     ///   então o seletor passa pela fatia do dia de meia-noite a meia-noite e ao meio-dia tudo fica na posição nativa;
     /// - do seletor (<c>CurrentDay</c>) fica só o triângulo do topo apontando para baixo: a placa de bronze cobria o sigilo do dia;
     /// - os sigilos perdem o aro de bronze e ficam em pé no meio da fatia (só transladam: sem rotação de pixel art).
-    /// O fundo nativo (<c>hud-day_dial-bg</c>) é escondido e redesenhado girado (vizinho mais próximo, grade de pixel de arte)
-    /// numa textura própria, refeita a cada <see cref="StepDeg"/>. As posições dos sigilos são aplicadas em
+    /// O fundo nativo (<c>hud-day_dial-bg</c>) é escondido; uma cópia com as divisórias é desenhada uma vez, ampliada
+    /// <see cref="Up"/>× por vizinho mais próximo (com mipmaps e filtro trilinear: "sharp bilinear") e girada pelo transform
+    /// a cada frame, então o giro é contínuo, sem os saltos de redesenhar pixel art girada. Os sigilos andam em passos de
+    /// 1 px de tela (Point filtrado fora da grade de tela borra/dobra colunas). As posições dos sigilos são aplicadas em
     /// <c>Canvas.willRenderCanvases</c>, depois do <c>Update</c> nativo, então a animação de troca de dia do jogo só
     /// contribui com os fades de cor. Troca de vários dias (dia pulado, carregar save) anda na velocidade nativa (120°/s).
     /// </summary>
@@ -29,7 +31,7 @@ namespace GK2Hud.Hud
 
         private const string RingName = HudFeature.Prefix + "WheelRing";
         private const float AttachRetry = 1f;
-        private const float StepDeg = 0.5f;            // 0,5° ≈ 3,75 s reais acordado; 1 px de arte na borda ≈ 1°
+        private const int Up = 4;                      // ampliação do anel antes de girar na GPU
         private const double CatchUpDaysPerSec = 2.0;   // = dayWheelAngularSpeedDeg 120°/s do UIHUDWheel
         private const double CatchUpThreshold = 0.02;   // dias; abaixo disso segue o relógio direto (inclui o sono 50×)
         private const float IconKeepRadius = 7.4f;      // px de arte: mantém o disco colorido, tira o aro de bronze
@@ -63,7 +65,8 @@ namespace GK2Hud.Hud
 
         private bool hooked, hasShown, loggedError;
         private double shownT;
-        private float drawnRho = float.NaN, nextAttach;
+        private float drawnRho = float.NaN, nextAttach, snap = 0.5f;
+        private RectTransform ringRt;
 
         /// <summary>Teste (cenário gk2hud-medalhao-giro.cs): força o tempo mostrado (dia + hora) sem mexer no jogo.</summary>
         internal double? ForcedT { get; set; }
@@ -124,8 +127,8 @@ namespace GK2Hud.Hud
                 size = Mathf.RoundToInt(Mathf.Min(r.width, r.height));
                 src = ReadSprite(bgSprite, out _, out _);
                 buf = new Color32[src.Length];
-                ringTex = new Texture2D(size, size, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp, name = RingName };
-                ringSprite = Sprite.Create(ringTex, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), bgSprite.pixelsPerUnit, 0, SpriteMeshType.FullRect);
+                ringTex = BuildRing();
+                ringSprite = Sprite.Create(ringTex, new Rect(0, 0, size * Up, size * Up), new Vector2(0.5f, 0.5f), bgSprite.pixelsPerUnit * Up, 0, SpriteMeshType.FullRect);
                 ringSprite.name = RingName;
 
                 for (int i = w.transform.childCount - 1; i >= 0; i--)
@@ -144,6 +147,9 @@ namespace GK2Hud.Hud
                 img.sprite = ringSprite;
                 img.raycastTarget = false;
                 img.color = bg.color;
+                ringRt = rt;
+                Canvas root = bg.canvas != null ? bg.canvas.rootCanvas : null;
+                snap = root != null && root.scaleFactor > 0f ? 1f / root.scaleFactor : 0.5f;
 
                 selector = w.transform.Find("CurrentDay")?.GetComponent<Image>();
                 if (selector != null && selector.sprite != null)
@@ -192,6 +198,7 @@ namespace GK2Hud.Hud
             }
             if (ringGo != null) Object.Destroy(ringGo);
             ringGo = null;
+            ringRt = null;
             if (ringSprite != null) Object.Destroy(ringSprite);
             if (ringTex != null) Object.Destroy(ringTex);
             ringSprite = null;
@@ -248,11 +255,10 @@ namespace GK2Hud.Hud
             // Rotação do anel em graus (anti-horário positivo); ao meio-dia de qualquer dia é múltiplo de 60 (posição nativa).
             double rot = (0.5 - shownT) * 60.0;
             rot -= Math.Floor(rot / 360.0) * 360.0;
-            float rho = Mathf.Round((float)rot / StepDeg) * StepDeg;
-            if (rho >= 360f) rho -= 360f;
-            if (rho != drawnRho)
+            float rho = (float)rot;
+            if (rho != drawnRho && ringRt != null)
             {
-                DrawRing(rho);
+                ringRt.localRotation = Quaternion.Euler(0f, 0f, rho);   // z positivo = anti-horário na tela
                 drawnRho = rho;
             }
 
@@ -271,9 +277,28 @@ namespace GK2Hud.Hud
                 int k = Mod(number - current, 6);
                 // Fatia do dia (baseDay + k): centro em -90° + 60°·dia + rotação.
                 double ang = (-90.0 + 60.0 * Mod(baseDay + k, 6) + rho) * Math.PI / 180.0;
-                var pos = new Vector2(Mathf.Round((float)(Math.Cos(ang) * iconRadius)), Mathf.Round((float)(Math.Sin(ang) * iconRadius)));
+                var pos = new Vector2(Snap((float)(Math.Cos(ang) * iconRadius)), Snap((float)(Math.Sin(ang) * iconRadius)));
                 if (e.rectTransform.anchoredPosition != pos) e.rectTransform.anchoredPosition = pos;
             }
+        }
+
+        private float Snap(float v) => Mathf.Round(v / snap) * snap;
+
+        /// <summary>Anel nativo + divisórias na posição sem giro, ampliado <see cref="Up"/>× por vizinho mais próximo.</summary>
+        private Texture2D BuildRing()
+        {
+            DrawRing(0f);
+            int n = size, m = size * Up;
+            var big = new Color32[m * m];
+            for (int y = 0; y < m; y++)
+            {
+                int sy = y / Up;
+                for (int x = 0; x < m; x++) big[y * m + x] = buf[sy * n + x / Up];
+            }
+            var tex = new Texture2D(m, m, TextureFormat.RGBA32, true) { filterMode = FilterMode.Trilinear, wrapMode = TextureWrapMode.Clamp, name = RingName };
+            tex.SetPixels32(big);
+            tex.Apply(true, true);
+            return tex;
         }
 
         private void DrawRing(float rhoDeg)
@@ -321,8 +346,6 @@ namespace GK2Hud.Hud
                     else if (ad <= DivOut) buf[i] = BronzeOut;
                 }
             }
-            ringTex.SetPixels32(buf);
-            ringTex.Apply(false);
         }
 
         // ---------------- sprites ----------------

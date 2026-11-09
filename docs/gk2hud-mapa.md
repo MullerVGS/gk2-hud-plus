@@ -247,7 +247,8 @@ grava ao construir; `DropData.EnsureSpawnDay` grava. Durações de craft no bala
   o anel gira no sentido da troca de dia nativa e o seletor/seta ficam parados (0.7.1: do seletor `CurrentDay` sobra só o
   triângulo do topo, linhas 4–10, meia largura min(y, 10−y) em volta da coluna 19, porque a placa cobria o sigilo do dia) (meia-noite = divisória sob o seletor,
   meio-dia = layout nativo). O fundo `hud-day_dial-bg` tem 6 encaixes (r 38) e ornamentos: é escondido e redesenhado
-  girado por vizinho mais próximo numa textura própria a cada 0,5° (textura do jogo não é legível: `Graphics.Blit` +
+  copiado com as divisórias numa textura própria (0.7.2: desenhada uma vez, ampliada 4× por vizinho mais próximo, mipmaps +
+  trilinear, girada pelo transform a cada frame; redesenhar girado a cada 0,5° piscava) (textura do jogo não é legível: `Graphics.Blit` +
   `ReadPixels`). Sigilos sem aro (raio < 7,4 px do centro do desenho), mesmo nome da sprite nativa, posições em
   `Canvas.willRenderCanvases` (depois do `Update` nativo). Saltos (dia pulado, carregar) andam a 120°/s; >6 dias = corte.
   Desligar restaura com `UIHUDWheel.OnNewDayStarted(day, false)`. Cenário `gk2hud-medalhao-giro.cs` (força só o tempo mostrado).
