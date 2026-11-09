@@ -2,6 +2,7 @@ using BepInEx;
 using BepInEx.Configuration;
 using GK2Hud.Hud;
 using GK2Hud.Tooltips;
+using GK2Hud.World;
 using HarmonyLib;
 using UnityEngine;
 
@@ -9,14 +10,15 @@ namespace GK2Hud
 {
     /// <summary>
     /// Mod de jogador com cara nativa: tooltips enriquecidos, fixáveis e aninhados (pasta Tooltips/) e informações
-    /// extras no HUD (pasta Hud/: dia da semana, hora, números de energia/insanidade). Cada feature tem ciclo Update/Dispose.
+    /// extras no HUD (pasta Hud/: dia da semana, hora, números de energia/insanidade) e tooltip de coisas em andamento no
+    /// mundo (pasta World/). Cada feature tem ciclo Update/Dispose.
     /// </summary>
     [BepInPlugin(Guid, Name, Version)]
     public class Plugin : BaseUnityPlugin
     {
         public const string Guid = "arthur.gk2.hud";
         public const string Name = "GK2 Hud";
-        public const string Version = "0.1.2";
+        public const string Version = "0.2.0";
 
         internal static BepInEx.Logging.ManualLogSource Log;
 
@@ -26,6 +28,8 @@ namespace GK2Hud
         internal TooltipFeature Tooltips { get; private set; }
 
         internal HudFeature HudInfo { get; private set; }
+
+        internal WorldHoverFeature WorldHover { get; private set; }
 
         private readonly LeakSweeper leakSweeper = new LeakSweeper();
 
@@ -41,6 +45,14 @@ namespace GK2Hud
             if (tooltipsOn.Value)
             {
                 Tooltips = new TooltipFeature(harmony, pinKey, hoverDelay, maxDepth);
+            }
+            ConfigEntry<bool> worldOn = Config.Bind("World", "Enabled", true,
+                "Tooltip ao parar o mouse sobre algo em andamento no mundo (craft, plantação, corpo...). O botão de fixar dos tooltips também fixa este.");
+            ConfigEntry<float> worldDelay = Config.Bind("World", "HoverDelay", 0.5f,
+                new ConfigDescription("Segundos com o mouse parado sobre o objeto até o tooltip aparecer.", new AcceptableValueRange<float>(0f, 5f)));
+            if (worldOn.Value)
+            {
+                WorldHover = new WorldHoverFeature(worldDelay);
             }
             ConfigEntry<bool> hudOn = Config.Bind("Hud", "Enabled", true, "Informações extras no HUD (dia da semana, hora, números de energia e insanidade).");
             ConfigEntry<bool> clockOn = Config.Bind("Hud", "Clock", true, "Hora do dia (relógio de 24 h derivado do timeOfDay) na placa sob a felicidade.");
@@ -61,11 +73,14 @@ namespace GK2Hud
         {
             leakSweeper.Tick();
             Tooltips?.Update();
+            WorldHover?.Update();
             HudInfo?.Update();
         }
 
         private void OnDestroy()
         {
+            WorldHover?.Dispose();
+            WorldHover = null;
             Tooltips?.Dispose();
             Tooltips = null;
             HudInfo?.Dispose();

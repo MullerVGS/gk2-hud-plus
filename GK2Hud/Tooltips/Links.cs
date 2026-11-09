@@ -36,7 +36,8 @@ namespace GK2Hud.Tooltips
             var dst = new List<LazyWidgetDataBase>(src.Count);
             foreach (LazyWidgetDataBase d in src)
             {
-                if (d is UITooltipTextWidgetData t && HasLinks(t.Text))
+                // Cabeçalho com link (tooltip de mundo: o nome do objeto leva à estação) mantém o estilo de cabeçalho.
+                if (d is UITooltipTextWidgetData t && HasLinks(t.Text) && (s == null || t.TextStyle != s.Header))
                     dst.Add(new UITooltipTextWidgetData(Highlight(t.Text, s?.Term), t.TextAlignmentOptions, t.TextStyle));
                 else
                     dst.Add(d);

@@ -22,6 +22,8 @@ namespace GK2Hud.Tooltips
         public int Side = 1;                    // +1 abre à direita da mãe, -1 à esquerda
         public List<TMP_Text> LinkTexts = new List<TMP_Text>();   // textos com <link>, coletados no render
         public Sprite Image;                    // imagem da construção (popup de estação), entre o cabeçalho e o resto
+        public System.Func<List<LazyWidgetDataBase>> Live;   // conteúdo que muda com o tempo (tooltip de mundo): refeito enquanto fixada
+        public string LiveSig;                  // assinatura do último conteúdo vivo renderizado
 
         /// <summary>Margem transparente da moldura hint-frame (px de tela, ~7 px de arte em cada lado).</summary>
         public const float FrameMargin = 14f;
@@ -253,6 +255,30 @@ namespace GK2Hud.Tooltips
             bool lost = false;
             foreach (Bubble b in Pinned) if (b.Rt == null) { lost = true; break; }
             if (lost) CloseAll();
+        }
+
+        private const float LiveInterval = 0.5f;
+        private float nextLive;
+
+        /// <summary>
+        /// Bolhas fixadas com conteúdo vivo (tempo restante de um craft no mundo): refaz a cada 0,5 s e só redesenha
+        /// quando o texto muda. Processo encerrado (Live devolve null) mantém o último conteúdo.
+        /// </summary>
+        public void RefreshLive(Styles s, System.Func<List<LazyWidgetDataBase>, string> signature)
+        {
+            if (Time.unscaledTime < nextLive) return;
+            nextLive = Time.unscaledTime + LiveInterval;
+            foreach (Bubble b in Pinned)
+            {
+                if (b.Live == null || b.Rt == null) continue;
+                List<LazyWidgetDataBase> data = b.Live();
+                if (data == null || data.Count == 0) continue;
+                string sig = signature(data);
+                if (sig == b.LiveSig) continue;
+                b.LiveSig = sig;
+                b.Data = data;
+                Render(b, s);
+            }
         }
 
         public void CloseTransient()

@@ -7,7 +7,7 @@ confirmado lendo o corpo do método nem no jogo.
 ## Decisões de design
 
 - Mod de jogador: visual indistinguível do nativo (regras de "Design nativo" do `AGENTS.md`).
-- v1 só UI (inventário, baú, craft, vendedor, HUD). Hover em objetos do mundo fica para v2 (viável, ver fim).
+- v1 só UI (inventário, baú, craft, vendedor, HUD). v2 (0.2.0): tooltip de coisas em andamento no mundo (seção "Hover no mundo").
 - Tooltip com informação extra no hover; **tecla livre** fixa o popup (padrão: botão do meio do mouse, configurável;
   T é a Tech Tree do jogo). No fixado, passar o mouse num termo destacado abre o popup aninhado ao lado; a tecla
   fixa esse também, recursivamente (igual BG3).
@@ -128,14 +128,60 @@ cujo sprite está no atlas TMP (inferido; conferir). Ingredientes dentro do tool
 - Escritas benignas de cache (ok): `Item.CheckPropertiesCreated`, getter `WgoData.WorldZoneData`,
   `CraftComponent.AvailableCrafts`, `CraftDef.TryGetResultingItemDef`, `ItemDef.GetPerksOnUse`.
 
-## Hover no mundo (v2)
+## Hover no mundo (v2, pasta `World/`, 0.2.0)
 
-Alvo nativo é por proximidade (`PlayerInteractionComponent.cs:98`, máscara 65600 = layers 6 e 16). Do mouse:
-`CameraSystem.ScreenPointToRay(Input.mousePosition)` → `Physics.RaycastAll(ray, ∞, 65600, Collide)` →
-`GetComponentInParent<Wgo>().Data`; no green, primeiro acerto da layer 6 é o alvo em 7–9 de 12 (vizinho da frente
-rouba; fogão sem collider próprio). Alternativa: projetar `wgo.BubbleDrawablePosition` e escolher o mais próximo do
-cursor. Bolha ancorada: `IBubbleDrawable` próprio (SGuid novo) + `UIObjectBubbleManager.Instance.Display/Hide`.
-Cenário: `docs/cenarios/hover-mundo.cs`.
+Pedido: parar o mouse sobre algo em andamento (craft, plantação...) mostra "como" e "quanto falta"; o botão
+do meio fixa como os outros tooltips. Config `[World] Enabled`, `HoverDelay` (0,5 s).
+
+- **Tooltip**: o `UITooltip` nativo (`Native.ShowAt`) ancorado num RectTransform proxy `GK2Hud_WorldProxy` (filho do
+  `UIRoot`, sem Graphic, criado sob demanda, destruído no Dispose e por nome na carga). O proxy cobre o retângulo de tela
+  do objeto ∪ a bolha nativa e é reposicionado a cada frame; o `UITooltip.Update` segue o alvo, então o tooltip anda com
+  a câmera e nasce acima da bolha nativa (não a cobre). Conteúdo refeito a 4 Hz e redesenhado só quando o texto muda;
+  `ShowAtTarget` só toca `gui_hover_light` quando o alvo muda ou o tooltip estava fechado (`UITooltip.cs:152-167`).
+- **Fixar**: o funil grava `lastData/lastTarget` (= proxy) e o `PinNative` de sempre clona o singleton. A bolha fixada de
+  mundo ganha `Bubble.Live` (refaz o conteúdo a 0,5 s; processo encerrado mantém o último). `Links.Highlighted` não
+  destaca texto com estilo de cabeçalho (o nome do objeto é link `wgo:` com cara de cabeçalho).
+- **Alvo** (`WorldTargets`): candidatos refeitos a cada 1 s = `craftSystemData.activeCrafts` com Wgo carregado
+  (`GameScene.GetWgoViewGlobal(uid)`, `GameScene.cs:99`) + corpos com timer nas cenas carregadas
+  (`GameScene.TryGetDropView`). Escolha a 5 Hz: retângulo de tela (8 cantos dos bounds dos renderers, sem sombras
+  `_sh`, `blackout`, `LightFaker`, partículas; ∪ gráficos ativos da bolha `UIObjectBubbleManager.TryGetDisplayedBubble`,
+  `:142`) contendo o cursor ou raycast físico (layers 6 e 16) no objeto; vence o centro mais próximo do cursor (raycast
+  dá 24 px de bônus). Testado: moinho ao lado do forno, bolhas encostadas, escolheu certo.
+- **Não dispara**: gamepad, janela/modal aberta, `IsControlsEnabledExcept(ByWork)` falso (cutscene, diálogo, sono,
+  teleporte...), `PlayerInputHandler.IsAttackFocusHeld()`, estado `Attack*` do SSM, ponteiro sobre UI (raycast de UI
+  próprio, vale com mouse virtual; a bolha nativa sobre objetos conta como mundo). O cursor sumir após 4 s não importa.
+- **Teste**: `WorldHoverFeature.VirtualMouse` (+ `TooltipFeature.VirtualMouse` para fixar). Cenários
+  `gk2hud-mundo-{hover,fixar,camera,janela,craft,plantar,corpo}.cs`.
+
+### Processos do mundo (fonte: `decomp/`, levantamento de 08/11)
+
+Tempo: todo temporizador anda em segundos de jogo = `Time.deltaTime × UpdateManager.TimeMultiplier` (50 dormindo,
+`EnergySystem.cs:61/70`); craft/drop/conveyor a cada 0,2 s (`MainGame.cs:204`). Fora do sono, segundo de jogo = segundo
+real (o tooltip mostra m:ss).
+
+| Processo | Estado / leitura | Tempo restante | No tooltip |
+| --- | --- | --- | --- |
+| Autocraft (forno, barril, compostagem, crematório...) | `CraftComponent.CurrentCraftElement`, `Status`, `CraftElementsQueue` | `(Total−Progress)×D − currentAutoCraftTickTime`, D = campo privado `autoCraftTickDuration` (5 s se ≤ 0; `CraftComponent.cs:756-783`). Não usar `WgoData.AutoCraftTickDuration` (reavalia expressão) | fazendo (link) ×saída pré-rolada (`PreOutputItems`, `CraftElementBase.cs:486`), progresso, falta, fila inteira (duração constante do balanço + perks), quem faz, bloqueio, próximos (links), combustível |
+| Craft manual do jogador | idem, `!Def.isAuto`, sem zumbi | depende de golpes: "Depende de você: faltam N ticks" | idem |
+| Craft com zumbi | `wgoData.Worker is ZombieWgoData` | golpe a cada 1 s × (1+`zombieSpeedItemModificators[mão]`); a cada `zombie_craft_sub_ticks_count` (10) golpes soma clamp(max(M,L)/L, 0, `max_cells_per_one_hit`) (`ZombieCraftActivity.cs:83-150,231`) → "~m:ss" | idem (não testado: save sem zumbi artesão) |
+| Canteiro crescendo | autocraft `GardenGrowing` (detectado no ctor de `CraftParamsData`, `:226-238`), `isHidden`, sem bolha nativa | por tick 1 célula (boa/falha, sorteio M/L) ou clamp(M/L,1,3) se M≥L (`CraftComponent.cs:1387`); M/L de `ParamsData.MasteryValue/MasteryLock` (só lookups) | plantado (link), progresso (boas/falhas), falta, maestria/chance, adubo (`ActivePerks` `perk_fertilize_*`), colheita até agora (`GetGameRes` dos `WGOPar("x")` na string crua do `addItemsToWgoOnFinish`) e máximo (`gameresPerSuccessfulProgress` das células restantes) |
+| Renovação escondida (poço, colmeia, cogumelo, arbustos, árvores, latrina) | autocraft `isHidden && isAuto` | fórmula do autocraft; spawner pronto espera o jogador se afastar (`wgoDelayedSpawnSystemData.Contains`, `WgoData.OnCraftEnd :1136`) | estágio (`SpawnWGOComponent.SpawnStages`), dá (saída, ou `AddItemToWgoInv("x",n)` lido da string de `onCraftEndExpressions` + estoque), vira (`replaceWgoId`), pronto em |
+| Corpo no chão | `DropData.AutoDestroyTimer > 0` (4500 s, só itens `body`+`corpse`, `DropData.cs:196`) | decrementa em `DropSystem.cs:128-162`; **pausa enquanto visível** (`WhenVisibleOnScreen`, `DropView.cs:1807`) | apodrece em, "parado enquanto está na tela", depois |
+| Combustível | `WGODef.isFuelContainer` + inventário da estação (`Wgo.cs:2002`); forno: ingrediente `isFuel` ("fire") no `GetCraftableMultiInventory` | contagem, não tempo | "Combustível: 70 · dá para 4 crafts" |
+
+Status nativos: `CraftStatus` (`CraftStatus.cs`) traduzido pelo mod (o jogo só tem `ui_craft_status_*` para 4 deles,
+`UICraftQueueElementWidget.cs:186-201`); `CraftComponentStatus` sem texto nativo.
+
+Fora (por quê): construção `*_place` (progresso por HP batendo, não tempo); prédios da cidade (`town_building_craft:*`,
+duração 0); ressurreição (`corpse_zombie_transition`, 1 tick de 5 s, some antes de dar para ver); `ZombieHPActivity`
+(zumbi cortando/colhendo: o alvo é o objeto de HP e o dano repete fórmula com `Debug.Log`; ficou para depois);
+eventos atrasados (`WgoData.delayedEvents`, privado, animação curta); drops no rio. Não existem no jogo: rega,
+animais, pesca com armadilha, secagem, fogueira por tempo, apodrecimento de item em baú.
+
+Armadilhas desta parte: `CraftElementBase.Def` e `GameBalance.GetCraftDefBase` cacheiam (benigno); `ZombieCraftActivity.
+GetActionDamage` e `UpdateGardenGrowingCraft` usam `UnityEngine.Random` (replicar fórmula); `UIGardenBedWindowData`
+grava ao construir; `DropData.EnsureSpawnDay` grava. Durações de craft no balanço atual são todas constantes
+(`craftDefs.json`), tick dos WGOs usa só `PPar(...)`.
 
 ## HUD (pasta `Hud/`, 08/11)
 

@@ -244,6 +244,7 @@ namespace GK2Hud.Tooltips
                 Stack.CloseAll();
             }
             UpdateHover(mouse);
+            Stack.RefreshLive(Styles.Read(), World.WorldContent.Signature);
         }
 
         private Bubble PinnedAt(Vector2 mouse)
@@ -303,6 +304,8 @@ namespace GK2Hud.Tooltips
             b.Pinned = true;
             b.Parent = parent;
             b.Data = new List<LazyWidgetDataBase>(lastData);
+            b.Live = World.WorldHoverFeature.Current?.LiveFor(lastTarget);
+            if (b.Live != null) b.LiveSig = World.WorldContent.Signature(lastData);
             if (parent != null)
             {
                 b.SourceRect = ScreenRectOf(lastTarget);
