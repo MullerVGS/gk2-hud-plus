@@ -244,7 +244,8 @@ grava ao construir; `DropData.EnsureSpawnDay` grava. Durações de craft no bala
 
 - **Medalhão giratório (0.7.0, `WheelSpinFeature`, `[Hud] WheelRotation`)**: cada dia é uma fatia de 60° com divisórias de
   bronze (paleta do aro dos sigilos: `#331606` contorno, `#6C3D22`/`#995C39` corpo, `#CA8A50` núcleo; r 30→48 px de arte);
-  o anel gira no sentido da troca de dia nativa e o seletor/seta ficam parados (meia-noite = divisória sob o seletor,
+  o anel gira no sentido da troca de dia nativa e o seletor/seta ficam parados (0.7.1: do seletor `CurrentDay` sobra só o
+  triângulo do topo, linhas 4–10, meia largura min(y, 10−y) em volta da coluna 19, porque a placa cobria o sigilo do dia) (meia-noite = divisória sob o seletor,
   meio-dia = layout nativo). O fundo `hud-day_dial-bg` tem 6 encaixes (r 38) e ornamentos: é escondido e redesenhado
   girado por vizinho mais próximo numa textura própria a cada 0,5° (textura do jogo não é legível: `Graphics.Blit` +
   `ReadPixels`). Sigilos sem aro (raio < 7,4 px do centro do desenho), mesmo nome da sprite nativa, posições em

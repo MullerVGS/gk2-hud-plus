@@ -16,6 +16,7 @@ namespace GK2Hud.Hud
     /// - cada dia é uma fatia de 60° do anel, separada das vizinhas por divisórias de bronze;
     /// - o anel gira no sentido da troca de dia nativa (o próximo vem da direita); o seletor de baixo e a seta ficam parados,
     ///   então o seletor passa pela fatia do dia de meia-noite a meia-noite e ao meio-dia tudo fica na posição nativa;
+    /// - do seletor (<c>CurrentDay</c>) fica só o triângulo do topo apontando para baixo: a placa de bronze cobria o sigilo do dia;
     /// - os sigilos perdem o aro de bronze e ficam em pé no meio da fatia (só transladam: sem rotação de pixel art).
     /// O fundo nativo (<c>hud-day_dial-bg</c>) é escondido e redesenhado girado (vizinho mais próximo, grade de pixel de arte)
     /// numa textura própria, refeita a cada <see cref="StepDeg"/>. As posições dos sigilos são aplicadas em
@@ -50,6 +51,9 @@ namespace GK2Hud.Hud
         private readonly Dictionary<string, int> dayNumberByName = new Dictionary<string, int>();
         private readonly Dictionary<Sprite, Sprite> stripped = new Dictionary<Sprite, Sprite>();   // nativo → sem aro
         private readonly Dictionary<Sprite, Sprite> original = new Dictionary<Sprite, Sprite>();   // sem aro → nativo
+
+        private Image selector;
+        private Sprite selectorNative, selectorPointer;
 
         private GameObject ringGo;
         private Texture2D ringTex;
@@ -141,6 +145,14 @@ namespace GK2Hud.Hud
                 img.raycastTarget = false;
                 img.color = bg.color;
 
+                selector = w.transform.Find("CurrentDay")?.GetComponent<Image>();
+                if (selector != null && selector.sprite != null)
+                {
+                    selectorNative = selector.sprite;
+                    selectorPointer = PointerOnly(selectorNative);
+                    if (selectorPointer != null) selector.sprite = selectorPointer;
+                }
+
                 wheel = w;
                 nativeBg = bg;
                 elements = els;
@@ -172,6 +184,7 @@ namespace GK2Hud.Hud
                         foreach (UIHUDWheelElement e in elements)
                             if (e != null && e.icon != null && e.icon.sprite != null && original.TryGetValue(e.icon.sprite, out Sprite o)) e.icon.sprite = o;
                     if (nativeBg != null) nativeBg.enabled = true;
+                    if (selector != null && selectorNative != null && selector.sprite == selectorPointer) selector.sprite = selectorNative;
                     // Volta as posições e cores nativas (o mesmo que o jogo faz ao carregar).
                     if (CalendarModel.Ready && EnvironmentEngine.Instance != null) wheel.OnNewDayStarted(CalendarModel.Env.Day, false);
                 }
@@ -183,6 +196,14 @@ namespace GK2Hud.Hud
             if (ringTex != null) Object.Destroy(ringTex);
             ringSprite = null;
             ringTex = null;
+            if (selectorPointer != null)
+            {
+                if (selectorPointer.texture != null) Object.Destroy(selectorPointer.texture);
+                Object.Destroy(selectorPointer);
+            }
+            selectorPointer = null;
+            selectorNative = null;
+            selector = null;
             foreach (Sprite s in stripped.Values)
             {
                 if (s == null) continue;
@@ -333,6 +354,34 @@ namespace GK2Hud.Hud
             s.name = sp.name;   // o WheelFeature e o calendário reconhecem o dia pelo nome da sprite
             stripped[sp] = s;
             original[s] = sp;
+            return s;
+        }
+
+        /// <summary>
+        /// Só o triângulo do topo do seletor (<c>hud-day_dial-curren_day_selector</c>, 40×36): linhas 4–10 de cima para baixo,
+        /// meia largura min(y, 10 − y) em volta da coluna 19, mais a sombra suave logo acima dele. O resto vira transparente.
+        /// </summary>
+        private static Sprite PointerOnly(Sprite sp)
+        {
+            Color32[] px = ReadSprite(sp, out int w, out int h);
+            if (w != 40 || h != 36) return null;   // arte diferente da medida: deixa o seletor nativo
+            var clear = new Color32(0, 0, 0, 0);
+            for (int yb = 0; yb < h; yb++)
+                for (int x = 0; x < w; x++)
+                {
+                    int y = h - 1 - yb;   // de cima para baixo, como a arte é lida
+                    int dx = Math.Abs(x - 19);
+                    Color32 c = px[yb * w + x];
+                    bool tri = y >= 4 && y <= 10 && dx <= Math.Min(y, 10 - y);
+                    bool shadow = c.a < 255 && y <= 5 && dx <= 7;
+                    if (!tri && !shadow) px[yb * w + x] = clear;
+                }
+            var tex = new Texture2D(w, h, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp, name = RingName + ".pointer" };
+            tex.SetPixels32(px);
+            tex.Apply(false);
+            Rect r = sp.rect;
+            Sprite s = Sprite.Create(tex, new Rect(0, 0, w, h), new Vector2(sp.pivot.x / r.width, sp.pivot.y / r.height), sp.pixelsPerUnit, 0, SpriteMeshType.FullRect);
+            s.name = sp.name;
             return s;
         }
 
