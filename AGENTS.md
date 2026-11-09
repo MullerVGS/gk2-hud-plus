@@ -41,6 +41,18 @@ custo do próprio Insight por parte (`gk2_insight_seconds{part}`), recursos do j
 GC/save/painel). Envio em thread própria; nada de rede na thread do jogo. `dormir.cs` gera sono + save no green.
 Para comparar custo, ligue as camadas com `insight-camadas.cs` e leia `gk2_insight_seconds` por janela.
 
+## GK2 Saves
+
+Mod de jogador (`GK2Saves/`, `arthur.gk2.saves`): **Save** e **Load** no topo do menu de pausa, clonados do botão Settings.
+O jogo só salva ao acordar (`EnergySystem.StopSleeping`). O Save chama o mesmo `SaveSystem.Save`, mas só com o jogo livre
+(`SaveGuard`: sem diálogo, cena, luta, sono, troca de área, trabalho ou carga na cabeça). Quando está bloqueado, o botão
+fica desabilitado e o tooltip nativo mostra o motivo. O Load abre a janela nativa `UISaveSlotsWindow` em modo "em jogo",
+com o save atual, os 3 backups do jogo e o histórico do mod, rotulados pelo `sourceLabel` nativo. Carregar passa por
+`GoToMenu` + o mesmo caminho do Continue, e o slot em jogo continua sendo o principal. O histórico fica em
+`BepInEx/config/arthur.gk2.saves/history/<slot>/`, fora da pasta que o Steam Cloud sincroniza: os últimos N saves de cada
+tipo (manual e ao dormir). Cenários: `gk2saves-clicar.cs`, `gk2saves-salvar-varios.cs`, `gk2saves-carregar.cs`,
+`gk2saves-apagar.cs`, `gk2saves-bloqueio.cs`, `save-qualquer-lugar.cs`, `pausa.cs`, `menu-load.cs`.
+
 ## Blue-green
 
 | | Blue | Green |
@@ -84,7 +96,7 @@ gk2 shot <nome> [--hideui] [--crop x,y,w,h]      print pelo próprio Unity → .
 gk2 ui <filtro> [prof]                           árvore da UI nativa: rects em px de tela, sprites, fontes, TextStyle
 gk2 run <cenario.cs>                             C# dentro do jogo (≈1,5 s): abrir janela, ler valor, preparar cena
 gk2 log [n] [grep] | state | windows | ping
-gk2 save snapshot|reset                          save de teste a partir do blue
+gk2 save snapshot|reset                          save de teste a partir do blue (reset limpa backups e histórico do GK2Saves)
 gk2 promote <Mod> [--green]                      entrega com o jogo aberto (blue, com aprovação) ou ensaio no green
 gk2 bridge | green-sync | decomp                 manutenção (ver abaixo)
 ```

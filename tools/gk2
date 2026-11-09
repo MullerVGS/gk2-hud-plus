@@ -112,7 +112,10 @@ EOF
     sub=${1:-}
     case "$sub" in
       snapshot) mkdir -p "$SNAPSHOTS/snapshot"; cp "$BLUE_DATA"/Steam_1.dat "$BLUE_DATA"/Steam_1.info "$SNAPSHOTS/snapshot/"; ls -la "$SNAPSHOTS/snapshot" ;;
-      reset) [ -f "$SNAPSHOTS/snapshot/Steam_1.dat" ] || die "sem snapshot"; mkdir -p "$GREEN_DATA"; cp "$SNAPSHOTS"/snapshot/Steam_1.* "$GREEN_DATA/"; echo "save do green = snapshot (recarregue o save no jogo)" ;;
+      reset) [ -f "$SNAPSHOTS/snapshot/Steam_1.dat" ] || die "sem snapshot"; mkdir -p "$GREEN_DATA"
+        rm -f "$GREEN_DATA"/Steam_1_*.dat "$GREEN_DATA"/Steam_1_*.info "$GREEN_DATA"/Steam_1*.new
+        rm -rf "$GREEN/BepInEx/config/arthur.gk2.saves/history"
+        cp "$SNAPSHOTS"/snapshot/Steam_1.* "$GREEN_DATA/"; echo "save do green = snapshot, sem backups nem histórico do GK2Saves (recarregue o save no jogo)" ;;
       *) die "save snapshot|reset" ;;
     esac
     ;;
