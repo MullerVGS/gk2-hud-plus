@@ -588,7 +588,7 @@ namespace GK2Hud.Calendar
                 if (j == null || !j.Active) return;
                 Dictionary<string, int> counts = j.BaselineCounts();
                 int quests = counts.TryGetValue(JournalKinds.Quest, out int q) ? q : 0;
-                int unlocks = counts.Where(kv => kv.Key != JournalKinds.Quest && kv.Key != JournalKinds.Tutorial && kv.Key != JournalKinds.DayIcon).Sum(kv => kv.Value);
+                int unlocks = counts.Where(kv => JournalKinds.Order.Contains(kv.Key) && kv.Key != JournalKinds.Quest && kv.Key != JournalKinds.Tutorial && kv.Key != JournalKinds.DayIcon).Sum(kv => kv.Value);
                 BaselineMark(x, "quest", quests, counts, new[] { JournalKinds.Quest }, j.StartDay);
                 BaselineMark(x, "unlock", unlocks, counts, JournalKinds.Order.Where(k => k != JournalKinds.Quest && k != JournalKinds.Tutorial && k != JournalKinds.DayIcon), j.StartDay);
                 return;

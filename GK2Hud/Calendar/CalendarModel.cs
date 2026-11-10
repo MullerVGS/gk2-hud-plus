@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using HarmonyLib;
 using LazyBearTechnology;
 using UnityEngine;
@@ -21,6 +22,7 @@ namespace GK2Hud.Calendar
         public string[] MapIcons = new string[0];   // ícones de dia do mapa que revelam o evento
         public string[] Tutorials = new string[0];  // tutoriais (cabeçalho) que revelam o evento
         public string[] Quests = new string[0];     // quests concluídas que revelam o evento (a partir do dia em que concluíram)
+        public string[] Phrases = new string[0];    // respostas de diálogo já ouvidas (blackListPhrases) que revelam o evento
         public string ResFlag;        // PlayerData.res que precisa ser > 0 (lido cru)
         public string Icon;           // sprite do ícone no TAB (os do mapa: day_*_expanded)
         public string NativeDesc;     // descrição com texto do próprio jogo (LLBase.L)
@@ -85,15 +87,18 @@ namespace GK2Hud.Calendar
                 Icon = "day_gluttony_expanded", NativeDesc = "tut_pr_machine_charge" },
             new EventDef { Id = "resurrection", DayId = "day_envy", Start = 0.01f, End = 0.99f, MapIcons = new[] { "day_envy_morgue" },
                 Tutorials = new[] { "tut_resurrection_hdr" }, Icon = "day_envy_expanded", NativeDesc = "tut_resurrection_day", PowerStatus = true },
-            // O jogo nunca libera o ícone day_envy_goddess: quem revela é a primeira conversa com a estátua (a fala das lágrimas
-            // é do evento 63_swamp_goddess, que a quest 63_swamp_goddess_speak dispara).
-            new EventDef { Id = "goddess", DayId = "day_envy", MapIcons = new[] { "day_envy_goddess" }, Quests = new[] { "63_swamp_goddess_speak" },
+            // Nenhum ícone do mapa marca a Deusa: quem revela é ouvir a resposta 63_swamp_goddess_32_c da estátua, a conversa
+            // que tem a fala das lágrimas (63_swamp_goddess_32_c_3).
+            new EventDef { Id = "goddess", DayId = "day_envy", Phrases = new[] { "63_swamp_goddess_32_c" },
                 Icon = "day_envy_expanded", NativeDesc = "63_swamp_goddess_32_c_3" },
             new EventDef { Id = "sermon", DayId = "day_wrath", Start = 0.01f, End = 0.99f, MapIcons = new[] { "day_wrath_church" },
                 Tutorials = new[] { "tutorial_hdr_seremons" }, Icon = "day_wrath_expanded", NativeDesc = "tut_sermons_day" },
-            new EventDef { Id = "nun", DayId = "day_wrath", MapIcons = new[] { "day_wrath" }, Icon = "day_wrath_expanded",
+            // Nenhum ícone do mapa marca a freira (day_wrath nunca é liberado): revela a conversa "Corpse Delivery"
+            // (opção 51_crossroad_fixed_delivery_1, marcada como ouvida ao concluir 51_crossroad_fixed_corpse_delivery).
+            new EventDef { Id = "nun", DayId = "day_wrath", Phrases = new[] { "51_crossroad_fixed_delivery_1" },
+                Quests = new[] { "51_crossroad_fixed_corpse_delivery" }, Icon = "day_wrath_expanded",
                 NativeDesc = "51_crossroad_fixed_delivery_6" },
-            new EventDef { Id = "battle", DayId = "day_sloth", Start = 0.01f, End = 0.99f, MapIcons = new[] { "day_sloth" },
+            new EventDef { Id = "battle", DayId = "day_sloth", Start = 0.01f, End = 0.99f,
                 Tutorials = new[] { "tut_battle_1_hdr", "tut_battle_2_hdr" }, Icon = "day_sloth_expanded", NativeDesc = "battle_planer_other_day" },
             new EventDef { Id = "donkey", LogicId = "donkey", ResFlag = "donkey_ready", Icon = null },
             new EventDef { Id = "nun_body", LogicId = "nun_body_drop", ResFlag = "nun_body_drop_ready", Icon = null },
@@ -155,6 +160,8 @@ namespace GK2Hud.Calendar
             foreach (string icon in e.MapIcons) if (ks.IsMapDayIconUnlocked(icon)) return true;
             if (ks.unlockedTutorials != null)
                 foreach (string t in e.Tutorials) if (ks.unlockedTutorials.Contains(t)) return true;
+            if (ks.blackListPhrases != null)
+                foreach (string p in e.Phrases) if (ks.blackListPhrases.Contains(p)) return true;
             return QuestRevealed(e);
         }
 
@@ -166,12 +173,12 @@ namespace GK2Hud.Calendar
         }
 
         /// <summary>
-        /// Primeiro dia em que o evento conta. Revelado só por quest: o dia em que o diário anotou a conclusão (antes do
+        /// Primeiro dia em que o evento conta. Revelado só por quest ou resposta de diálogo: o dia em que o diário anotou a conclusão (antes do
         /// diário ou sem diário = sempre). Revelado pelo jogo (ícone/tutorial/res): sempre.
         /// </summary>
         public static int KnownSince(EventDef e)
         {
-            if (RevealAll || e.Quests.Length == 0) return int.MinValue;
+            if (RevealAll || (e.Quests.Length == 0 && e.Phrases.Length == 0)) return int.MinValue;
             KnowledgeSystem ks = MainGame.Instance.GameSave.knowledgeSystem;
             if (ks != null)
             {
@@ -181,9 +188,9 @@ namespace GK2Hud.Calendar
             Journal.JournalTracker j = Journal.JournalTracker.Current;
             if (j == null || !j.Active) return int.MinValue;
             int since = int.MaxValue;
-            foreach (string q in e.Quests)
+            foreach (var key in e.Quests.Select(q => (Journal.JournalKinds.Quest, q)).Concat(e.Phrases.Select(p => (Journal.JournalKinds.Phrase, p))))
             {
-                Journal.JournalEntry en = j.Find(Journal.JournalKinds.Quest, q, out bool baseline);
+                Journal.JournalEntry en = j.Find(key.Item1, key.Item2, out bool baseline);
                 if (baseline) return int.MinValue;
                 if (en != null) since = Math.Min(since, en.d);
             }

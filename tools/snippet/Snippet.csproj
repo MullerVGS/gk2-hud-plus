@@ -3,4 +3,12 @@
   <PropertyGroup>
     <AssemblyName>Snippet</AssemblyName>
   </PropertyGroup>
+  <ItemGroup>
+    <!-- Só os cenários: Addressables e FlowCanvas (grafos de diálogo/script do jogo, usados pelo índice de gatilhos). -->
+    <Reference Include="$(Refs)/Managed/Unity.Addressables.dll" Private="false" />
+    <Reference Include="$(Refs)/Managed/Unity.ResourceManager.dll" Private="false" />
+    <Reference Include="$(Refs)/Managed/FlowCanvas.dll" Private="false" />
+    <Reference Include="$(Refs)/Managed/NodeCanvas.dll" Private="false" />
+    <Reference Include="$(Refs)/Managed/ParadoxNotion.dll" Private="false" />
+  </ItemGroup>
 </Project>

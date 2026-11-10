@@ -98,6 +98,8 @@ gk2 run <cenario.cs>                             C# dentro do jogo (≈1,5 s): a
 gk2 log [n] [grep] | state | windows | ping
 gk2 save snapshot|reset                          save de teste a partir do blue (reset limpa backups e histórico do GK2Saves)
 gk2 promote <Mod> [--green]                      entrega com o jogo aberto (blue, com aprovação) ou ensaio no green
+gk2 gatilhos [onde <termo>]                      índice do jogo: quem libera ícone/tutorial/resposta/recurso, onde está cada fala
+gk2 check GK2Hud                                 barreira do promote (ids na tela, calendário × índice, auditoria do save)
 gk2 bridge | green-sync | decomp                 manutenção (ver abaixo)
 ```
 
@@ -127,7 +129,32 @@ Peças:
 4. Editar → `gk2 deploy <Mod>` → cenário que leva à tela → `gk2 shot` → **olhar o print** (Read) → julgar → repetir.
 5. `gk2 log 40 <Mod>` sem exceções.
 6. Mostrar o print final, de preferência ao lado da referência, e pedir aprovação.
-7. Subir a `Version` (plugin e `modinfo.json`), `gk2 promote <Mod> --green` (print do aviso) e então `gk2 promote <Mod>`.
+7. Subir a `Version` (plugin e `modinfo.json`), `gk2 deploy`, `gk2 check GK2Hud` verde, `gk2 promote <Mod> --green`
+   (print do aviso) e então `gk2 promote <Mod>` (que roda o check de novo e não promove se falhar).
+
+## Barreira: índice de gatilhos e `gk2 check`
+
+Regra: nada que o mod mostra ou esconde é deduzido pelo nome de um id. Condição de revelação, nome e descrição saem do
+que o jogo faz, conferido no índice.
+
+- **Índice** (`gk2 gatilhos` → `decomp/gatilhos.json`, regenerado sozinho quando o jogo muda): `tools/check/exportar.cs`
+  exporta no green o balanço e os textos (Dumper do Insight) e os 271 grafos de script/diálogo (Addressables
+  `VisualScripts/`, JSON do FlowCanvas); `tools/check/gatilhos.py` junta com as chamadas com literal do `decomp/`. Tem
+  toda chamada que libera algo (`UnlockMapDayIcon`, `ShowTutorialWindow`, `AddPhraseToBlackList`/`BlackListPhrase`,
+  `UnlockPhrase`, `SetPPar`, `AddGameRes`, `StartQuest`, `GSFireEvent`...) com a fonte, e cada fala com a conversa e a
+  resposta que leva a ela. `gk2 gatilhos onde <termo>` responde "o que libera isso / onde está essa fala".
+- **Evidência mais precisa do save**: `KnowledgeSystem.blackListPhrases` = respostas/opções de diálogo que o jogador já
+  ouviu. A resposta P abre as falas `P_n`; a opção de menu `X_1` abre as irmãs `X_n`.
+- **`gk2 check GK2Hud`** (`tools/check/gk2hud-estado.cs` no green + `check.py`) falha se: `LLBase.L` com chave variável
+  fora do `Names.cs` (para reproduzir texto nativo, `Names.NativeAsIs`) ou chave literal inexistente; algum nome ou
+  tooltip do mod, para qualquer id do balanço, tem texto com cara de id; alguma chave de revelação do calendário não é
+  liberada por nada no jogo (chave morta); a descrição é fala atrás de uma resposta e a revelação não passa por ela;
+  no save carregado, um evento está escondido com evidência de que o jogador o conhece. Exceções só em
+  `tools/check/permitidos.txt`, com o motivo. `tools/check/teste.py` reintroduz os bugs já vistos e exige que a barreira
+  os pegue (roda dentro do check).
+- **Auditoria do save do blue**: `gk2 save snapshot && gk2 save reset && gk2 run docs/cenarios/recarregar.cs && gk2 check GK2Hud`.
+- **Spoiler**: o índice mostra o jogo inteiro aos agentes; relatório, print e mensagem só citam o que o save
+  do blue já revelou. O check segue isso: evento sem evidência entra só na contagem.
 
 ## Design nativo
 
@@ -197,5 +224,6 @@ mesma zona (`WgoData.GetCraftableMultiInventory`). Dados completos: `Ctrl+F7` do
 - [ ] Compila sem aviso; `gk2 deploy` e um segundo `gk2 deploy` funcionam (recarregável de verdade).
 - [ ] Print do green na tela relevante, julgado contra a referência, com os itens acima.
 - [ ] `gk2 log` sem exceção do mod.
+- [ ] GK2Hud: `gk2 check GK2Hud` verde (sem ele o `gk2 promote` para o blue recusa).
 - [ ] Nada mudou no blue nem no save do blue além do que foi promovido com aprovação.
 - [ ] Commit no repo local (mensagem sem trailers) e memória atualizada se algo novo foi aprendido.

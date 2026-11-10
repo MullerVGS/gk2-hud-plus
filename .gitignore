@@ -5,3 +5,4 @@ dumps/
 **/obj/
 .shots/
 tools/snippet/work/
+__pycache__/

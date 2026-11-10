@@ -61,15 +61,16 @@ namespace GK2Hud.Tooltips
         {
             string key = wgoId + "_d";
             if (!OwnLocKey(key)) return null;
-            string text = LLBase.L(key);
+            string text = Names.Text(key);
+            if (text == null) return null;
             if (stationDescCounts == null || stationDescLang != LLBase.CurrentLang)
             {
                 stationDescLang = LLBase.CurrentLang;
                 stationDescCounts = new Dictionary<string, int>();
                 foreach (string id in GameBalance.Me.buildableWgos.Keys)
                 {
-                    string k = id + "_d", t = LLBase.L(k);
-                    if (t == k) continue;
+                    string t = Names.Text(id + "_d");
+                    if (t == null) continue;
                     stationDescCounts.TryGetValue(t, out int n);
                     stationDescCounts[t] = n + 1;
                 }
@@ -273,7 +274,8 @@ namespace GK2Hud.Tooltips
             float baseValue = expr.EvaluateFloat();
             float per = baseValue + perkAdd;
             if (Mathf.Approximately(baseValue, 0f) && Mathf.Approximately(per, 0f)) return;   // perk zerando o custo ainda aparece (0), como na janela
-            string t = LLBase.L(res) + ": " + res.FontIcon() + L10n.T("per_tick", Num(s, F(per)));
+            string label = Names.Text(res);
+            string t = (label != null ? label + ": " : "") + res.FontIcon() + L10n.T("per_tick", Num(s, F(per)));
             if (ticks > 0) t += ", " + L10n.T("total", Num(s, F(per * ticks)));
             lines.Add(t);
         }
@@ -390,7 +392,7 @@ namespace GK2Hud.Tooltips
                     if (cand == null || cand.Count == 0) continue;
                     if (!craftedAtCache.TryGetValue(cand, out string[] pair) || pair[0] != s.Lang)
                     {
-                        pair = new[] { s.Lang, s.CraftedAtLabel + string.Join(", ", cand.Select(id => LLBase.L(id))), CraftedAtText(s, cand) };
+                        pair = new[] { s.Lang, s.CraftedAtLabel + string.Join(", ", cand.Select(Names.NativeAsIs)), CraftedAtText(s, cand) };
                         craftedAtCache[cand] = pair;
                     }
                     if (!t.Text.StartsWith(pair[1])) continue;

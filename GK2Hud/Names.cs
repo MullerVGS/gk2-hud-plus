@@ -45,6 +45,12 @@ namespace GK2Hud
         /// <summary>Texto visível (sem tags) é um id: serve para filtrar itens de lista já embrulhados em link.</summary>
         public static bool IsDevText(string s) => IsDevId(Tags.Replace(s ?? "", "").Trim());
 
+        /// <summary>
+        /// <c>LLBase.L</c> cru, só para reproduzir um texto nativo exatamente como o jogo o monta (ex.: casar o "Crafted at"
+        /// nativo antes de trocá-lo); nunca para mostrar. É o único caminho para LLBase.L com chave variável fora daqui.
+        /// </summary>
+        public static string NativeAsIs(string key) => LLBase.L(key);
+
         /// <summary>Junta nomes sem nulos nem repetidos.</summary>
         public static string Join(IEnumerable<string> names, string sep = ", ") =>
             string.Join(sep, names.Where(n => !string.IsNullOrEmpty(n)).Distinct());

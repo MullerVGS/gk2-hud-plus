@@ -42,6 +42,8 @@ namespace GK2Hud.Journal
                     string n = def != null ? def.GetHeader() : Names.Text(id.Split(':')[0]);
                     return string.IsNullOrEmpty(n) || n == id || Names.IsDevId(n) ? CalendarL10n.T("jk_sermon") : n;
                 }
+                case JournalKinds.Phrase:
+                    return null;
                 case JournalKinds.DayIcon:
                 {
                     List<string> titles = CalendarModel.Defs.Where(e => e.MapIcons.Contains(id)).Select(e => e.Title).ToList();

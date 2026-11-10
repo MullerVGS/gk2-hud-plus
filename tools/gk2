@@ -180,10 +180,30 @@ im.save(sys.argv[1])" "$out" "$crop"
   windows) api /windows | pretty ;;
   ui) api "/ui?filter=$(urlenc "${1:-}")&depth=${2:-8}&inactive=${3:-0}" ;;
   wait) wait_bridge "${1:-120}"; api /ping | pretty ;;
+  gatilhos)
+    # Índice de gatilhos do jogo (quem libera ícone/tutorial/resposta/recurso, em que conversa está cada fala).
+    if [ "${1:-}" = "onde" ]; then python3 "$HERE/tools/check/gatilhos.py" onde "${2:?termo}" "$HERE/decomp/gatilhos.json"; exit 0; fi
+    out=$(GK2_RUN_TIMEOUT=300 "$0" run "$HERE/tools/check/exportar.cs")
+    echo "$out" | grep -q '"ok": true' || { echo "$out" | tail -5; die "export falhou (green rodando, save carregado, GK2 Insight no green?)"; }
+    echo "$out" | grep '"result"'
+    python3 "$HERE/tools/check/gatilhos.py" build "$GREEN/BepInEx/GK2Insight-dump" "$HERE/decomp" "$HERE/decomp/gatilhos.json"
+    ;;
+  check)
+    # Barreira antes de promover: ids na tela, chaves do calendário contra o índice e auditoria do save carregado.
+    proj=${1:?projeto}; [ "$proj" = GK2Hud ] || die "check só existe para GK2Hud por enquanto"
+    idx="$HERE/decomp/gatilhos.json"
+    if [ ! -f "$idx" ] || [ "$HERE/refs/Managed/Assembly-CSharp.dll" -nt "$idx" ]; then "$0" gatilhos; fi
+    out=$(GK2_RUN_TIMEOUT=300 "$0" run "$HERE/tools/check/gk2hud-estado.cs")
+    echo "$out" | grep -q '"ok": true' || { echo "$out" | tail -5; die "varredura no green falhou"; }
+    python3 "$HERE/tools/check/check.py" "$HERE" "$GREEN/BepInEx/gk2check/gk2hud.json" "$idx"
+    python3 "$HERE/tools/check/teste.py" "$HERE" "$GREEN/BepInEx/gk2check/gk2hud.json" "$idx" >/dev/null || die "a barreira deixou passar um bug conhecido (rode tools/check/teste.py)"
+    ;;
   promote)
     # Entrega um mod aprovado. Blue: pacote Mods/Code (vale ao reabrir) + BepInEx/hot (o GK2 HotLoader aplica com o
     # jogo aberto e avisa na tela). --green: só a pasta hot do green, para ensaiar a entrega antes do blue.
-    proj=${1:?projeto}; target=${2:-blue}; dll=$(build "$proj")
+    proj=${1:?projeto}; target=${2:-blue}
+    if [ "$proj" = GK2Hud ] && [ "$target" != "--green" ]; then "$0" check GK2Hud || die "gk2 check GK2Hud falhou: nada promovido"; fi
+    dll=$(build "$proj")
     if [ "$target" = "--green" ]; then game="$GREEN"; else game="$BLUE"
       pack="$BLUE_DATA/Mods/Code/$proj"; mkdir -p "$pack/BepInEx/plugins/$proj"
       [ -f "$HERE/$proj/modinfo.json" ] && cp "$HERE/$proj/modinfo.json" "$pack/modinfo.json"
@@ -216,7 +236,9 @@ shot [nome] [--hideui] [--crop x,y,w,h] [--frames n]   print pelo Unity → .sho
 winshot [nome]             print pela janela (fallback, sem ponte)
 log [n] [grep] | state | ping | windows | ui [filtro] [prof] [inativos 0|1] | wait [s]
 promote <Proj> [--green|--sem-hot]   entrega o mod aprovado (blue: Mods/Code + hot-reload pelo HotLoader; --green: ensaio)
-decomp                     regenera decomp/ (após update do jogo)
+decomp                     regenera decomp/ (após update do jogo; depois rode `gk2 gatilhos`)
+gatilhos [onde <termo>]    índice decomp/gatilhos.json (balanço + grafos de diálogo + código); `onde` diz quem libera/usa o termo
+check GK2Hud               barreira do promote: ids na tela, calendário × índice, auditoria do save carregado (sem spoiler)
 EOF
     ;;
 esac

@@ -64,7 +64,8 @@ namespace GK2Hud.Journal
     internal static class JournalKinds
     {
         public const string Quest = "quest", Tech = "tech", Building = "building", Town = "town", Craft = "craft", Alchemy = "alchemy",
-            Perk = "perk", DayIcon = "dayicon", Tutorial = "tutorial", Sermon = "sermon";
+            Perk = "perk", DayIcon = "dayicon", Tutorial = "tutorial", Sermon = "sermon",
+            Phrase = "phrase";   // resposta de diálogo já escolhida (KnowledgeSystem.blackListPhrases): só para datar revelações, nunca listada
 
         /// <summary>Ordem de exibição dentro do dia.</summary>
         public static readonly string[] Order = { Sermon, Quest, Tech, Building, Town, Craft, Alchemy, Perk, DayIcon, Tutorial };
@@ -215,6 +216,7 @@ namespace GK2Hud.Journal
             changed |= Count(JournalKinds.Alchemy, ks.unlockedAlchemyFormulas?.Count ?? 0);
             changed |= Count(JournalKinds.DayIcon, ks.unlockedMapDayIcons?.Count ?? 0);
             changed |= Count(JournalKinds.Tutorial, ks.unlockedTutorials?.Count ?? 0);
+            changed |= Count(JournalKinds.Phrase, ks.blackListPhrases?.Count ?? 0);
             changed |= Count(JournalKinds.Perk, gameSave.perkSystemData?.activePerks?.Count ?? 0);
             changed |= Count(JournalKinds.Quest, CompletedQuestCount());
             if (!changed) return;
@@ -279,6 +281,7 @@ namespace GK2Hud.Journal
             Add(set, JournalKinds.Alchemy, ks.unlockedAlchemyFormulas);
             Add(set, JournalKinds.DayIcon, ks.unlockedMapDayIcons);
             Add(set, JournalKinds.Tutorial, ks.unlockedTutorials);
+            Add(set, JournalKinds.Phrase, ks.blackListPhrases);
             List<PerkData> perks = gameSave.perkSystemData?.activePerks;
             if (perks != null)
                 foreach (PerkData p in perks)

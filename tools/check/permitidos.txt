@@ -1,0 +1,7 @@
+# Textos com cara de id que o check aceita, um token por linha, com o motivo depois de #.
+prosperity_item1 # texto nativo do item de oração ("Item: prosperity_item1"): é o próprio jogo, o mod só repassa
+prosperity_item3 # idem
+prosperity_item5 # idem
+
+# Descrição de evento que vem de uma conversa que a revelação não alcança: calendário:<id> # motivo
+calendário:battle # "Battle available on <Preguiça>" do acampamento só repete a regra que os tutoriais de batalha já ensinam
