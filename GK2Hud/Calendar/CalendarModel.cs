@@ -35,8 +35,7 @@ namespace GK2Hud.Calendar
                 string own = CalendarL10n.TOrNull("ev_" + Id + "_d");
                 if (own != null) return own;
                 if (NativeDesc == null) return null;
-                string s = LLBase.L(NativeDesc);
-                return string.IsNullOrEmpty(s) || s == NativeDesc ? null : s;
+                return Names.Text(NativeDesc);
             }
         }
     }

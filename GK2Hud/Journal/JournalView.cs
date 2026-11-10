@@ -34,14 +34,13 @@ namespace GK2Hud.Journal
                 {
                     CraftDef cd = GameBalance.Me.GetDataOrNull<CraftDef>(id);
                     if (cd == null || id.StartsWith("mix")) return null;
-                    string n = TooltipContent.CraftName(cd);
-                    return n == cd.id ? null : n;
+                    return TooltipContent.CraftName(cd);
                 }
                 case JournalKinds.Sermon:
                 {
                     ItemDef def = GameBalance.Me.GetDataOrNull<ItemDef>(id);
-                    string n = def != null ? def.GetHeader() : LLBase.L(id.Split(':')[0]);
-                    return string.IsNullOrEmpty(n) || n == id ? CalendarL10n.T("jk_sermon") : n;
+                    string n = def != null ? def.GetHeader() : Names.Text(id.Split(':')[0]);
+                    return string.IsNullOrEmpty(n) || n == id || Names.IsDevId(n) ? CalendarL10n.T("jk_sermon") : n;
                 }
                 case JournalKinds.DayIcon:
                 {
@@ -49,10 +48,7 @@ namespace GK2Hud.Journal
                     return titles.Count == 0 ? null : string.Join(", ", titles);
                 }
                 default:
-                {
-                    string n = LLBase.L(id);
-                    return string.IsNullOrEmpty(n) || n == id ? null : n;
-                }
+                    return Names.Text(id);
             }
         }
 
@@ -100,8 +96,8 @@ namespace GK2Hud.Journal
             if (n.ok) lines.Add(LLBase.L("ui_pray_result_faith_bonus") + " " + Num(s, "faith".FontIcon() + n.fb));
             if (n.buff != null)
             {
-                string b = LLBase.L(n.buff);
-                lines.Add(LLBase.L("ui_sermon_tooltip_buff") + " " + (b == n.buff ? Num(s, b) : Links.Wrap(Links.Perk, n.buff, b)));
+                string b = Names.Text(n.buff);
+                if (b != null) lines.Add(LLBase.L("ui_sermon_tooltip_buff") + " " + Links.Wrap(Links.Perk, n.buff, b));
             }
             list.Add(new UITooltipTextWidgetData(string.Join("\n", lines), TextAlignmentOptions.Center, s.Description));
             list.Add(new UITooltipSeparatorWidgetData());
@@ -151,6 +147,7 @@ namespace GK2Hud.Journal
             }
             if (!(list[list.Count - 1] is UITooltipSeparatorWidgetData)) list.Add(new UITooltipSeparatorWidgetData());
             list.Add(new UITooltipTextWidgetData(KindLabel(l.Kind) + " · " + When(l.Kind, l.Id), TextAlignmentOptions.Center, s.Small));
+            Names.Scrub(list);
             return list;
         }
 
@@ -171,18 +168,18 @@ namespace GK2Hud.Journal
         {
             if (kind == JournalKinds.Quest)
             {
+                // QuestData.Description lê quest_closed_<id>_d nas concluídas, e metade das quests da árvore só tem o texto
+                // da aberta (quest_open_<id>_d): sem ele o jogo devolveria a própria chave.
                 QuestData q = MainGame.Instance?.GameSave?.questSystemData?.questCollection?.quests?.Find(x => x != null && x.id == id);
-                string d = q?.Description;
-                return string.IsNullOrEmpty(d) ? null : d;
+                if (q == null) return null;
+                return q.status == QuestStatus.Completed ? Names.Text("quest_closed_" + id + "_d") ?? Names.Text("quest_open_" + id + "_d") : Names.Text("quest_open_" + id + "_d");
             }
             if (kind == JournalKinds.DayIcon)
             {
                 EventDef ev = CalendarModel.Defs.FirstOrDefault(e => e.MapIcons.Contains(id));
                 return ev?.Description;
             }
-            string key = id + "_d";
-            string s = LLBase.L(key);
-            return string.IsNullOrEmpty(s) || s == key ? null : s;
+            return Names.Text(id + "_d");
         }
 
         public static Entity EntityFor(string kind, string id)

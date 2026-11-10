@@ -170,8 +170,12 @@ namespace GK2Hud.Tooltips
                 case EntityKind.Craft:
                 {
                     CraftDef cd = e.CraftDef;
-                    list.Add(new UITooltipTextWidgetData(CraftName(cd), TextAlignmentOptions.Center, s.Header));
-                    list.Add(new UITooltipSeparatorWidgetData());
+                    string cn = CraftName(cd);
+                    if (cn != null)
+                    {
+                        list.Add(new UITooltipTextWidgetData(cn, TextAlignmentOptions.Center, s.Header));
+                        list.Add(new UITooltipSeparatorWidgetData());
+                    }
                     ItemDef res = cd.TryGetResultingItemDef();
                     if (res != null && res.type != ItemType.Preach)
                         Native.AddItemWidgets(list, res, addHeader: false, notShowStudy: true, noCraftedAt: true, variants: cd.GetPossibleResultingItemDefs());
@@ -187,8 +191,12 @@ namespace GK2Hud.Tooltips
                     AppendBlock(list, PerkLines(e, s));
                     break;
                 case EntityKind.Station:
-                    list.Add(new UITooltipTextWidgetData(LLBase.L(e.Id), TextAlignmentOptions.Center, s.Header));
-                    list.Add(new UITooltipSeparatorWidgetData());
+                    string sn = Names.Wgo(e.Id);
+                    if (sn != null)
+                    {
+                        list.Add(new UITooltipTextWidgetData(sn, TextAlignmentOptions.Center, s.Header));
+                        list.Add(new UITooltipSeparatorWidgetData());
+                    }
                     string desc = StationDescription(e.Id);
                     if (desc != null) list.Add(new UITooltipTextWidgetData(desc, TextAlignmentOptions.Center, s.Description));
                     AppendBlock(list, StationLines(e, s, true));
@@ -254,8 +262,8 @@ namespace GK2Hud.Tooltips
             List<LazyWidgetDataBase> w = Widgets(lines, s);
             // Na janela da própria estação, "Crafted at: <ela mesma>" não diz nada.
             bool onlyHere = e.Wgo != null && cd.craftsIn != null && cd.craftsIn.Count == 1 && cd.craftsIn[0] == e.Wgo.id;
-            if (withCraftedAt && !onlyHere && cd.craftsIn != null && cd.craftsIn.Count > 0)
-                w.Add(new UITooltipTextWidgetData(CraftedAtText(s, cd.craftsIn), TextAlignmentOptions.Center, s.Small));
+            if (withCraftedAt && !onlyHere && cd.craftsIn != null && cd.craftsIn.Count > 0 && CraftedAtText(s, cd.craftsIn) is string at)
+                w.Add(new UITooltipTextWidgetData(at, TextAlignmentOptions.Center, s.Small));
             return w;
         }
 
@@ -304,7 +312,7 @@ namespace GK2Hud.Tooltips
             if (sources != null && sources.Count > 0)
             {
                 List<string> links = sources.GroupBy(i => i.GetHeader()).Select(g => Links.Wrap(Links.Item, g.First().id, g.Key)).ToList();
-                w.Add(new UITooltipTextWidgetData(ListText(s, L10n.T("granted_by"), links), TextAlignmentOptions.Center, s.Small));
+                if (ListText(s, L10n.T("granted_by"), links) is string lt) w.Add(new UITooltipTextWidgetData(lt, TextAlignmentOptions.Center, s.Small));
             }
             return w;
         }
@@ -318,13 +326,14 @@ namespace GK2Hud.Tooltips
                 List<string> links = crafts.OfType<CraftDef>().Where(IsListable).Where(Known).Where(c => CraftNameOrNull(c) != null)
                     .GroupBy(CraftName).Select(g => Links.Wrap(Links.Craft, g.First().id, g.Key)).ToList();
                 if (links.Count > 0)
-                    w.Add(new UITooltipTextWidgetData(ListText(s, L10n.T("crafts"), links), TextAlignmentOptions.Center, s.Small));
+                    if (ListText(s, L10n.T("crafts"), links) is string lt) w.Add(new UITooltipTextWidgetData(lt, TextAlignmentOptions.Center, s.Small));
             }
             if (withExtension && gb.IsWorkbenchExtensionId(e.Id) && gb.workbenchParentsByExtensionCache.TryGetValue(e.Id, out List<WGODef> parents) && parents.Count > 0)
             {
-                string t = (s.SmallSelected.ApplyStyleToString(LLBase.L("ui_hint_extention_for") + " ") ?? "")
-                    + string.Join(", ", parents.Select(p => Links.Wrap(Links.Station, p.id, LLBase.L(p.id))));
-                w.Add(new UITooltipTextWidgetData(t, TextAlignmentOptions.Center, s.Small));
+                List<string> names = StationLinks(parents.Select(p => p.id));
+                if (names.Count > 0)
+                    w.Add(new UITooltipTextWidgetData((s.SmallSelected.ApplyStyleToString(LLBase.L("ui_hint_extention_for") + " ") ?? "") + string.Join(", ", names),
+                        TextAlignmentOptions.Center, s.Small));
             }
             string journal = Journal.JournalView.StationLine(e.Id);
             if (journal != null) w.Add(new UITooltipTextWidgetData(journal, TextAlignmentOptions.Center, s.Small));
@@ -347,8 +356,17 @@ namespace GK2Hud.Tooltips
         private static List<string> ItemStations(string itemId) =>
             itemId != null && GameBalance.Me.craftInItemsCacheShownInTooltips.TryGetValue(itemId, out List<string> l) ? l : null;
 
-        private static string CraftedAtText(Styles s, List<string> stations) =>
-            s.CraftedAtLabel + string.Join(", ", stations.Select(id => Links.Wrap(Links.Station, id, LLBase.L(id))));
+        /// <summary>"Crafted at: A, B" com links; null quando nenhuma estação tem nome mostrável.</summary>
+        private static string CraftedAtText(Styles s, List<string> stations)
+        {
+            List<string> names = StationLinks(stations);
+            return names.Count == 0 ? null : s.CraftedAtLabel + string.Join(", ", names);
+        }
+
+        /// <summary>Estações como links, uma por nome (variantes com o mesmo nome viram uma), sem as que não têm nome.</summary>
+        private static List<string> StationLinks(IEnumerable<string> wgoIds) =>
+            wgoIds.Select(id => new { id, n = Names.Wgo(id) }).Where(x => x.n != null).GroupBy(x => x.n)
+                .Select(g => Links.Wrap(Links.Station, g.First().id, g.Key)).ToList();
 
         private static bool HasCraftedAt(List<LazyWidgetDataBase> list, Styles s)
         {
@@ -376,7 +394,11 @@ namespace GK2Hud.Tooltips
                         craftedAtCache[cand] = pair;
                     }
                     if (!t.Text.StartsWith(pair[1])) continue;
-                    list[i] = new UITooltipTextWidgetData(pair[2] + t.Text.Substring(pair[1].Length), t.TextAlignmentOptions, t.TextStyle);
+                    string rest = t.Text.Substring(pair[1].Length);
+                    if (pair[2] == null) rest = rest.TrimStart('\n');
+                    string text = (pair[2] ?? "") + rest;
+                    if (text.Length == 0) list.RemoveAt(i);
+                    else list[i] = new UITooltipTextWidgetData(text, t.TextAlignmentOptions, t.TextStyle);
                     return true;
                 }
             }
@@ -387,6 +409,8 @@ namespace GK2Hud.Tooltips
 
         private static string ListText(Styles s, string label, List<string> items)
         {
+            items = items.Where(x => !Names.IsDevText(x)).ToList();
+            if (items.Count == 0) return null;
             string t = (s.SmallSelected.ApplyStyleToString(label + ": ") ?? "") + string.Join(", ", items.Take(MaxListed));
             if (items.Count > MaxListed) t += " +" + (items.Count - MaxListed);
             return t;
@@ -397,8 +421,8 @@ namespace GK2Hud.Tooltips
 
         private static void AddDescription(List<LazyWidgetDataBase> list, string id, TextStyle style)
         {
-            string key = id + "_d", text = LLBase.L(key);
-            if (text != key) list.Add(new UITooltipTextWidgetData(text, TextAlignmentOptions.Center, style));
+            string text = Names.Text(id + "_d");
+            if (text != null) list.Add(new UITooltipTextWidgetData(text, TextAlignmentOptions.Center, style));
         }
 
         private static void AppendBlock(List<LazyWidgetDataBase> list, List<LazyWidgetDataBase> lines)
@@ -427,12 +451,7 @@ namespace GK2Hud.Tooltips
             return i;
         }
 
-        private static void Tidy(List<LazyWidgetDataBase> list)
-        {
-            for (int i = list.Count - 1; i > 0; i--)
-                if (list[i] is UITooltipSeparatorWidgetData && list[i - 1] is UITooltipSeparatorWidgetData) list.RemoveAt(i);
-            while (list.Count > 0 && list[list.Count - 1] is UITooltipSeparatorWidgetData) list.RemoveAt(list.Count - 1);
-        }
+        private static void Tidy(List<LazyWidgetDataBase> list) => Names.Scrub(list);
 
         private KeyValuePair<int, int> Counts(string itemId)
         {
@@ -470,15 +489,16 @@ namespace GK2Hud.Tooltips
         private static bool IsListable(CraftDef cd) =>
             cd != null && !cd.isHidden && !cd.doNotShowInTooltips && !cd.id.StartsWith("rem_") && !cd.id.StartsWith("set_") && !cd.id.StartsWith("town_building_craft:");
 
-        public static string CraftName(CraftDef cd) => CraftNameOrNull(cd) ?? cd.id;
-
         /// <summary>Nome do craft (texto próprio ou o do item resultante); null quando o jogo não tem nome para ele.</summary>
+        public static string CraftName(CraftDef cd) => CraftNameOrNull(cd);
+
         private static string CraftNameOrNull(CraftDef cd)
         {
-            string n = LLBase.L(cd.id);
-            if (n != cd.id) return n;
-            ItemDef res = cd.TryGetResultingItemDef();
-            return res != null ? res.GetHeader() : null;
+            if (cd == null) return null;
+            string n = Names.Text(cd.id);
+            if (n != null) return n;
+            string h = cd.TryGetResultingItemDef()?.GetHeader();
+            return string.IsNullOrEmpty(h) || Names.IsDevId(h) ? null : h;
         }
 
         private static string ResIcon(string res)

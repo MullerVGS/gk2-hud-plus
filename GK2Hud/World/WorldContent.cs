@@ -27,6 +27,7 @@ namespace GK2Hud.World
             if (t.Drop != null)
             {
                 if (WorldProcesses.IsRotting(t.Drop)) DropSection(list, s, t.Drop);
+                Names.Scrub(list);
                 return list.Count == 0 ? null : list;
             }
             if (t.Data != null && t.Data.CraftComponent != null && WorldProcesses.HasCraftProcess(t.Data.CraftComponent))
@@ -36,6 +37,7 @@ namespace GK2Hud.World
                 else if (el.Def.isHidden && el.Def.isAuto) RenewSection(list, s, t.Data, el);
                 else CraftSection(list, s, t.Data);
             }
+            Names.Scrub(list);
             return list.Count == 0 ? null : list;
         }
 
@@ -68,15 +70,14 @@ namespace GK2Hud.World
             if (t.Drop != null)
             {
                 ItemDef def = t.Drop.Item?.Definition;
-                header = def != null ? def.GetHeader() : t.Drop.Id;
+                header = def?.GetHeader();
             }
-            else header = t.Data != null ? WgoName(t.Data) : "?";
-            return new List<LazyWidgetDataBase>
-            {
-                Text(header, s.Header),
-                new UITooltipSeparatorWidgetData(),
-                Text(line, s.Description),
-            };
+            else header = t.Data != null ? WgoName(t.Data) : null;
+            var list = new List<LazyWidgetDataBase>();
+            AddHeader(list, header, s);
+            list.Add(Text(line, s.Description));
+            Names.Scrub(list);
+            return list;
         }
 
         // ---------------- corpo no chão ----------------
@@ -85,16 +86,14 @@ namespace GK2Hud.World
         private static void DropSection(List<LazyWidgetDataBase> list, Styles s, DropData d)
         {
             ItemDef def = d.Item.Definition;
-            string name = def != null ? def.GetHeader() : d.Id;
-            list.Add(Text(def != null ? Links.Wrap(Links.Item, def.id, name) : name, s.Header));
-            list.Add(new UITooltipSeparatorWidgetData());
+            AddHeader(list, def != null ? Links.Wrap(Links.Item, def.id, def.GetHeader()) : null, s);
             var lines = new List<string> { Label(s, L10n.T("w_rots_in")) + Clock(s, d.AutoDestroyTimer) };
             // O DropView liga WhenVisibleOnScreen quando o chunk está visível (DropView.cs:1807): o timer não corre na tela.
             MultiFlagOR<CanNotBeAutoDestroyedReason> f = d.CanNotBeAutoDestroyed;
             if (f.HasFlag(CanNotBeAutoDestroyedReason.WhenVisibleOnScreen) && f.GetFlag(CanNotBeAutoDestroyedReason.WhenVisibleOnScreen))
                 lines.Add(L10n.T("w_rot_paused"));
-            string after = LLBase.L("body_drop_grave_object");
-            if (after != "body_drop_grave_object") lines.Add(Label(s, L10n.T("w_then")) + after);
+            string after = Names.Wgo("body_drop_grave_object");
+            if (after != null) lines.Add(Label(s, L10n.T("w_then")) + after);
             else lines.Add(L10n.T("w_rots_then"));
             list.AddRange(Widgets(lines, s));
         }
@@ -114,8 +113,7 @@ namespace GK2Hud.World
             List<ChanceOutputItem> outs = el.Def.addItemsToWgoOnFinish?.chanceOutputItems;
             ChanceOutputItem main = outs != null && outs.Count > 0 ? outs[0] : null;
             ItemDef crop = main != null ? GameBalance.Me.GetDataOrNull<ItemDef>(main.id) : null;
-            list.Add(Text(WgoName(w), s.Header));
-            list.Add(new UITooltipSeparatorWidgetData());
+            AddHeader(list, WgoName(w), s);
 
             var lines = new List<string>();
             if (crop != null) lines.Add(Label(s, L10n.T("w_growing")) + ItemLink(crop));
@@ -215,8 +213,7 @@ namespace GK2Hud.World
         private static void RenewSection(List<LazyWidgetDataBase> list, Styles s, WgoData w, CraftElementBase el)
         {
             CraftComponent cc = w.CraftComponent;
-            list.Add(Text(WgoName(w), s.Header));
-            list.Add(new UITooltipSeparatorWidgetData());
+            AddHeader(list, WgoName(w), s);
             var lines = new List<string>();
             List<SpawnStage> stages = w.SpawnWGOComponent?.SpawnStages;
             int stage = stages == null ? -1 : stages.FindIndex(x => x != null && x.craftId == el.CraftId);
@@ -232,8 +229,8 @@ namespace GK2Hud.World
             else if (el.Def is CraftDef rd && !string.IsNullOrEmpty(rd.replaceWgoId) && rd.replaceWgoId != "0")
             {
                 // Colmeia, cogumelo, arbusto: o craft troca o objeto pelo "cheio" (replaceWgoId).
-                string n = LLBase.L(rd.replaceWgoId);
-                if (n != rd.replaceWgoId && n != WgoName(w)) lines.Add(Label(s, L10n.T("w_becomes")) + n);
+                string n = Names.Wgo(rd.replaceWgoId);
+                if (n != null && n != WgoName(w)) lines.Add(Label(s, L10n.T("w_becomes")) + n);
             }
             int total = Mathf.Max(0, el.TotalProgressTicks), done = Mathf.Max(0, el.ProgressTicks);
             bool delayed = MainGame.Instance?.GameSave?.wgoDelayedSpawnSystemData?.Contains(w) ?? false;
@@ -282,15 +279,15 @@ namespace GK2Hud.World
             CraftComponent cc = w.CraftComponent;
             CraftElementBase el = cc.CurrentCraftElement;
             CraftDefBase def = el.Def;
-            list.Add(Text(Links.Wrap(Links.Station, w.id, WgoName(w)), s.Header));
-            list.Add(new UITooltipSeparatorWidgetData());
+            string name = WgoName(w);
+            AddHeader(list, name != null ? Links.Wrap(Links.Station, w.id, name) : null, s);
 
             var lines = new List<string>();
             // O quê: nome do craft (link) e quantidade que sai (pré-rolada no início do craft, CraftElementBase.cs:486).
             string what = CraftLink(def);
             int outCount = OutputCount(el, w);
-            if (outCount > 1) what += " " + Num(s, "×" + outCount);
-            lines.Add(Label(s, L10n.T(def.isHidden ? "w_renewing" : "w_making")) + what);
+            if (what != null && outCount > 1) what += " " + Num(s, "×" + outCount);
+            if (what != null) lines.Add(Label(s, L10n.T(def.isHidden ? "w_renewing" : "w_making")) + what);
 
             int total = Mathf.Max(0, el.TotalProgressTicks), done = Mathf.Max(0, el.ProgressTicks);
             bool started = el.IsStarted;
@@ -357,10 +354,10 @@ namespace GK2Hud.World
             // Fila: próximos itens (links).
             var next = new List<string>();
             int extra = 0;
-            if (el.Count > 1 || el.IsInfinite) next.Add(CraftLink(def) + " " + (el.IsInfinite ? L10n.T("w_repeat") : Num(s, "×" + (el.Count - 1))));
+            if ((el.Count > 1 || el.IsInfinite) && CraftLink(def) is string cur) next.Add(cur + " " + (el.IsInfinite ? L10n.T("w_repeat") : Num(s, "×" + (el.Count - 1))));
             foreach (CraftElementBase q in queue)
             {
-                if (q == null || q == el || q.Def == null || q.Count <= 0) continue;
+                if (q == null || q == el || q.Def == null || q.Count <= 0 || CraftLink(q.Def) == null) continue;
                 if (next.Count >= MaxQueue) { extra++; continue; }
                 next.Add(CraftLink(q.Def) + (q.IsInfinite ? " " + L10n.T("w_repeat") : q.Count > 1 ? " " + Num(s, "×" + q.Count) : ""));
             }
@@ -543,7 +540,8 @@ namespace GK2Hud.World
             if (string.IsNullOrEmpty(itemId)) return null;
             int count = w.Inventory?.Data?.GetTotalCountInInventory(itemId) ?? 0;
             ItemDef fd = GameBalance.Me.GetDataOrNull<ItemDef>(itemId);
-            string name = fd != null ? Links.Wrap(Links.Item, itemId, fd.GetHeader()) : itemId;
+            if (fd == null) return null;
+            string name = Links.Wrap(Links.Item, itemId, fd.GetHeader());
             return Label(s, L10n.T("w_fuel")) + name + " " + Num(s, count.ToString());
         }
 
@@ -574,33 +572,24 @@ namespace GK2Hud.World
 
         // ---------------- utilidades ----------------
 
-        /// <summary>
-        /// Nome do objeto: texto próprio, sem sufixo numérico, sem "_empty"; senão o primeiro pedaço do id que é um item
-        /// (arbustos "bush_blueberry_clr1_l_empty" → Blueberry, "honey_wild_empty" → Honey); senão o id cru.
-        /// </summary>
-        public static string WgoName(WgoData w)
-        {
-            string id = w.id;
-            foreach (string cand in new[] { id, System.Text.RegularExpressions.Regex.Replace(id, "_\\d+$", ""), id.EndsWith("_empty") ? id.Substring(0, id.Length - 6) : null })
-            {
-                if (string.IsNullOrEmpty(cand)) continue;
-                string n = LLBase.L(cand);
-                if (n != cand) return n;
-            }
-            foreach (string token in id.Split('_'))
-            {
-                if (token.Length < 3) continue;
-                ItemDef d = GameBalance.Me.GetDataOrNull<ItemDef>(token);
-                if (d != null) return d.GetHeader();
-            }
-            return id;
-        }
+        /// <summary>Nome do objeto (<see cref="Names.Wgo"/>) ou null quando o jogo e o glossário não têm nome para ele.</summary>
+        public static string WgoName(WgoData w) => Names.Wgo(w?.id);
 
+        /// <summary>Craft como link; sem nome próprio, o item que ele entrega; null quando não há nome mostrável.</summary>
         private static string CraftLink(CraftDefBase def)
         {
-            if (def is CraftDef cd && !cd.id.StartsWith("mix")) return Links.Wrap(Links.Craft, cd.id, TooltipContent.CraftName(cd));
-            string n = LLBase.L(def.id);
-            return n;
+            if (def is CraftDef cd && !cd.id.StartsWith("mix") && TooltipContent.CraftName(cd) is string n) return Links.Wrap(Links.Craft, cd.id, n);
+            string t = Names.Text(def.id);
+            if (t != null) return t;
+            ItemDef res = ResultItem(def);
+            return res != null ? ItemLink(res) : null;
+        }
+
+        private static void AddHeader(List<LazyWidgetDataBase> list, string header, Styles s)
+        {
+            if (string.IsNullOrEmpty(header)) return;
+            list.Add(Text(header, s.Header));
+            list.Add(new UITooltipSeparatorWidgetData());
         }
 
         private static string Label(Styles s, string label) => s.SmallSelected.ApplyStyleToString(label + ": ") ?? "";
