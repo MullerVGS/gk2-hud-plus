@@ -20,6 +20,7 @@ namespace GK2Hud.Calendar
         public float End = -1f;       // timeOfDay de fim; < 0 = instantâneo (só Start)
         public string[] MapIcons = new string[0];   // ícones de dia do mapa que revelam o evento
         public string[] Tutorials = new string[0];  // tutoriais (cabeçalho) que revelam o evento
+        public string[] Quests = new string[0];     // quests concluídas que revelam o evento (a partir do dia em que concluíram)
         public string ResFlag;        // PlayerData.res que precisa ser > 0 (lido cru)
         public string Icon;           // sprite do ícone no TAB (os do mapa: day_*_expanded)
         public string NativeDesc;     // descrição com texto do próprio jogo (LLBase.L)
@@ -84,8 +85,10 @@ namespace GK2Hud.Calendar
                 Icon = "day_gluttony_expanded", NativeDesc = "tut_pr_machine_charge" },
             new EventDef { Id = "resurrection", DayId = "day_envy", Start = 0.01f, End = 0.99f, MapIcons = new[] { "day_envy_morgue" },
                 Tutorials = new[] { "tut_resurrection_hdr" }, Icon = "day_envy_expanded", NativeDesc = "tut_resurrection_day", PowerStatus = true },
-            new EventDef { Id = "goddess", DayId = "day_envy", MapIcons = new[] { "day_envy_goddess" }, Icon = "day_envy_expanded",
-                NativeDesc = "63_swamp_goddess_32_c_3" },
+            // O jogo nunca libera o ícone day_envy_goddess: quem revela é a primeira conversa com a estátua (a fala das lágrimas
+            // é do evento 63_swamp_goddess, que a quest 63_swamp_goddess_speak dispara).
+            new EventDef { Id = "goddess", DayId = "day_envy", MapIcons = new[] { "day_envy_goddess" }, Quests = new[] { "63_swamp_goddess_speak" },
+                Icon = "day_envy_expanded", NativeDesc = "63_swamp_goddess_32_c_3" },
             new EventDef { Id = "sermon", DayId = "day_wrath", Start = 0.01f, End = 0.99f, MapIcons = new[] { "day_wrath_church" },
                 Tutorials = new[] { "tutorial_hdr_seremons" }, Icon = "day_wrath_expanded", NativeDesc = "tut_sermons_day" },
             new EventDef { Id = "nun", DayId = "day_wrath", MapIcons = new[] { "day_wrath" }, Icon = "day_wrath_expanded",
@@ -152,7 +155,39 @@ namespace GK2Hud.Calendar
             foreach (string icon in e.MapIcons) if (ks.IsMapDayIconUnlocked(icon)) return true;
             if (ks.unlockedTutorials != null)
                 foreach (string t in e.Tutorials) if (ks.unlockedTutorials.Contains(t)) return true;
-            return false;
+            return QuestRevealed(e);
+        }
+
+        private static bool QuestRevealed(EventDef e)
+        {
+            if (e.Quests.Length == 0) return false;
+            List<QuestData> qs = MainGame.Instance.GameSave.questSystemData?.questCollection?.quests;
+            return qs != null && qs.Exists(q => q != null && q.status == QuestStatus.Completed && Array.IndexOf(e.Quests, q.id) >= 0);
+        }
+
+        /// <summary>
+        /// Primeiro dia em que o evento conta. Revelado só por quest: o dia em que o diário anotou a conclusão (antes do
+        /// diário ou sem diário = sempre). Revelado pelo jogo (ícone/tutorial/res): sempre.
+        /// </summary>
+        public static int KnownSince(EventDef e)
+        {
+            if (RevealAll || e.Quests.Length == 0) return int.MinValue;
+            KnowledgeSystem ks = MainGame.Instance.GameSave.knowledgeSystem;
+            if (ks != null)
+            {
+                foreach (string icon in e.MapIcons) if (ks.IsMapDayIconUnlocked(icon)) return int.MinValue;
+                if (ks.unlockedTutorials != null) foreach (string t in e.Tutorials) if (ks.unlockedTutorials.Contains(t)) return int.MinValue;
+            }
+            Journal.JournalTracker j = Journal.JournalTracker.Current;
+            if (j == null || !j.Active) return int.MinValue;
+            int since = int.MaxValue;
+            foreach (string q in e.Quests)
+            {
+                Journal.JournalEntry en = j.Find(Journal.JournalKinds.Quest, q, out bool baseline);
+                if (baseline) return int.MinValue;
+                if (en != null) since = Math.Min(since, en.d);
+            }
+            return since == int.MaxValue ? int.MinValue : since;
         }
 
         /// <summary>A ressurreição tem energia? (res cru <c>resurrection_has_power</c>; recarrega no fim de Luxúria.)</summary>
@@ -170,7 +205,7 @@ namespace GK2Hud.Calendar
             List<GameLogicData> logics = MainGame.Instance.GameSave.gameLogicSystemData?.gameLogics;
             foreach (EventDef e in Defs)
             {
-                if (!Known(e)) continue;
+                if (!Known(e) || absDay < KnownSince(e)) continue;
                 if (e.DayId != null)
                 {
                     if (e.DayId == dayId) list.Add(new Occurrence { Def = e, Day = absDay, Start = e.Start, End = e.End });
