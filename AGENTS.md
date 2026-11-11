@@ -63,6 +63,29 @@ um nó por vez e só sem perk comprado dependente; perks de início (`availableA
 Um X desenhado no nó (0.1.0) foi recusado por não ser imersivo. Cenários: `zumbi-perks.cs` (abre a árvore),
 `gk2zombierefund-clicar.cs`.
 
+## GK2 Map
+
+Mod de jogador (`GK2Map/`, `arthur.gk2.map`), só informação, nas duas janelas de mapa (aba Map do TAB e mapa dos marcos).
+- **Zoom**: scroll do mouse, 4 níveis de razão inteira (1, 2, 3 e 4 px de tela por pixel de arte; o nativo é 2), ancorado
+  no cursor. O conteúdo do `ScrollRect` cresce (`sizeDelta`) e o `Map` ganha `localScale`, então arrasto e pan nativos
+  continuam limitando certo. Rótulos ficam do tamanho nativo; marcadores também, menos no nível afastado.
+- **Setinhas amarelas**: são pintura na arte (`map-bg`), não UI. O mod as acha pela cor na textura (uma vez por sessão)
+  e casa cada uma com a porta mais próxima (`WGODef.teleportDestinationWgoIds` + áreas internas do
+  `TeleportPointGraph`). Só entra interior cuja zona está em `KnowledgeSystem.visitedWorldZones`. Hover = tooltip nativo
+  com o nome da zona; clique, ou mais um scroll no zoom máximo, abre a vista.
+- **Vista do local**: o mundo inteiro (interiores incluídos) vive na cena `RuinedTemple` e é ligado por pedaços conforme
+  a câmera do mundo. A vista desliga o `CinemachineBrain`, leva a câmera do mundo para o interior e chama o
+  `ChunkManager` no modo de carga gradual; some com o pergaminho e o fundo `Back` da moldura e refaz o `BgShadow` em
+  faixas, então o mundo aparece pelo vão da janela. Luz e som ambiente do interior vêm do preset da porta
+  (`TeleportTo("destino", "preset")`), trocando só `EnvironmentEngine.timesOfDay` (o nome que vai para o save não muda).
+  Abre no enquadramento em que a zona cabe (escala normal ou metade); scroll alterna, arrasto/WASD andam dentro das
+  zonas visitadas do mesmo interior; scroll para trás, botão direito, trocar de aba ou fechar a janela restauram tudo.
+  Custo medido: 90–220 ms na primeira abertura de um local na sessão, ~10 ms depois.
+- **Inspeção** (só leitura): hover mostra o nome do objeto; clique fixa o tooltip nativo com qualidade (widget nativo),
+  craft em andamento e conteúdo do inventário. Nomes vêm do `GK2Hud/Names.cs` (linkado no csproj).
+- Cenários: `gk2map-zoom.cs`, `gk2map-local.cs` (hover/entrar/scroll/sair/lista), `gk2map-inspecionar.cs`.
+- A placa "Портовый район" no canto do green é do jogo (aparece sem o mod ao carregar o save de teste na mina).
+
 ## Blue-green
 
 | | Blue | Green |

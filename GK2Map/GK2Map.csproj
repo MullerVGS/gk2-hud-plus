@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>GK2Map</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Nomes mostráveis de objetos: a mesma fonte do GK2Hud, coberta pelo gk2 check. -->
+    <Compile Include="../GK2Hud/Names.cs" Link="Shared/Names.cs" />
+  </ItemGroup>
+</Project>
