@@ -320,7 +320,6 @@ namespace GK2Map
             nextTitle = Time.unscaledTime + 0.25f;
             WorldZone zone = Atlas != null ? Atlas.TitleZoneAt(focus) : null;
             string text = zone != null ? ZoneInfo.Label(zone, hudZone) : string.Empty;
-            if (string.IsNullOrEmpty(text) && !place.Outdoor) text = place.Title;
             if (title.text != text) title.text = text ?? string.Empty;
         }
 

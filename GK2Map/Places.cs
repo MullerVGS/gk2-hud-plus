@@ -43,6 +43,7 @@ namespace GK2Map
     {
         private const float MatchRadius = 30f;
         private const float DoorTolerance = 6f;
+        private const float CorridorMargin = 5f;
         private static readonly FieldInfo ExpressionText = AccessTools.Field(typeof(LazyExpression), "expressionString");
         private static readonly AccessTools.FieldRef<TeleportPointGraph, List<IndoorAreaData>> AreasRef =
             AccessTools.FieldRefAccess<TeleportPointGraph, List<IndoorAreaData>>("indoorAreas");
@@ -136,19 +137,54 @@ namespace GK2Map
             IndoorAreaData area = AreaOf(p);
             // As áreas de nuvens das regiões têm frestas entre si; uma porta de rua logo na borda ainda vale.
             if (area == null) return OutdoorAt(p, DoorTolerance);
+            // Interior: vale se a zona do destino já foi visitada; destino em corredor (fora de qualquer zona) vale se
+            // alguma zona da mesma área interna já foi.
             WorldZone zone = ZoneAt(p);
-            if (zone == null || !visited.Contains(zone.Id)) return null;
-            var place = new Place { DoorId = door.Data.id, ZoneId = zone.Id, Title = LLBase.L("wz_" + zone.Id), Light = door.Light, Area = area };
-            Bounds zb = zone.ZoneCollider.bounds;
-            place.Center = new Vector3(zb.center.x, p.y, zb.center.z);
-            place.Boxes.Add(zb);
+            if (zone != null && !visited.Contains(zone.Id)) return null;
+            var known = new List<WorldZone>();
+            bool all = true;
             foreach (WorldZone other in Zones)
             {
-                if (other == zone || other.ZoneCollider == null || !visited.Contains(other.Id)) continue;
+                if (other == null || other.ZoneCollider == null) continue;
                 Bounds ob = other.ZoneCollider.bounds;
                 if (ob.size.x < 1f || ob.size.z < 1f || !area.ContainsXZ(ob.center)) continue;
-                place.Boxes.Add(ob);
+                if (visited.Contains(other.Id)) known.Add(other);
+                else all = false;
             }
+            if (known.Count == 0) return null;
+            WorldZone named = zone;
+            if (named == null)
+            {
+                float best = float.MaxValue;
+                foreach (WorldZone k in known)
+                {
+                    float d = k.ZoneCollider.bounds.SqrDistance(new Vector3(p.x, k.ZoneCollider.bounds.center.y, p.z));
+                    if (d < best) { best = d; named = k; }
+                }
+            }
+            var place = new Place { DoorId = door.Data.id, ZoneId = zone != null ? zone.Id : null, Title = LLBase.L("wz_" + named.Id), Light = door.Light, Area = area };
+            if (zone != null)
+            {
+                Bounds zb = zone.ZoneCollider.bounds;
+                place.Center = new Vector3(zb.center.x, p.y, zb.center.z);
+                place.Boxes.Add(zb);
+            }
+            else
+            {
+                place.Center = p;
+                place.Boxes.Add(new Bounds(p, new Vector3(8f, 4f, 8f)));
+            }
+            // Por onde a vista anda: as zonas visitadas com uma folga (corredores entre elas) e, quando todas as zonas
+            // da área já foram visitadas, a área interna inteira.
+            foreach (WorldZone k in known)
+            {
+                Bounds kb = k.ZoneCollider.bounds;
+                kb.Expand(new Vector3(CorridorMargin * 2f, 0f, CorridorMargin * 2f));
+                place.Boxes.Add(kb);
+            }
+            if (all && area.bounds != null)
+                foreach (IndoorAreaBoundData ab in area.bounds)
+                    if (ab != null) place.Boxes.Add(new Bounds(ab.center, ab.size));
             return place;
         }
 
