@@ -1,4 +1,5 @@
-// GK2ZombieRefund: com a janela do zumbi aberta (zumbi-perks.cs), clica no nó NO. ACAO = "x" (esquerdo no X), "direito" (no nó) ou "comprar" (esquerdo no nó).
+// GK2ZombieRefund: com a janela do zumbi aberta (zumbi-perks.cs), age no nó NO. ACAO = "hover" (tooltip), "direito"
+// (abre a confirmação), "sim" / "nao" (responde a confirmação aberta) ou "comprar" (esquerdo no nó).
 using System.Collections;
 using System.Linq;
 using LazyBearTechnology;
@@ -6,7 +7,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 public static class Snippet
 {
-    static string ACAO = "x";
+    static string ACAO = "hover";
     const string NO = "z_building_lvl_up_1_1";
 
     public static IEnumerator Run()
@@ -15,16 +16,23 @@ public static class Snippet
         if (w == null) { yield return "nó não encontrado (abra zumbi-perks.cs)"; yield break; }
         var z = w.Data.ZombieWgoData;
         string antes = Estado(z);
-        GameObject alvo = w.gameObject;
-        var btn = PointerEventData.InputButton.Left;
-        if (ACAO == "x") { var x = w.transform.Find("GK2ZombieRefund_X"); if (x == null || !x.gameObject.activeSelf) { yield return "sem X ativo; " + antes; yield break; } alvo = x.gameObject; }
-        if (ACAO == "direito") btn = PointerEventData.InputButton.Right;
-        var ped = new PointerEventData(EventSystem.current) { button = btn };
-        ExecuteEvents.Execute(alvo, ped, ExecuteEvents.pointerClickHandler);
-        yield return new WaitForSecondsRealtime(0.5f);
-        var xx = w.transform.Find("GK2ZombieRefund_X");
-        yield return ACAO + ": " + antes + " → " + Estado(z) + " · X " + (xx != null && xx.gameObject.activeSelf ? "visível" : "oculto");
+        var dialog = LazyUI.GetWindow<UIDialogWindow>();
+        if (ACAO == "sim" || ACAO == "nao")
+        {
+            var btns = dialog.GetComponentsInChildren<UIDialogWindowButton>(false);
+            if (!dialog.IsShown || btns.Length < 2) { yield return "sem diálogo aberto"; yield break; }
+            var b = btns[ACAO == "sim" ? 0 : 1].GetComponentInChildren<LazyButton>();
+            b.onClick.Invoke();
+        }
+        else
+        {
+            var ped = new PointerEventData(EventSystem.current) { button = ACAO == "direito" ? PointerEventData.InputButton.Right : PointerEventData.InputButton.Left };
+            if (ACAO == "hover") ExecuteEvents.Execute(w.gameObject, ped, ExecuteEvents.pointerEnterHandler);
+            else ExecuteEvents.Execute(w.gameObject, ped, ExecuteEvents.pointerClickHandler);
+        }
+        yield return new WaitForSecondsRealtime(0.6f);
+        yield return ACAO + ": " + antes + " → " + Estado(z) + " · diálogo " + (dialog.IsShown ? "aberto" : "fechado");
     }
 
-    static string Estado(ZombieWgoData z) => "perks " + z.GetUsedPerksCount() + "/" + z.RedSkulls + " R" + z.techRed + " G" + z.techGreen + " laranja " + z.GetTalentBranch("talent_orange").curTalentValue;
+    static string Estado(ZombieWgoData z) => "perks " + z.GetUsedPerksCount() + "/" + z.RedSkulls + " R" + z.techRed + " laranja " + z.GetTalentBranch("talent_orange").curTalentValue;
 }

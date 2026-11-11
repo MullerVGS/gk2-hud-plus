@@ -12,8 +12,9 @@ using UnityEngine.UI;
 namespace GK2ZombieRefund
 {
     /// <summary>
-    /// Desfaz a compra de um perk de zumbi na árvore de perks: um X nativo no canto do nó comprado ou clique direito no
-    /// nó. Devolve os pontos e a caveira pela mesma lógica do respec que o jogo tem e não usa
+    /// Desfaz a compra de um perk de zumbi na árvore de perks: clique direito no nó comprado abre a janela de diálogo
+    /// nativa (Sim/Não), e o tooltip nativo do perk ganha uma linha com a dica. Devolve os pontos e a caveira pela mesma
+    /// lógica do respec que o jogo tem e não usa
     /// (<c>ZombieWgoData.RespecSpentTalents</c>), um nó por vez e só quando nenhum perk comprado depende dele.
     /// </summary>
     [BepInPlugin(Guid, Name, Version)]
@@ -21,15 +22,13 @@ namespace GK2ZombieRefund
     {
         public const string Guid = "arthur.gk2.zombierefund";
         public const string Name = "GK2 Zombie Refund";
-        public const string Version = "0.1.0";
+        public const string Version = "0.2.0";
 
         internal static Plugin Instance;
         internal static BepInEx.Logging.ManualLogSource Log;
 
         private Harmony harmony;
-        private readonly List<GameObject> created = new List<GameObject>();
         private readonly List<Component> added = new List<Component>();
-        private Sprite cross;
 
         private void Awake()
         {
@@ -38,6 +37,8 @@ namespace GK2ZombieRefund
             harmony = new Harmony(Guid);
             harmony.Patch(AccessTools.Method(typeof(TalentLevelUpWidget), nameof(TalentLevelUpWidget.Redraw)),
                 postfix: new HarmonyMethod(typeof(Plugin), nameof(RedrawPostfix)));
+            harmony.Patch(AccessTools.Method(typeof(UITooltip), nameof(UITooltip.ShowTalentLevelUpWidget)),
+                prefix: new HarmonyMethod(typeof(Tooltip), nameof(Tooltip.Prefix)));
             foreach (TalentLevelUpWidget w in FindObjectsByType<TalentLevelUpWidget>(FindObjectsInactive.Include, FindObjectsSortMode.None))
                 if (w.Data != null) Decorate(w);
             Log.LogInfo($"{Name} {Version} carregado");
@@ -46,10 +47,10 @@ namespace GK2ZombieRefund
         private void OnDestroy()
         {
             harmony?.UnpatchSelf();
-            foreach (GameObject go in created) if (go != null) Destroy(go);
             foreach (Component c in added) if (c != null) Destroy(c);
-            created.Clear();
             added.Clear();
+            UIDialogWindow dialog = LazyUI.IsInitialized ? LazyUI.GetWindow<UIDialogWindow>() : null;
+            if (dialog != null && dialog.IsShown && Confirm.Open) dialog.Close();
             if (Instance == this) Instance = null;
         }
 
@@ -64,37 +65,6 @@ namespace GK2ZombieRefund
             TalentLevelUpWidgetData d = w.Data;
             bool zombie = d != null && d.Def != null && d.Def.isZombiePerk && d.ZombieWgoData != null;
             if (zombie && w.GetComponent<RightClick>() == null) added.Add(w.gameObject.AddComponent<RightClick>());
-            Transform x = w.transform.Find(XName);
-            bool show = zombie && Refund.CanRefund(d.ZombieWgoData, d.Def);
-            if (!show)
-            {
-                if (x != null) x.gameObject.SetActive(false);
-                return;
-            }
-            if (x == null)
-            {
-                Sprite sp = CrossSprite();
-                if (sp == null) return;
-                var go = new GameObject(XName, typeof(RectTransform), typeof(Image), typeof(CrossClick));
-                var rt = (RectTransform)go.transform;
-                rt.SetParent(w.transform, false);
-                rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(1f, 1f);
-                rt.sizeDelta = new Vector2(sp.rect.width, sp.rect.height);
-                rt.anchoredPosition = new Vector2(1f, 0f);
-                go.GetComponent<Image>().sprite = sp;
-                created.Add(go);
-                x = rt;
-            }
-            x.SetAsLastSibling();
-            x.gameObject.SetActive(true);
-        }
-
-        private const string XName = "GK2ZombieRefund_X";
-
-        private Sprite CrossSprite()
-        {
-            if (cross == null) cross = Resources.FindObjectsOfTypeAll<Sprite>().FirstOrDefault(s => s.name == "btn_i-close_cross-s");
-            return cross;
         }
     }
 
@@ -141,15 +111,102 @@ namespace GK2ZombieRefund
             (f?.GetValue(null) as Action)?.Invoke();
         }
 
-        public static void FromWidget(TalentLevelUpWidget w)
+        /// <summary>Título do perk como no tooltip nativo (<c>UITooltip.AddTalentLevelUpWidgets</c>).</summary>
+        public static string Header(TalentLevelUpDef def)
+        {
+            if (!string.IsNullOrEmpty(def.linkedPerk))
+            {
+                PerkDef p = GameBalance.Me.GetData<PerkDef>(def.linkedPerk);
+                if (p != null) return p.GetHeader();
+            }
+            // Sem perk ligado o nível só soma maestria e não tem nome traduzido: o mesmo título do tooltip nativo.
+            return string.Format("{0}: {1} +{2}", LLBase.L("ui_add_mastery"), def.talentId.FontIcon(), def.talentValueAdd);
+        }
+
+        public static string Points(TalentLevelUpDef def) => def.ZombieTechPointsIcon + def.ZombieTechPoints;
+    }
+
+    /// <summary>Janela de diálogo nativa: "Devolver este perk?" com Sim/Não.</summary>
+    internal static class Confirm
+    {
+        public static bool Open;
+
+        public static void Ask(TalentLevelUpWidget w)
         {
             TalentLevelUpWidgetData d = w != null ? w.Data : null;
-            if (d?.Def == null || d.ZombieWgoData == null) return;
-            if (Do(d.ZombieWgoData, d.Def))
+            if (d?.Def == null || d.ZombieWgoData == null || !Refund.CanRefund(d.ZombieWgoData, d.Def)) return;
+            ZombieWgoData z = d.ZombieWgoData;
+            TalentLevelUpDef def = d.Def;
+            UIDialogWindow window = LazyUI.GetWindow<UIDialogWindow>();
+            UITooltip.Hide();
+            string info = L10n.T("ask", Refund.Points(def), "rskull".FontIcon());
+            window.Open(new UIDialogWindowData(Refund.Header(def), info, () =>
             {
-                UITooltip.Hide();
-                w.Redraw();
+                Open = false;
+                window.Close();
+                if (Refund.Do(z, def) && w != null) w.Redraw();
+            }, () =>
+            {
+                Open = false;
+                window.Close();
+            }));
+            Open = true;
+        }
+    }
+
+    /// <summary>Linha a mais no tooltip nativo do perk comprado que pode ser devolvido.</summary>
+    internal static class Tooltip
+    {
+        private static readonly MethodInfo AddWidgets = AccessTools.Method(typeof(UITooltip), "AddTalentLevelUpWidgets");
+        private static readonly MethodInfo ShowAt = AccessTools.Method(typeof(UITooltip), "ShowAtTargetAndCalculateOffsets");
+        private static readonly FieldInfo InstanceField = AccessTools.Field(typeof(UITooltip), "instance");
+        private static readonly FieldInfo SmallStyle = AccessTools.Field(typeof(UITooltip), "smallDescriptionTextStyle");
+
+        public static bool Prefix(TalentLevelUpWidget widget)
+        {
+            try
+            {
+                TalentLevelUpWidgetData d = widget != null ? widget.Data : null;
+                if (d?.Def == null || d.ZombieWgoData == null || !Refund.CanRefund(d.ZombieWgoData, d.Def)) return true;
+                object instance = InstanceField.GetValue(null);
+                if (instance == null || AddWidgets == null || ShowAt == null) return true;
+                var list = new List<LazyWidgetDataBase>();
+                AddWidgets.Invoke(null, new object[] { list, d.Def });
+                if (list.Count > 0 && !(list[list.Count - 1] is UITooltipSeparatorWidgetData)) list.Add(new UITooltipSeparatorWidgetData());
+                list.Add(new UITooltipTextWidgetData(L10n.T("hint", Refund.Points(d.Def)), TMPro.TextAlignmentOptions.Center, (TextStyle)SmallStyle.GetValue(instance)));
+                object[] args = ShowAt.GetParameters().Select(p => p.HasDefaultValue ? p.DefaultValue : null).ToArray();
+                args[0] = list;
+                args[1] = widget.transform as RectTransform;
+                if (args.Length > 4) args[4] = default(Vector2);
+                ShowAt.Invoke(instance, args);
+                return false;
             }
+            catch (Exception e)
+            {
+                Plugin.Log.LogError(e);
+                return true;
+            }
+        }
+    }
+
+    internal static class L10n
+    {
+        private static readonly Dictionary<string, string> En = new Dictionary<string, string>
+        {
+            ["hint"] = "Right-click: refund ({0})",
+            ["ask"] = "Refund this perk?\n{0} and 1 {1} back.",
+        };
+
+        private static readonly Dictionary<string, string> Pt = new Dictionary<string, string>
+        {
+            ["hint"] = "Clique direito: devolver ({0})",
+            ["ask"] = "Devolver este perk?\nVoltam {0} e 1 {1}.",
+        };
+
+        public static string T(string key, params object[] args)
+        {
+            Dictionary<string, string> t = LLBase.CurrentLang.StartsWith("pt") ? Pt : En;
+            return string.Format(t.TryGetValue(key, out string s) ? s : En[key], args);
         }
     }
 
@@ -159,18 +216,7 @@ namespace GK2ZombieRefund
         public void OnPointerClick(PointerEventData e)
         {
             if (e.button != PointerEventData.InputButton.Right) return;
-            try { Refund.FromWidget(GetComponent<TalentLevelUpWidget>()); }
-            catch (Exception ex) { Plugin.Log.LogError(ex); }
-        }
-    }
-
-    /// <summary>Clique (esquerdo) no X.</summary>
-    internal sealed class CrossClick : MonoBehaviour, IPointerClickHandler
-    {
-        public void OnPointerClick(PointerEventData e)
-        {
-            if (e.button != PointerEventData.InputButton.Left) return;
-            try { Refund.FromWidget(GetComponentInParent<TalentLevelUpWidget>()); }
+            try { Confirm.Ask(GetComponent<TalentLevelUpWidget>()); }
             catch (Exception ex) { Plugin.Log.LogError(ex); }
         }
     }
