@@ -23,7 +23,7 @@ namespace GK2Hud.Journal
     /// <summary>Nomes, agrupamento e tooltips das linhas do diário; a linha "desbloqueado no dia N" dos tooltips.</summary>
     internal static class JournalView
     {
-        public static string KindLabel(string kind) => CalendarL10n.T("jk_" + kind);
+        public static string KindLabel(string kind) => kind == JournalKinds.Reveal ? Names.NativeAsIs("TechTreePage") : CalendarL10n.T("jk_" + kind);
 
         /// <summary>Nome no idioma atual; null quando o jogo não tem nome para mostrar (não entra no diário).</summary>
         public static string Name(string kind, string id)

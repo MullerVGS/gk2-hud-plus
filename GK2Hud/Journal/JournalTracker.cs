@@ -53,7 +53,7 @@ namespace GK2Hud.Journal
     [Serializable]
     internal sealed class JournalFile
     {
-        public int version = 1;
+        public int version = 1;   // 2: tecnologias reveladas (JournalKinds.Reveal)
         public string slot;
         public int startDay;
         public float startTod;
@@ -65,13 +65,14 @@ namespace GK2Hud.Journal
     {
         public const string Quest = "quest", Tech = "tech", Building = "building", Town = "town", Craft = "craft", Alchemy = "alchemy",
             Perk = "perk", DayIcon = "dayicon", Tutorial = "tutorial", Sermon = "sermon",
+            Reveal = "reveal",   // tecnologia que nasce escondida (TechDef.hiddenAtStart) e apareceu na Tech Tree
             Phrase = "phrase";   // resposta de diálogo já escolhida (KnowledgeSystem.blackListPhrases): só para datar revelações, nunca listada
 
         /// <summary>Ordem de exibição dentro do dia.</summary>
-        public static readonly string[] Order = { Sermon, Quest, Tech, Building, Town, Craft, Alchemy, Perk, DayIcon, Tutorial };
+        public static readonly string[] Order = { Sermon, Quest, Reveal, Tech, Building, Town, Craft, Alchemy, Perk, DayIcon, Tutorial };
 
         /// <summary>Tipos que só crescem no jogo: se um some, o save carregado é outra linha do tempo.</summary>
-        public static readonly string[] Monotonic = { Quest, Tech, Building, Craft, Alchemy };
+        public static readonly string[] Monotonic = { Quest, Reveal, Tech, Building, Craft, Alchemy };
     }
 
     /// <summary>
@@ -159,6 +160,13 @@ namespace GK2Hud.Journal
                 Restart(slot, current, "novo");
                 return;
             }
+            if (file.version < 2)
+            {
+                // Diário de antes das revelações: o que já está visível na Tech Tree entra como já conhecido (sem data).
+                foreach (string key in current) if (KindOf(key) == JournalKinds.Reveal && !file.baseline.Contains(key)) file.baseline.Add(key);
+                file.version = 2;
+                Dirty();
+            }
             int before = file.entries.Count;
             // Linha do tempo abandonada: o que foi anotado depois do ponto carregado não aconteceu neste save.
             file.entries.RemoveAll(e => e.When > now + 0.0005);
@@ -194,7 +202,7 @@ namespace GK2Hud.Journal
         private void Restart(string slot, HashSet<string> current, string why)
         {
             EnvironmentData env = MainGame.Instance.GameSave.environmentData;
-            file = new JournalFile { slot = slot, startDay = env.Day, startTod = env.TimeOfDay, baseline = current.OrderBy(x => x).ToList() };
+            file = new JournalFile { version = 2, slot = slot, startDay = env.Day, startTod = env.TimeOfDay, baseline = current.OrderBy(x => x).ToList() };
             seen.Clear();
             foreach (string key in current) seen.Add(key);
             counts.Clear();
@@ -210,6 +218,7 @@ namespace GK2Hud.Journal
             KnowledgeSystem ks = gameSave.knowledgeSystem;
             bool changed = force;
             changed |= Count(JournalKinds.Tech, ks.unlockedTechs?.Count ?? 0);
+            changed |= Count(JournalKinds.Reveal, ks.hiddenTechs?.Count ?? 0);
             changed |= Count(JournalKinds.Craft, ks.unlockedCrafts?.Count ?? 0);
             changed |= Count(JournalKinds.Building, ks.unlockedBuildings?.Count ?? 0);
             changed |= Count(JournalKinds.Town, ks.unlockedTownBuildings?.Count ?? 0);
@@ -275,6 +284,10 @@ namespace GK2Hud.Journal
             var set = new HashSet<string>();
             KnowledgeSystem ks = gameSave.knowledgeSystem;
             Add(set, JournalKinds.Tech, ks.unlockedTechs);
+            List<TechDef> techs = GameBalance.Me?.techDefs;
+            if (techs != null && ks.hiddenTechs != null)
+                foreach (TechDef t in techs)
+                    if (t != null && t.hiddenAtStart && !ks.hiddenTechs.Contains(t.id)) set.Add(JournalKinds.Reveal + ":" + t.id);
             Add(set, JournalKinds.Craft, ks.unlockedCrafts);
             Add(set, JournalKinds.Building, ks.unlockedBuildings);
             Add(set, JournalKinds.Town, ks.unlockedTownBuildings);
