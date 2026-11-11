@@ -59,6 +59,18 @@ namespace GK2Hud.Calendar
 
     internal enum OccState { Upcoming, Active, Past }
 
+    /// <summary>Previsão da viagem do burro (ver <see cref="CalendarModel.Donkey"/>).</summary>
+    internal struct DonkeyTrip
+    {
+        public bool Locked;     // a Freira ouviu "nenhum corpo"
+        public bool Busy;       // o burro vai ao necrotério sem entrega (missão em andamento)
+        public bool Full;       // necrotério cheio: o jogo pula a viagem
+        public int Bodies, Capacity;
+        public int Count;       // corpos se a chance passar
+        public int MaxCount;    // corpos por viagem com vaga sobrando
+        public int ChancePct;
+    }
+
     /// <summary>
     /// Calendário da semana, só leitura. Sem spoiler: cada evento só aparece quando o jogo já o revelou ao jogador
     /// (ícone de dia liberado no mapa, tutorial aberto ou o recurso do jogador que liga o evento).
@@ -202,6 +214,56 @@ namespace GK2Hud.Calendar
         {
             GameRes res = PlayerRes(MainGame.PlayerData);
             return res != null && res.GetWithoutSystemsCheck("resurrection_has_power") > 0f;
+        }
+
+        /// <summary>
+        /// Viagem do burro com o estado de agora, pela regra do grafo <c>npc_donkey</c> (<c>full_cycle</c>): nada com
+        /// <c>global_lock_on_drop_bodies</c> (a Freira ouviu "nenhum corpo") ou durante <c>33_base_complain_go</c>;
+        /// <c>Flow_Body</c> pula com o necrotério cheio e rola <c>donkey_body_drop_chance</c> contra <c>Random.Range(0, 100)</c>;
+        /// <c>Flow_GetCorpseDropAmount</c> traz 1 (+<c>donkey_drop_additional</c> se a Freira ouviu "muitos corpos"),
+        /// limitado às vagas. A capacidade é somada à mão: <c>GetTotalQuality</c> grava no save.
+        /// </summary>
+        public static DonkeyTrip Donkey()
+        {
+            var t = new DonkeyTrip();
+            GameRes res = PlayerRes(MainGame.PlayerData);
+            WorldZoneData morgue = MainGame.WorldData?.GetWorldZoneDataById("morgue");
+            if (res == null || morgue == null) return t;
+            t.Locked = res.GetWithoutSystemsCheck("global_lock_on_drop_bodies") > 0f;
+            List<QuestData> qs = MainGame.Instance.GameSave.questSystemData?.questCollection?.quests;
+            t.Busy = qs != null && qs.Exists(q => q != null && q.id == "33_base_complain_go" && q.status == QuestStatus.InProgress);
+            t.Bodies = Mathf.RoundToInt(res.GetWithoutSystemsCheck("cur_bodies_count"));
+            t.Capacity = morgue.IsContainer ? (int)ZoneQuality(morgue) : 0;
+            t.Full = t.Bodies >= t.Capacity;
+            int extra = 0;
+            ConstDef add = ConstDef.Get("donkey_drop_additional");
+            if (res.GetWithoutSystemsCheck("nun_many_body_drop") > 0f && add != null)
+                extra = add.IntValue != 0 ? add.IntValue : Mathf.RoundToInt(add.FloatValue);
+            t.MaxCount = 1 + extra;
+            t.Count = Mathf.Min(t.MaxCount, Mathf.Max(1, t.Capacity - t.Bodies));
+            t.ChancePct = Mathf.Clamp(Mathf.FloorToInt(res.GetWithoutSystemsCheck("donkey_body_drop_chance")) + 1, 0, 100);
+            return t;
+        }
+
+        /// <summary>A ocorrência é a próxima viagem agendada no save (<c>GameLogicData.execDay/execTime</c>) e ainda não saiu?</summary>
+        public static bool IsNextRun(Occurrence o)
+        {
+            if (o.Def.LogicId == null || State(o, Now) != OccState.Upcoming) return false;
+            GameLogicData g = MainGame.Instance.GameSave.gameLogicSystemData?.gameLogics?.Find(x => x.id == o.Def.LogicId);
+            return g != null && Math.Abs(o.StartAbs - (g.execDay + (double)g.execTime)) < 1e-3;
+        }
+
+        private static float ZoneQuality(WorldZoneData wz)
+        {
+            List<SGuid> ids = wz.Definition != null && wz.Definition.hasCustomQualityZones ? wz.customQualityWgoDataList : wz.wgoDataList;
+            float total = wz.additionalQuality;
+            if (ids == null) return total;
+            foreach (SGuid id in ids)
+            {
+                WgoData w = MainGame.WorldData.GetWgoData(id);
+                if (w != null) total += w.Quality;
+            }
+            return total;
         }
 
         /// <summary>Ocorrências conhecidas num dia absoluto, em ordem de horário.</summary>

@@ -37,7 +37,7 @@ namespace GK2DevBridge
         {
             Instance = this;
             Log = Logger;
-            ConfigEntry<int> port = Config.Bind("Server", "Port", 47777, "Porta HTTP em 127.0.0.1.");
+            ConfigEntry<int> port = Config.Bind("Server", "Port", 27777, "Porta HTTP em 127.0.0.1.");
             LogBuffer.Install();
             Application.runInBackground = true;
 

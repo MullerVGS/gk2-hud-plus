@@ -166,11 +166,30 @@ namespace GK2Hud.Calendar
             return list;
         }
 
-        /// <summary>Linha de estado extra (energia da ressurreição).</summary>
+        /// <summary>Linha de estado extra (energia da ressurreição, corpos do burro).</summary>
         public static string Extra(Occurrence o)
         {
+            if (o.Def.Id == "donkey") return DonkeyLine(o);
             if (!o.Def.PowerStatus) return null;
             return CalendarModel.ResurrectionPowered() ? CalendarL10n.T("power_ok") : CalendarL10n.T("power_used", HudL10n.Day("day_lust"));
+        }
+
+        /// <summary>
+        /// Quantos corpos o burro traz. A próxima viagem com o estado de agora (chance, vagas); as seguintes, só o
+        /// máximo por viagem. Sem spoiler: mais de 1 só depois que o jogador pediu "muitos corpos" à Freira.
+        /// </summary>
+        private static string DonkeyLine(Occurrence o)
+        {
+            if (CalendarModel.State(o, CalendarModel.Now) != OccState.Upcoming) return null;
+            DonkeyTrip t = CalendarModel.Donkey();
+            if (t.Locked) return CalendarL10n.T("donkey_locked");
+            bool next = CalendarModel.IsNextRun(o);
+            if (!next) return t.Busy ? null : CalendarL10n.T(t.MaxCount > 1 ? "donkey_up_to" : "donkey_one", t.MaxCount);
+            if (t.Busy) return CalendarL10n.T("donkey_busy");
+            if (t.Full) return CalendarL10n.T("donkey_full", t.Bodies, t.Capacity);
+            string line = CalendarL10n.T("donkey_chance", t.ChancePct, CalendarL10n.T(t.Count == 1 ? "corpse_1" : "corpse_n", t.Count));
+            if (t.Count < t.MaxCount) line += " " + CalendarL10n.T(t.Count == 1 ? "donkey_room_1" : "donkey_room_n", t.Count);
+            return line;
         }
 
         /// <summary>Horário e contagem regressiva em tempo real (dia de jogo = 7,5 min acordado).</summary>

@@ -10,7 +10,10 @@ SNAPSHOTS=/mnt/d/GK2-green-saves
 WINHOME=${GK2_WINHOME:-$(wslpath "$(cmd.exe /c 'echo %USERPROFILE%' 2>/dev/null | tr -d '\r')")}
 BLUE_DATA="$WINHOME/AppData/LocalLow/Lazy Bear Games/Graveyard Keeper 2"
 GREEN_DATA="$WINHOME/AppData/LocalLow/Lazy Bear Games/GK2 Green Instance"
-PORT=${GK2_BRIDGE_PORT:-47777}
+# Porta da DevBridge: a do .cfg do green (fonte única). Fora da faixa efêmera do Linux: no WSL mirrored ela fica
+# reservada no Windows e a ponte não consegue abrir a porta (ip_local_port_range muda a cada boot do WSL).
+PORT=${GK2_BRIDGE_PORT:-$(sed -n 's/^Port *= *\([0-9]*\).*/\1/p' "$GREEN/BepInEx/config/arthur.gk2.devbridge.cfg" 2>/dev/null | head -1)}
+PORT=${PORT:-27777}
 URL="http://127.0.0.1:$PORT"
 SHOTS="$HERE/.shots"
 BUILDER=gk2-builder
@@ -54,6 +57,11 @@ bridge_up() { curl -sS --max-time 2 "$URL/ping" >/dev/null 2>&1; }
 wait_bridge() {
   local limit=${1:-120}
   for _ in $(seq 1 "$limit"); do bridge_up && return 0; sleep 1; done
+  local lo hi
+  read -r lo hi < /proc/sys/net/ipv4/ip_local_port_range
+  if [ "$PORT" -ge "$lo" ] && [ "$PORT" -le "$hi" ]; then
+    die "ponte não respondeu: a porta $PORT está na faixa efêmera do WSL ($lo-$hi), reservada no Windows; troque Port no arthur.gk2.devbridge.cfg do green"
+  fi
   die "ponte não respondeu em ${limit}s (green rodando? DevBridge instalada?)"
 }
 

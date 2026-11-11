@@ -104,7 +104,7 @@ gk2 bridge | green-sync | decomp                 manutenção (ver abaixo)
 ```
 
 Peças:
-- **GK2DevBridge** (`GK2DevBridge/`): plugin HTTP só do green em `127.0.0.1:47777` (a 7777 é de um container
+- **GK2DevBridge** (`GK2DevBridge/`): plugin HTTP só do green em `127.0.0.1:27777` (porta no `.cfg` do green; fora da faixa efêmera do WSL, `/proc/sys/net/ipv4/ip_local_port_range`, que o modo mirrored reserva no Windows; a 7777 é de um container
   docker do WSL). O WSL está em `networkingMode=mirrored`, então `curl 127.0.0.1` alcança o Windows. Cada pedido
   roda na thread principal do Unity. Rotas: `/ping /state /log /shot /ui /windows /reload /unload /run /quit`.
   Ela própria não recarrega a quente: `gk2 bridge` reinstala e reinicia o green.

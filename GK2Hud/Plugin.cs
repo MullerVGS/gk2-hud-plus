@@ -20,7 +20,7 @@ namespace GK2Hud
     {
         public const string Guid = "arthur.gk2.hud";
         public const string Name = "GK2 Hud";
-        public const string Version = "0.7.5";
+        public const string Version = "0.7.6";
 
         internal static BepInEx.Logging.ManualLogSource Log;
 
