@@ -53,6 +53,15 @@ com o save atual, os 3 backups do jogo e o histórico do mod, rotulados pelo `so
 tipo (manual e ao dormir). Cenários: `gk2saves-clicar.cs`, `gk2saves-salvar-varios.cs`, `gk2saves-carregar.cs`,
 `gk2saves-apagar.cs`, `gk2saves-bloqueio.cs`, `save-qualquer-lugar.cs`, `pausa.cs`, `menu-load.cs`.
 
+## GK2 Zombie Refund
+
+Mod de jogador (`GK2ZombieRefund/`, `arthur.gk2.zombierefund`): desfaz a compra de um perk de zumbi na árvore de perks
+(janela do zumbi, aba Perks). O nó comprado ganha o X nativo `btn_i-close_cross-s` no canto superior direito (espelha a
+caveira do canto esquerdo); clicar no X ou clicar com o direito no nó devolve os pontos e a caveira. Mesma lógica do
+`ZombieWgoData.RespecSpentTalents` (respec que o jogo tem e não usa), um nó por vez e só sem perk comprado dependente;
+perks de início (`availableAtStart`) não têm X. Muda estado do jogo. Cenários: `zumbi-perks.cs` (abre a árvore),
+`gk2zombierefund-clicar.cs`.
+
 ## Blue-green
 
 | | Blue | Green |

@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <AssemblyName>GK2PerkFix</AssemblyName>
+    <AssemblyName>GK2ZombieRefund</AssemblyName>
   </PropertyGroup>
 </Project>
