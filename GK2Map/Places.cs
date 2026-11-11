@@ -8,106 +8,202 @@ using UnityEngine.UI;
 
 namespace GK2Map
 {
-    /// <summary>Um interior alcançável por uma setinha amarela do mapa.</summary>
+    /// <summary>Um lugar que a vista mostra: um interior (área interna do jogo) ou o mundo aberto já explorado.</summary>
     internal class Place
     {
+        public bool Outdoor;
         public string DoorId;
         public string ZoneId;
         public string Title;
-        /// <summary>Preset de luz e som que a porta aplica ao entrar ("indoor", "church", "dungeons").</summary>
+        /// <summary>Preset de luz e som do lugar ("outdoor", "indoor", "church", "dungeons").</summary>
         public string Light;
         /// <summary>Posição da setinha na arte do mapa (unidades do canvas, a partir do centro do mapa).</summary>
         public Vector2 MapPos;
         /// <summary>Ponto do chão que a vista mostra ao abrir.</summary>
         public Vector3 Center;
-        /// <summary>Caixas (zonas já visitadas do mesmo interior) dentro das quais a vista pode andar.</summary>
-        public readonly List<Bounds> Boxes = new List<Bounds>();
-        /// <summary>As zonas dessas caixas, na mesma ordem.</summary>
-        public readonly List<WorldZone> Zones = new List<WorldZone>();
+        /// <summary>Interior: zonas já visitadas da mesma área. Mundo aberto: regiões do mapa já conhecidas.</summary>
+        public List<Bounds> Boxes = new List<Bounds>();
+        public IndoorAreaData Area;
+    }
+
+    /// <summary>Porta, escada ou alçapão: um objeto que teleporta para outro (<c>WGODef.teleportDestinationWgoIds</c>).</summary>
+    internal class Door
+    {
+        public WgoData Data;
+        public WgoData Dest;
+        public string Light;
     }
 
     /// <summary>
-    /// Liga as setinhas amarelas pintadas na arte do mapa aos interiores do jogo. As setinhas saem da própria textura
-    /// (pela cor); as portas, do balanço (<c>WGODef.teleportDestinationWgoIds</c>) e das áreas internas do
-    /// <c>TeleportPointGraph</c>. Só entra interior cuja zona o jogador já visitou
-    /// (<c>KnowledgeSystem.visitedWorldZones</c>, o mesmo critério dos rótulos nativos do mapa).
+    /// O que a vista pode mostrar neste save, montado a cada redesenho do mapa. Interiores: áreas internas do
+    /// <c>TeleportPointGraph</c>, só zonas em <c>KnowledgeSystem.visitedWorldZones</c>. Mundo aberto: só dentro das
+    /// regiões do mapa em <c>knownMapZones</c> (as mesmas caixas que prendem o mapa). Portas ligam os dois.
     /// </summary>
-    internal static class Places
+    internal class Atlas
     {
         private const float MatchRadius = 30f;
-        private static readonly Color32 ArrowLight = new Color32(254, 196, 111, 255);
-        private static readonly Color32 ArrowDark = new Color32(253, 150, 33, 255);
+        private const float DoorTolerance = 6f;
         private static readonly FieldInfo ExpressionText = AccessTools.Field(typeof(LazyExpression), "expressionString");
         private static readonly AccessTools.FieldRef<TeleportPointGraph, List<IndoorAreaData>> AreasRef =
             AccessTools.FieldRefAccess<TeleportPointGraph, List<IndoorAreaData>>("indoorAreas");
 
-        public static List<Place> Build(RectTransform map, List<Vector2> arrows)
+        public readonly List<Place> ArrowPlaces = new List<Place>();
+        public readonly List<Door> Doors = new List<Door>();
+        public readonly List<Bounds> KnownWorld = new List<Bounds>();
+        public WorldZone[] Zones = new WorldZone[0];
+
+        private List<IndoorAreaData> areas;
+        private List<string> visited;
+        private Vector2 mapSize;
+        private Vector3 worldMin, worldMax;
+
+        public static Atlas Build(RectTransform map, List<Vector2> arrows, List<Rect> knownMapRects)
         {
-            var places = new List<Place>();
+            var a = new Atlas();
             TeleportPointGraph graph = TeleportPointGraph.Instance;
             GUIElements gui = GUIElements.Instance;
-            if (graph == null || gui == null || MainGame.Instance == null || MainGame.Instance.GameSave == null || arrows == null) return places;
-            List<IndoorAreaData> areas = AreasRef(graph);
-            List<string> visited = MainGame.Instance.GameSave.knowledgeSystem.visitedWorldZones;
-            WorldZone[] zones = Object.FindObjectsByType<WorldZone>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
-            Vector2 size = map.sizeDelta;
+            if (graph == null || gui == null || MainGame.Instance == null || MainGame.Instance.GameSave == null) return a;
+            a.areas = AreasRef(graph);
+            a.visited = MainGame.Instance.GameSave.knowledgeSystem.visitedWorldZones;
+            a.Zones = Object.FindObjectsByType<WorldZone>(FindObjectsInactive.Exclude, FindObjectsSortMode.None);
+            a.mapSize = map.sizeDelta;
+            a.worldMin = gui.WorldMin.position;
+            a.worldMax = gui.WorldMax.position;
+            if (knownMapRects != null)
+                foreach (Rect r in knownMapRects)
+                {
+                    Vector3 lo = a.MapToWorld(r.min), hi = a.MapToWorld(r.max);
+                    var b = new Bounds();
+                    b.SetMinMax(new Vector3(Mathf.Min(lo.x, hi.x), -100f, Mathf.Min(lo.z, hi.z)), new Vector3(Mathf.Max(lo.x, hi.x), 100f, Mathf.Max(lo.z, hi.z)));
+                    a.KnownWorld.Add(b);
+                }
 
-            var doors = new List<Place>();
             foreach (WGODef def in GameBalance.Me.GetDataCollection<WGODef>())
             {
                 if (def == null || def.teleportDestinationWgoIds == null || def.teleportDestinationWgoIds.Count == 0) continue;
                 WgoData door = MainGame.WorldData.GetWgoData(def.id);
-                if (door == null || door.IsHidden || AreaOf(areas, door.Position) != null) continue;
-                if (!TryMapPos(gui, size, door.Position, out Vector2 mapPos)) continue;
+                if (door == null || door.IsHidden) continue;
                 foreach (string destId in def.teleportDestinationWgoIds)
                 {
-                    WgoData dest = string.IsNullOrEmpty(destId) ? null : MainGame.WorldData.GetWgoData(destId);
-                    IndoorAreaData area = dest == null ? null : AreaOf(areas, dest.Position);
-                    if (area == null) continue;
-                    WorldZone zone = ZoneAt(zones, dest.Position);
-                    if (zone == null || !visited.Contains(zone.Id)) continue;
-                    var place = new Place { DoorId = def.id, ZoneId = zone.Id, Title = LLBase.L("wz_" + zone.Id), MapPos = mapPos, Light = LightOf(def, destId) };
-                    Bounds zb = zone.ZoneCollider.bounds;
-                    place.Center = new Vector3(zb.center.x, dest.Position.y, zb.center.z);
-                    place.Boxes.Add(zb);
-                    place.Zones.Add(zone);
-                    foreach (WorldZone other in zones)
-                    {
-                        if (other == zone || other.ZoneCollider == null || !visited.Contains(other.Id)) continue;
-                        Bounds ob = other.ZoneCollider.bounds;
-                        if (ob.size.x < 1f || ob.size.z < 1f || !area.ContainsXZ(ob.center)) continue;
-                        place.Boxes.Add(ob);
-                        place.Zones.Add(other);
-                    }
-                    doors.Add(place);
+                    WgoData dest = string.IsNullOrEmpty(destId) || destId == def.id ? null : MainGame.WorldData.GetWgoData(destId);
+                    if (dest == null) continue;
+                    a.Doors.Add(new Door { Data = door, Dest = dest, Light = LightOf(def, destId, a.AreaOf(dest.Position) != null) });
                     break;
                 }
             }
 
-            // Cada setinha fica com a porta mais próxima; a posição da vista no mapa passa a ser a da setinha pintada.
-            var used = new HashSet<Place>();
-            foreach (Vector2 arrow in arrows)
+            // Cada setinha do mapa fica com a porta de rua mais próxima que leva a um interior já visitado.
+            if (arrows != null)
             {
-                Place best = null;
-                float bestDist = MatchRadius;
-                foreach (Place d in doors)
+                var used = new HashSet<Door>();
+                foreach (Vector2 arrow in arrows)
                 {
-                    float dist = Vector2.Distance(d.MapPos, arrow);
-                    if (dist < bestDist && !used.Contains(d)) { best = d; bestDist = dist; }
+                    Door best = null;
+                    float bestDist = MatchRadius;
+                    foreach (Door d in a.Doors)
+                    {
+                        if (used.Contains(d) || a.AreaOf(d.Data.Position) != null || a.AreaOf(d.Dest.Position) == null) continue;
+                        if (!a.WorldToMap(d.Data.Position, out Vector2 mapPos)) continue;
+                        float dist = Vector2.Distance(mapPos, arrow);
+                        if (dist < bestDist) { best = d; bestDist = dist; }
+                    }
+                    if (best == null) continue;
+                    used.Add(best);
+                    Place place = a.Through(best);
+                    if (place == null) continue;
+                    place.MapPos = arrow;
+                    a.ArrowPlaces.Add(place);
                 }
-                if (best == null) continue;
-                used.Add(best);
-                best.MapPos = arrow;
-                places.Add(best);
             }
-            return places;
+            return a;
+        }
+
+        /// <summary>O lugar do outro lado da porta, ou null se o jogador ainda não o conhece.</summary>
+        public Place Through(Door door)
+        {
+            Vector3 p = door.Dest.Position;
+            IndoorAreaData area = AreaOf(p);
+            // As áreas de nuvens das regiões têm frestas entre si; uma porta de rua logo na borda ainda vale.
+            if (area == null) return OutdoorAt(p, DoorTolerance);
+            WorldZone zone = ZoneAt(p);
+            if (zone == null || !visited.Contains(zone.Id)) return null;
+            var place = new Place { DoorId = door.Data.id, ZoneId = zone.Id, Title = LLBase.L("wz_" + zone.Id), Light = door.Light, Area = area };
+            Bounds zb = zone.ZoneCollider.bounds;
+            place.Center = new Vector3(zb.center.x, p.y, zb.center.z);
+            place.Boxes.Add(zb);
+            foreach (WorldZone other in Zones)
+            {
+                if (other == zone || other.ZoneCollider == null || !visited.Contains(other.Id)) continue;
+                Bounds ob = other.ZoneCollider.bounds;
+                if (ob.size.x < 1f || ob.size.z < 1f || !area.ContainsXZ(ob.center)) continue;
+                place.Boxes.Add(ob);
+            }
+            return place;
+        }
+
+        /// <summary>O mundo aberto em volta de um ponto, ou null fora das regiões conhecidas do mapa.</summary>
+        public Place OutdoorAt(Vector3 p, float tolerance = 0f)
+        {
+            if (KnownWorld.Count == 0 || !InKnownWorld(p, tolerance)) return null;
+            return new Place { Outdoor = true, Light = "outdoor", Center = p, Boxes = KnownWorld, Title = string.Empty };
+        }
+
+        public Place OutdoorAtMap(Vector2 mapPos)
+        {
+            Vector3 p = MapToWorld(mapPos);
+            p.y = GroundY(p);
+            return OutdoorAt(p);
+        }
+
+        public bool InKnownWorld(Vector3 p, float tolerance = 0f)
+        {
+            foreach (Bounds b in KnownWorld)
+                if (p.x >= b.min.x - tolerance && p.x <= b.max.x + tolerance && p.z >= b.min.z - tolerance && p.z <= b.max.z + tolerance) return true;
+            return false;
+        }
+
+        /// <summary>Zona visitada sob o ponto, para o título da vista; null se não há ou o jogador não a conhece.</summary>
+        public WorldZone TitleZoneAt(Vector3 p)
+        {
+            WorldZone zone = ZoneAt(p);
+            return zone != null && visited.Contains(zone.Id) ? zone : null;
+        }
+
+        /// <summary>Zonas visitadas cujo colisor toca o retângulo (XZ) dado: de onde saem os objetos inspecionáveis.</summary>
+        public void VisitedZonesIn(Vector3 center, float halfX, float halfZ, List<WorldZone> into)
+        {
+            into.Clear();
+            foreach (WorldZone z in Zones)
+            {
+                if (z == null || z.ZoneCollider == null || !visited.Contains(z.Id)) continue;
+                Bounds b = z.ZoneCollider.bounds;
+                if (b.size.x < 1f || b.size.z < 1f) continue;
+                if (Mathf.Abs(center.x - b.center.x) > b.extents.x + halfX || Mathf.Abs(center.z - b.center.z) > b.extents.z + halfZ) continue;
+                into.Add(z);
+            }
+        }
+
+        /// <summary>Altura do chão: a da zona com colisor mais próxima no mundo aberto (o mapa não guarda altura).</summary>
+        private float GroundY(Vector3 p)
+        {
+            float best = float.MaxValue, y = 0f;
+            foreach (WorldZone z in Zones)
+            {
+                if (z == null || z.ZoneCollider == null) continue;
+                Bounds b = z.ZoneCollider.bounds;
+                if (b.size.x < 1f || b.size.z < 1f || AreaOf(b.center) != null) continue;
+                float dx = Mathf.Max(0f, Mathf.Abs(p.x - b.center.x) - b.extents.x), dz = Mathf.Max(0f, Mathf.Abs(p.z - b.center.z) - b.extents.z);
+                float d = dx * dx + dz * dz;
+                if (d < best) { best = d; y = z.GroundPlaneY; }
+            }
+            return y;
         }
 
         /// <summary>
         /// A porta teleporta por expressão (<c>TeleportTo("destino", "preset", ...)</c>); o preset é o segundo
-        /// argumento. Porta que teleporta por grafo cai no "indoor".
+        /// argumento. Porta que teleporta por grafo usa "indoor" para interior e "outdoor" para a rua.
         /// </summary>
-        private static string LightOf(WGODef def, string destId)
+        private static string LightOf(WGODef def, string destId, bool destIndoor)
         {
             foreach (CustomInteraction ci in new[] { def.customInteraction, def.customInteraction2 })
             {
@@ -120,10 +216,10 @@ namespace GK2Map
                     if (m.Success) return m.Groups[1].Value;
                 }
             }
-            return "indoor";
+            return destIndoor ? "indoor" : "outdoor";
         }
 
-        private static IndoorAreaData AreaOf(List<IndoorAreaData> areas, Vector3 pos)
+        public IndoorAreaData AreaOf(Vector3 pos)
         {
             if (areas == null) return null;
             foreach (IndoorAreaData a in areas)
@@ -132,11 +228,11 @@ namespace GK2Map
         }
 
         /// <summary>Menor zona com colisor que contém o ponto (em XZ).</summary>
-        private static WorldZone ZoneAt(WorldZone[] zones, Vector3 pos)
+        public WorldZone ZoneAt(Vector3 pos)
         {
             WorldZone best = null;
             float bestArea = float.MaxValue;
-            foreach (WorldZone z in zones)
+            foreach (WorldZone z in Zones)
             {
                 if (z == null || z.ZoneCollider == null) continue;
                 Bounds b = z.ZoneCollider.bounds;
@@ -148,19 +244,30 @@ namespace GK2Map
             return best;
         }
 
-        /// <summary>Mundo → mapa, a mesma conta de <c>MapPageWidget.UpdateMilestones</c>.</summary>
-        private static bool TryMapPos(GUIElements gui, Vector2 size, Vector3 p, out Vector2 mapPos)
+        /// <summary>Mundo → mapa, a mesma conta de <c>MapPageWidget.UpdateMilestones</c>; false fora dos limites do mapa.</summary>
+        public bool WorldToMap(Vector3 p, out Vector2 mapPos)
         {
-            Vector3 min = gui.WorldMin.position, max = gui.WorldMax.position;
-            float tilt = Mathf.Deg2Rad * gui.WorldMin.rotation.x;
-            float z = p.z + p.y * Mathf.Tan(tilt);
+            Vector3 min = worldMin, max = worldMax;
             mapPos = Vector2.zero;
-            if (p.x < Mathf.Min(min.x, max.x) || p.x > Mathf.Max(min.x, max.x) || z < Mathf.Min(min.z, max.z) || z > Mathf.Max(min.z, max.z)) return false;
+            if (p.x < Mathf.Min(min.x, max.x) || p.x > Mathf.Max(min.x, max.x) || p.z < Mathf.Min(min.z, max.z) || p.z > Mathf.Max(min.z, max.z)) return false;
             float u = Mathf.InverseLerp(min.x, max.x, p.x);
-            float v = Mathf.InverseLerp(min.z, max.z, z);
-            mapPos = new Vector2((u - 0.5f) * size.x, (v - 0.5f) * size.y);
+            float v = Mathf.InverseLerp(min.z, max.z, p.z);
+            mapPos = new Vector2((u - 0.5f) * mapSize.x, (v - 0.5f) * mapSize.y);
             return true;
         }
+
+        public Vector3 MapToWorld(Vector2 mapPos)
+        {
+            float u = mapPos.x / mapSize.x + 0.5f, v = mapPos.y / mapSize.y + 0.5f;
+            return new Vector3(Mathf.LerpUnclamped(worldMin.x, worldMax.x, u), 0f, Mathf.LerpUnclamped(worldMin.z, worldMax.z, v));
+        }
+    }
+
+    /// <summary>As setinhas amarelas pintadas na arte do mapa, achadas pela cor na própria textura.</summary>
+    internal static class Places
+    {
+        private static readonly Color32 ArrowLight = new Color32(254, 196, 111, 255);
+        private static readonly Color32 ArrowDark = new Color32(253, 150, 33, 255);
 
         /// <summary>
         /// Acha as setinhas na textura do mapa: grupos de 6–7×4 pixels com as duas cores da seta. Devolve posições em

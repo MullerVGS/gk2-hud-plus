@@ -44,6 +44,10 @@ namespace GK2Map
         private RectTransform hoverProxy;
         private bool pressOnPlace;
         private Rect? explored;
+        private readonly List<Rect> knownRects = new List<Rect>();
+        private Atlas atlas;
+
+        public Atlas Atlas => atlas;
         private readonly List<GameObject> hiddenLabels = new List<GameObject>();
 
         public MapPageWidget Widget => widget;
@@ -75,11 +79,13 @@ namespace GK2Map
         {
             Plugin p = Plugin.Instance;
             places.Clear();
+            atlas = null;
             if (!p.PlacesEnabled.Value) { placesPending = false; return; }
             List<Vector2> arrows = p.Arrows(map.GetComponent<Image>(), baseSize);
             if (arrows == null) return;
             placesPending = false;
-            places = Places.Build(map, arrows);
+            atlas = Atlas.Build(map, arrows, knownRects);
+            places = atlas.ArrowPlaces;
         }
 
         public Place PlaceAt(Vector2 mouse, float radius)
@@ -128,9 +134,14 @@ namespace GK2Map
             }
             Plugin p = Plugin.Instance;
             Place enter = click ? hovered : null;
-            // No zoom máximo, mais um passo de scroll perto de uma setinha entra no local.
-            if (enter == null && steps > 0 && p.ZoomIndex == Levels.Length - 1)
-                enter = hovered ?? PlaceAt(mouse, 40f / zoom);
+            // No zoom máximo, mais um passo de scroll desce ao mundo naquele ponto do mapa (só em região conhecida).
+            if (enter == null && steps > 0 && atlas != null && p.PlacesEnabled.Value && p.ZoomIndex == Levels.Length - 1
+                && Mathf.Approximately(zoom, Levels[Levels.Length - 1])
+                && RectTransformUtility.RectangleContainsScreenPoint(scroll.viewport, mouse, null))
+            {
+                RectTransformUtility.ScreenPointToLocalPointInRectangle(map, mouse, null, out Vector2 mapAt);
+                enter = atlas.OutdoorAtMap(mapAt);
+            }
             if (enter != null)
             {
                 PlaceView.TestLeftClick = false;
@@ -236,6 +247,7 @@ namespace GK2Map
         private void ComputeExplored()
         {
             explored = null;
+            knownRects.Clear();
             foreach (GameObject go in hiddenLabels) if (go != null) go.SetActive(true);
             hiddenLabels.Clear();
             GameSave save = MainGame.Instance != null ? MainGame.Instance.GameSave : null;
@@ -255,7 +267,12 @@ namespace GK2Map
                 RectTransform clouds = zone.transform.Find("Clouds") as RectTransform;
                 if (clouds == null) continue;
                 clouds.GetWorldCorners(CornerBuffer);
-                Grow(map.InverseTransformPoint(CornerBuffer[0]), map.InverseTransformPoint(CornerBuffer[2]));
+                Vector2 lo = map.InverseTransformPoint(CornerBuffer[0]), hi = map.InverseTransformPoint(CornerBuffer[2]);
+                Vector2 edge = baseSize * 0.5f;
+                lo = Vector2.Max(lo, -edge);
+                hi = Vector2.Min(hi, edge);
+                if (hi.x > lo.x && hi.y > lo.y) knownRects.Add(Rect.MinMaxRect(lo.x, lo.y, hi.x, hi.y));
+                Grow(lo, hi);
             }
             if (!any) return;
             if (player != null && player.gameObject.activeSelf)
@@ -279,6 +296,13 @@ namespace GK2Map
             if (milestones != null)
                 foreach (Transform t in milestones)
                     if (t.gameObject.activeSelf && !e.Contains((Vector2)map.InverseTransformPoint(t.position))) t.gameObject.SetActive(false);
+        }
+
+        /// <summary>Centraliza o mapa no ponto do mundo dado (ao voltar da vista do mundo aberto).</summary>
+        public void CenterOnWorld(Vector3 world)
+        {
+            if (atlas == null || scroll == null || !atlas.WorldToMap(world, out Vector2 mapPos)) return;
+            scroll.content.anchoredPosition = Clamp(-mapPos * zoom);
         }
 
         private void LateUpdate()

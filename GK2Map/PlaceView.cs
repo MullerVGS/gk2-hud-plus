@@ -56,7 +56,26 @@ namespace GK2Map
         private Vector2 pressPos;
         private Vector2 lastMouse;
 
+        private struct Frame
+        {
+            public Place Place;
+            public Vector3 Focus;
+            public int Level;
+        }
+
+        private readonly List<Frame> stack = new List<Frame>();
+        private TextMeshProUGUI title;
+        private float nextTitle;
+        private bool anchoring;
+        private Vector2 anchorPx;
+        private Vector3 anchorWorld;
+        private readonly Outline outline = new Outline();
+
         public Place Place => place;
+        public Atlas Atlas => owner.Atlas;
+        public float Ortho => ortho;
+        public Vector3 Focus => focus;
+        private WorldZoneWidget hudZone;
         public Camera Camera => cam;
         public RectTransform Viewport => owner.Scroll.viewport;
 
@@ -82,14 +101,70 @@ namespace GK2Map
             savedPos = cam.transform.position;
             savedOrtho = cam.orthographicSize;
             if (brain != null) brain.enabled = false;
-            focus = place.Center;
             BuildUi();
-            level = FitsNear() ? 1 : 0;
+            savedLight = EnvironmentEngine.Instance != null ? LightField.GetValue(EnvironmentEngine.Instance) as TimeOfDayPresets : null;
+            outline.Attach(cam);
+            Show(place, place.Center, place.Outdoor ? 0 : -1);
+        }
+
+        /// <summary>Troca o lugar mostrado (sem mexer na pilha): foco, enquadramento, luz, título e carga do mundo.</summary>
+        private void Show(Place next, Vector3 at, int lvl)
+        {
+            place = next;
+            focus = at;
+            level = lvl >= 0 ? lvl : FitsNear() ? 1 : 0;
             ortho = OrthoFor(level);
+            anchoring = false;
+            pressed = dragging = false;
+            focus = ClampFocus(focus);
+            PlaceInspect.Clear();
             ApplyLight();
             ApplyCamera(true);
+            nextTitle = 0f;
+            UpdateTitle();
             UITooltip.Hide();
             LazyAudio.PlayAndForget("gui_click");
+        }
+
+        /// <summary>
+        /// Atravessa uma porta ou escada. Se ela leva de volta ao lugar de onde a vista veio, desfaz o passo (a pilha
+        /// encolhe); senão empilha o lugar atual, e o scroll para trás volta por ele.
+        /// </summary>
+        public void Through(Door door)
+        {
+            Place next = Atlas != null ? Atlas.Through(door) : null;
+            if (next == null) return;
+            if (stack.Count > 0 && SamePlace(stack[stack.Count - 1].Place, next))
+            {
+                Frame f = stack[stack.Count - 1];
+                stack.RemoveAt(stack.Count - 1);
+                Show(f.Place, next.Outdoor ? door.Dest.Position : f.Focus, f.Level);
+                return;
+            }
+            stack.Add(new Frame { Place = place, Focus = focus, Level = level });
+            Show(next, next.Center, next.Outdoor ? 1 : -1);
+        }
+
+        private static bool SamePlace(Place a, Place b)
+        {
+            return a.Outdoor == b.Outdoor && (a.Outdoor || a.Area == b.Area);
+        }
+
+        /// <summary>Um passo para trás: o lugar anterior da pilha ou, sem pilha, o mapa (centrado onde a vista estava).</summary>
+        private void Back()
+        {
+            if (stack.Count == 0)
+            {
+                Place was = place;
+                Vector3 at = focus;
+                MapZoom map = owner;
+                Exit();
+                if (was.Outdoor && map != null) map.CenterOnWorld(at);
+                return;
+            }
+            Frame f = stack[stack.Count - 1];
+            stack.RemoveAt(stack.Count - 1);
+            Show(f.Place, f.Focus, f.Level);
         }
 
         private float OrthoFor(int lvl) => lvl == 0 ? savedOrtho * 2f : savedOrtho;
@@ -116,8 +191,21 @@ namespace GK2Map
             int steps = MapZoom.ReadScroll();
             if (steps != 0 && over)
             {
-                if (steps < 0 && level == 0) { Exit(); return; }
-                level = Mathf.Clamp(level + steps, 0, 1);
+                if (steps < 0 && level == 0) { Back(); return; }
+                if (steps > 0 && level == 1)
+                {
+                    // Já na escala normal: mais um passo de scroll sobre uma porta ou escada entra por ela.
+                    Door door = PlaceInspect.DoorNear(mouse, DoorScrollRadius);
+                    if (door != null) { Through(door); return; }
+                }
+                int nextLevel = Mathf.Clamp(level + steps, 0, 1);
+                if (nextLevel != level)
+                {
+                    level = nextLevel;
+                    anchoring = true;
+                    anchorPx = mouse - ViewCenter();
+                    anchorWorld = focus + GroundOffset(anchorPx, ortho);
+                }
             }
             if (Input.GetMouseButtonDown(1) || TestRightClick)
             {
@@ -161,13 +249,79 @@ namespace GK2Map
                     focus.z += dir.y * k;
                 }
             }
-            focus = ClampToBoxes(focus);
-
             float target = OrthoFor(level);
             if (!Mathf.Approximately(ortho, target))
+            {
                 ortho = Mathf.MoveTowards(ortho, target, savedOrtho * Time.unscaledDeltaTime / ZoomSeconds);
+                // O ponto do chão sob o cursor fica parado enquanto a escala muda.
+                if (anchoring && !dragging) focus = anchorWorld - GroundOffset(anchorPx, ortho);
+            }
+            else anchoring = false;
+            focus = ClampFocus(focus);
             ApplyCamera(false);
-            PlaceInspect.Tick(this, mouse, over && !dragging, clicked);
+            UpdateTitle();
+            Door through = PlaceInspect.Tick(this, mouse, over && !dragging, clicked);
+            outline.Draw(PlaceInspect.HoverRenderers, 2f * ortho / Screen.height);
+            if (through != null) Through(through);
+        }
+
+        private const float DoorScrollRadius = 70f;
+
+        private Vector2 ViewCenter()
+        {
+            Vector3[] c = new Vector3[4];
+            Viewport.GetWorldCorners(c);
+            return (c[0] + c[2]) * 0.5f;
+        }
+
+        /// <summary>Deslocamento no chão (XZ) de um ponto a <paramref name="px"/> pixels do centro da vista.</summary>
+        private Vector3 GroundOffset(Vector2 px, float atOrtho)
+        {
+            float units = 2f * atOrtho / Screen.height;
+            return new Vector3(px.x * units, 0f, px.y * units / Mathf.Max(0.1f, cam.transform.up.z));
+        }
+
+        /// <summary>Metade do que a vista mostra do chão, em unidades do mundo (X e Z).</summary>
+        public Vector2 ViewHalfExtents()
+        {
+            Vector3[] c = new Vector3[4];
+            Viewport.GetWorldCorners(c);
+            Vector3 half = GroundOffset((c[2] - c[0]) * 0.5f, ortho);
+            return new Vector2(half.x, half.z);
+        }
+
+        /// <summary>
+        /// Interior: o foco anda dentro das zonas visitadas. Mundo aberto: a vista inteira (não só o foco) fica dentro
+        /// de uma região conhecida do mapa, para não mostrar vizinhança ainda não explorada.
+        /// </summary>
+        private Vector3 ClampFocus(Vector3 p)
+        {
+            Vector2 shrink = place.Outdoor ? ViewHalfExtents() : Vector2.zero;
+            Vector3 best = p;
+            float bestDist = float.MaxValue;
+            foreach (Bounds b in place.Boxes)
+            {
+                float x0 = b.min.x + shrink.x, x1 = b.max.x - shrink.x, z0 = b.min.z + shrink.y, z1 = b.max.z - shrink.y;
+                float x = x0 > x1 ? b.center.x : Mathf.Clamp(p.x, x0, x1);
+                float z = z0 > z1 ? b.center.z : Mathf.Clamp(p.z, z0, z1);
+                float d = (x - p.x) * (x - p.x) + (z - p.z) * (z - p.z);
+                if (d < bestDist)
+                {
+                    bestDist = d;
+                    best = new Vector3(x, p.y, z);
+                }
+            }
+            return best;
+        }
+
+        private void UpdateTitle()
+        {
+            if (title == null || Time.unscaledTime < nextTitle) return;
+            nextTitle = Time.unscaledTime + 0.25f;
+            WorldZone zone = Atlas != null ? Atlas.TitleZoneAt(focus) : null;
+            string text = zone != null ? ZoneInfo.Label(zone, hudZone) : string.Empty;
+            if (string.IsNullOrEmpty(text) && !place.Outdoor) text = place.Title;
+            if (title.text != text) title.text = text ?? string.Empty;
         }
 
         /// <summary>Põe o ponto <see cref="focus"/> no centro da área do mapa (que não é o centro da tela).</summary>
@@ -231,16 +385,26 @@ namespace GK2Map
             if (env == null || string.IsNullOrEmpty(place.Light)) return;
             var all = LightsField.GetValue(env) as Dictionary<string, TimeOfDayPresets>;
             if (all == null || !all.TryGetValue(place.Light, out TimeOfDayPresets wanted) || wanted == null) return;
-            savedLight = LightField.GetValue(env) as TimeOfDayPresets;
-            if (savedLight == wanted) return;
+            if (LightField.GetValue(env) as TimeOfDayPresets == wanted) return;
             SetLight(env, wanted);
             lightChanged = true;
         }
 
+        /// <summary>
+        /// O que o jogo faz ao trocar de preset no teleporte (<c>SetTimeOfDayPresetAsync</c>), menos gravar o nome no
+        /// save: luz, som ambiente e o clima pausado em interior (sem isso chove dentro de casa).
+        /// </summary>
         private static void SetLight(EnvironmentEngine env, TimeOfDayPresets preset)
         {
             LightField.SetValue(env, preset);
             LightChanged.Invoke(env, new object[] { env.Data.TimeOfDay, true });
+            WeatherSystem weather = WeatherSystem.Instance;
+            if (weather != null)
+            {
+                weather.SetPauseState(WeatherSystemPauseFlag.TimeOfDay, preset.indoorPreset);
+                weather.ApplySoundParameters(preset.indoorPreset, preset.applySfxFromOutdoor);
+            }
+            env.SyncIndoorAudioSnapshot();
         }
 
         private static readonly MethodInfo ProcessChunks = AccessTools.Method(typeof(ChunkManager), "TryProcessChunkVisibility");
@@ -263,24 +427,6 @@ namespace GK2Map
                 ProcessChunks.Invoke(chunks, new object[] { true });
             }
             else chunks.ForceProcessVisibility();
-        }
-
-        private Vector3 ClampToBoxes(Vector3 p)
-        {
-            Vector3 best = p;
-            float bestDist = float.MaxValue;
-            foreach (Bounds b in place.Boxes)
-            {
-                float x = Mathf.Clamp(p.x, b.min.x, b.max.x);
-                float z = Mathf.Clamp(p.z, b.min.z, b.max.z);
-                float d = (x - p.x) * (x - p.x) + (z - p.z) * (z - p.z);
-                if (d < bestDist)
-                {
-                    bestDist = d;
-                    best = new Vector3(x, p.y, z);
-                }
-            }
-            return best;
         }
 
         private void BuildUi()
@@ -387,27 +533,33 @@ namespace GK2Map
             created.Add(go);
         }
 
-        /// <summary>Nome do local no alto da vista, clonado de um rótulo de região do próprio mapa.</summary>
+        private static readonly AccessTools.FieldRef<WorldZoneWidget, TextMeshProUGUI> HudLabelRef = AccessTools.FieldRefAccess<WorldZoneWidget, TextMeshProUGUI>("worldZoneLabel");
+
+        /// <summary>
+        /// Nome e informação do local no alto da vista ("Morgue 5/7"), no rótulo clonado da placa de zona do HUD: mesma
+        /// fonte, estilo e ícones que o jogo usa para dizer onde o jogador está.
+        /// </summary>
         private void BuildTitle()
         {
-            TextMeshProUGUI model = null;
-            foreach (TextMeshProUGUI t in owner.Map.GetComponentsInChildren<TextMeshProUGUI>(true))
-                if (t.GetComponent<TextStyleComponent>() != null && t.GetComponentInParent<UIMapMilestone>(true) == null) { model = t; break; }
+            hudZone = FindFirstObjectByType<WorldZoneWidget>(FindObjectsInactive.Include);
+            TextMeshProUGUI model = hudZone != null ? HudLabelRef(hudZone) : null;
             if (model == null) return;
             GameObject go = Instantiate(model.gameObject, Viewport, false);
             go.name = "GK2Map_Title";
             foreach (LocalizedLabel l in go.GetComponents<LocalizedLabel>()) DestroyImmediate(l);
+            foreach (LayoutElement l in go.GetComponents<LayoutElement>()) DestroyImmediate(l);
             var rt = (RectTransform)go.transform;
             rt.localScale = Vector3.one;
             rt.anchorMin = rt.anchorMax = new Vector2(0.5f, 1f);
             rt.pivot = new Vector2(0.5f, 1f);
-            rt.sizeDelta = new Vector2(300f, 24f);
+            rt.sizeDelta = new Vector2(400f, 24f);
             rt.anchoredPosition = new Vector2(0f, -8f);
             TextMeshProUGUI text = go.GetComponent<TextMeshProUGUI>();
             text.alignment = TextAlignmentOptions.Top;
             text.textWrappingMode = TextWrappingModes.NoWrap;
             text.raycastTarget = false;
-            text.text = place.Title;
+            text.text = string.Empty;
+            title = text;
             go.SetActive(true);
             created.Add(go);
         }
@@ -417,6 +569,8 @@ namespace GK2Map
             if (exited) return;
             exited = true;
             if (Current == this) Current = null;
+            outline.Detach();
+            stack.Clear();
             PlaceInspect.Clear();
             foreach (GameObject go in created) if (go != null) Destroy(go);
             created.Clear();

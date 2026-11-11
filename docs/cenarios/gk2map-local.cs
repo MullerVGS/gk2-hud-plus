@@ -5,7 +5,7 @@ using HarmonyLib;
 using LazyBearTechnology;
 using UnityEngine;
 
-// GK2Map: abre o mapa e, na setinha da zona ZONA, faz ACAO: "hover" (tooltip), "entrar" (vista do local), "scroll" (entra pelo scroll no zoom máximo), "sair" (botão direito), "lista" (zonas com setinha).
+// GK2Map: abre o mapa e, na setinha da zona ZONA, faz ACAO: "hover" (tooltip), "entrar" (vista do local), "scroll" (zoom máximo e mais um passo: desce ao mundo aberto naquele ponto), "sair" (botão direito), "lista" (zonas com setinha).
 public static class Snippet
 {
     static string ZONA = "church";
@@ -45,30 +45,28 @@ public static class Snippet
         if (place == null) { yield return "sem setinha para " + ZONA + " (" + string.Join(",", places.Select(Zone)) + ")"; yield break; }
         var map = (RectTransform)AccessTools.Property(zoomType, "Map").GetValue(zoom);
         var plugin = Chainloader.PluginInfos["arthur.gk2.map"].Instance;
+        // A setinha precisa estar na área visível: centraliza o mapa nela.
+        var scroll = (UnityEngine.UI.ScrollRect)AccessTools.Property(zoomType, "Scroll").GetValue(zoom);
+        Vector2 arrow = (Vector2)AccessTools.Field(place.GetType(), "MapPos").GetValue(place);
+        System.Action center = () =>
+        {
+            float z = (float)AccessTools.Property(zoomType, "Zoom").GetValue(zoom);
+            scroll.content.anchoredPosition = (Vector2)AccessTools.Method(zoomType, "Clamp").Invoke(zoom, new object[] { -arrow * z });
+        };
+        System.Action aim = () => AccessTools.Property(zoomType, "VirtualMouse").SetValue(null, (Vector2?)(Vector2)map.TransformPoint(arrow));
+        center(); yield return null; aim(); yield return null; yield return null;
         if (ACAO == "scroll")
         {
-            AccessTools.Property(zoomType, "VirtualMouse").SetValue(null, (Vector2?)(Vector2)map.TransformPoint((Vector2)AccessTools.Field(place.GetType(), "MapPos").GetValue(place)));
-            for (int i = 0; i < 4; i++)
+            // Até o zoom máximo e mais um passo: desce ao mundo aberto no ponto da setinha.
+            for (int i = 0; i < 4 && !(bool)AccessTools.Property(viewType, "Active").GetValue(null); i++)
             {
                 AccessTools.Property(zoomType, "TestScroll").SetValue(null, 1);
                 float t0 = Time.realtimeSinceStartup;
                 while (Time.realtimeSinceStartup - t0 < 0.4f) yield return null;
-                AccessTools.Property(zoomType, "VirtualMouse").SetValue(null, (Vector2?)(Vector2)map.TransformPoint((Vector2)AccessTools.Field(place.GetType(), "MapPos").GetValue(place)));
+                if (!(bool)AccessTools.Property(viewType, "Active").GetValue(null)) { center(); yield return null; aim(); yield return null; }
             }
         }
-        else
-        {
-            // A setinha precisa estar na área visível: centraliza o mapa nela.
-            var scroll = (UnityEngine.UI.ScrollRect)AccessTools.Property(zoomType, "Scroll").GetValue(zoom);
-            float z = (float)AccessTools.Property(zoomType, "Zoom").GetValue(zoom);
-            Vector2 pos = -(Vector2)AccessTools.Field(place.GetType(), "MapPos").GetValue(place) * z;
-            scroll.content.anchoredPosition = (Vector2)AccessTools.Method(zoomType, "Clamp").Invoke(zoom, new object[] { pos });
-            yield return null;
-            Vector2 screen = map.TransformPoint((Vector2)AccessTools.Field(place.GetType(), "MapPos").GetValue(place));
-            AccessTools.Property(zoomType, "VirtualMouse").SetValue(null, (Vector2?)screen);
-            yield return null; yield return null;
-            if (ACAO == "entrar") AccessTools.Property(viewType, "TestLeftClick").SetValue(null, true);
-        }
+        else if (ACAO == "entrar") AccessTools.Property(viewType, "TestLeftClick").SetValue(null, true);
         float t1 = Time.realtimeSinceStartup;
         while (Time.realtimeSinceStartup - t1 < 0.8f) yield return null;
         yield return ACAO + " " + ZONA + " vista ativa: " + AccessTools.Property(viewType, "Active").GetValue(null) + " mouse " + AccessTools.Property(zoomType, "VirtualMouse").GetValue(null);

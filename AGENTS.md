@@ -72,7 +72,7 @@ Mod de jogador (`GK2Map/`, `arthur.gk2.map`), só informação, nas duas janelas
 - **Setinhas amarelas**: são pintura na arte (`map-bg`), não UI. O mod as acha pela cor na textura (uma vez por sessão)
   e casa cada uma com a porta mais próxima (`WGODef.teleportDestinationWgoIds` + áreas internas do
   `TeleportPointGraph`). Só entra interior cuja zona está em `KnowledgeSystem.visitedWorldZones`. Hover = tooltip nativo
-  com o nome da zona; clique, ou mais um scroll no zoom máximo, abre a vista.
+  com o nome da zona; clique abre a vista do interior (o scroll no zoom máximo desce ao mundo aberto, ver 0.2.0).
 - **Vista do local**: o mundo inteiro (interiores incluídos) vive na cena `RuinedTemple` e é ligado por pedaços conforme
   a câmera do mundo. A vista desliga o `CinemachineBrain`, leva a câmera do mundo para o interior e chama o
   `ChunkManager` no modo de carga gradual; some com o pergaminho e o fundo `Back` da moldura e refaz o `BgShadow` em
@@ -91,7 +91,24 @@ Mod de jogador (`GK2Map/`, `arthur.gk2.map`), só informação, nas duas janelas
   `Cinemachine.CinemachineCore.CameraUpdatedEvent`; a vista dispara o evento a cada frame (sem isso as bolhas ficam
   presas na tela ao arrastar). Fora da moldura: faixas do escurecimento nativo + um canvas preto na ordem 45 (acima das
   bolhas, 40; abaixo do HUD, 50). Personagens usam caixa fixa a partir dos pés (os limites do esqueleto são enormes).
-- Cenários: `gk2map-zoom.cs`, `gk2map-local.cs` (hover/entrar/scroll/sair/lista), `gk2map-inspecionar.cs`.
+- **Navegação (0.2.0)**: no zoom máximo, mais um scroll desce ao **mundo aberto** naquele ponto do mapa (base,
+  vinhedo, floresta, cidade...), só dentro das regiões em `knownMapZones`; ali a vista inteira (não só o foco) fica
+  dentro de uma região conhecida. Scroll sobre porta, escada ou alçapão (`WGODef.teleportDestinationWgoIds`) atravessa;
+  clique também. O caminho fica numa pilha (mapa → base → casa → porão) e o scroll para trás desfaz um passo por vez;
+  botão direito volta direto ao mapa. `Atlas` (em `Places.cs`) monta lugares e portas a cada redesenho do mapa. Clicar
+  na setinha do mapa continua abrindo o interior direto.
+- **Contorno (0.2.0)**: o jogo não tem destaque de contorno. `Outline.cs` monta a borda numa textura à parte por
+  `CommandBuffer` (`AfterForwardOpaque`): `UI/Default` com estêncil marca a área do objeto e desenha a silhueta
+  deslocada em 8 direções só fora dela; a textura vai para a tela pelo `GUI/Text Shader` (cor única × alfa). Não
+  funcionam: teste de profundidade (o shader do jogo não grava profundidade geométrica), redesenhar o objeto com o
+  material dele (sai branco) e qualquer shader pronto direto na tela (cor de vértice das malhas escurece). Sprites
+  auxiliares de personagem (`-hed`, `-bdy`, `Shadowcaster`, `_SpriteInvisible`) ficam fora.
+- **Título (0.2.0)**: rótulo clonado da placa de zona do HUD (`WorldZoneWidget.worldZoneLabel`) com o texto nativo
+  ("Morgue 6/7") montado por `ZoneInfo.cs` só com leitura: o caminho nativo (`GetQualityString`, `WZQual`) grava no save.
+- **Clima (0.2.0)**: ao trocar o preset de luz a vista também pausa/solta o clima como o teleporte faz
+  (`WeatherSystem.SetPauseState(TimeOfDay, indoorPreset)`), senão chove dentro dos interiores; restaura ao sair.
+- Cenários: `gk2map-zoom.cs`, `gk2map-local.cs` (hover/entrar/scroll/sair/lista), `gk2map-inspecionar.cs`,
+  `gk2map-estado.cs` (lugar, nível, pilha, portas; scroll sobre um alvo).
 - O overlay de FPS de terceiros nos prints do blue marcava 11–14; a telemetria do blue (`gk2_fps`) no mesmo período
   ficou em 84–238. Consultar: `ssh vps 'docker exec victoriametrics wget -qO- "http://127.0.0.1:8428/api/v1/query_range?..."'`.
 - A placa "Портовый район" no canto do green é do jogo (aparece sem o mod ao carregar o save de teste na mina).

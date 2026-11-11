@@ -28,6 +28,9 @@ namespace GK2Map
             public Renderer[] Renderers;
             /// <summary>Personagem (NPC, zumbi): os limites do esqueleto são bem maiores que o desenho.</summary>
             public bool Character;
+            /// <summary>Porta ou escada: clicar atravessa em vez de fixar o tooltip.</summary>
+            public Door Door;
+            public Vector3 Anchor;
             public Rect Rect;
         }
 
@@ -43,7 +46,32 @@ namespace GK2Map
 
         public static string Describe => (pinned != null ? "fixado " + pinned.Data.id : hover != null ? "hover " + hover.Data.id : "nada") + " candidatos " + Candidates.Count;
 
-        public static void Tick(PlaceView view, Vector2 mouse, bool over, bool clicked)
+        /// <summary>Renderers do objeto sob o cursor (ou fixado), para o contorno.</summary>
+        public static Renderer[] HoverRenderers
+        {
+            get
+            {
+                Target t = hover ?? pinned;
+                return t != null && t.View != null && t.Renderers != null && t.Renderers.Length > 0 ? t.Renderers : null;
+            }
+        }
+
+        /// <summary>Porta sob o cursor ou a mais próxima dele dentro de <paramref name="radius"/> pixels.</summary>
+        public static Door DoorNear(Vector2 mouse, float radius)
+        {
+            Door best = null;
+            float bestDist = radius;
+            foreach (Target t in Candidates)
+            {
+                if (t.Door == null || !TryRect(t)) continue;
+                float d = t.Rect.Contains(mouse) ? 0f : Vector2.Distance(t.Rect.center, mouse);
+                if (d < bestDist) { best = t.Door; bestDist = d; }
+            }
+            return best;
+        }
+
+        /// <returns>A porta clicada, quando o clique foi numa porta; senão null.</returns>
+        public static Door Tick(PlaceView view, Vector2 mouse, bool over, bool clicked)
         {
             float now = Time.unscaledTime;
             if (now >= nextRebuild)
@@ -55,30 +83,35 @@ namespace GK2Map
             {
                 nextPick = now + PickSeconds;
                 Target at = over ? Pick(mouse) : null;
+                if (clicked && at != null && at.Door != null) return at.Door;
                 if (clicked)
                 {
                     pinned = at;
-                    hover = null;
+                    hover = at;
                     if (at == null) UITooltip.Hide();
                     else Show(view, at, true);
                 }
-                else if (pinned == null && at != hover)
+                else if (at != hover)
                 {
                     hover = at;
-                    if (at == null) UITooltip.Hide();
-                    else Show(view, at, false);
+                    if (pinned == null)
+                    {
+                        if (at == null) UITooltip.Hide();
+                        else Show(view, at, false);
+                    }
                 }
             }
             Target shown = pinned ?? hover;
             if (shown != null)
             {
-                if (shown.View == null || !shown.View.gameObject.activeInHierarchy)
+                if (shown.Door == null && (shown.View == null || !shown.View.gameObject.activeInHierarchy))
                 {
                     pinned = hover = null;
                     UITooltip.Hide();
                 }
                 else if (TryRect(shown)) PlaceProxy(view, shown.Rect);
             }
+            return null;
         }
 
         public static void Clear()
@@ -92,19 +125,46 @@ namespace GK2Map
             proxy = null;
         }
 
-        /// <summary>Objetos com nome das zonas do local que estão ligados no momento.</summary>
+        private static readonly List<WorldZone> TmpZones = new List<WorldZone>();
+
+        /// <summary>
+        /// O que dá para inspecionar agora: portas e escadas dentro da vista e os objetos com nome das zonas visitadas
+        /// que a vista toca.
+        /// </summary>
         private static void Rebuild(PlaceView view)
         {
             Target keepPinned = pinned, keepHover = hover;
             Candidates.Clear();
             Seen.Clear();
-            foreach (WorldZone zone in view.Place.Zones)
+            Atlas atlas = view.Atlas;
+            if (atlas == null) return;
+            Vector3 focus = view.Focus;
+            Vector2 half = view.ViewHalfExtents() + new Vector2(2f, 2f);
+            bool outdoor = view.Place.Outdoor;
+
+            foreach (Door door in atlas.Doors)
             {
-                if (zone == null) continue;
+                Vector3 p = door.Data.Position;
+                if (Mathf.Abs(p.x - focus.x) > half.x || Mathf.Abs(p.z - focus.z) > half.y) continue;
+                if ((atlas.AreaOf(p) == null) != outdoor) continue;
+                Wgo w = GameScene.GetWgoViewGlobal(door.Data.UniqueId);
+                if (w != null && !w.gameObject.activeInHierarchy) w = null;
+                if (w != null) Seen.Add(w);
+                Target t = Reuse(keepPinned, keepHover, door, w) ?? new Target { Door = door, Data = door.Data, Name = DoorName(atlas, door) };
+                if (t.Name == null) continue;
+                t.View = w;
+                t.Anchor = p;
+                t.Renderers = w != null ? BodyRenderers(w.gameObject) : new Renderer[0];
+                Candidates.Add(t);
+            }
+
+            atlas.VisitedZonesIn(focus, half.x, half.y, TmpZones);
+            foreach (WorldZone zone in TmpZones)
+            {
                 foreach (Wgo w in zone.Wgos)
                 {
                     if (w == null || !w.gameObject.activeInHierarchy || w.Data == null || w.Data.IsHidden || !Seen.Add(w)) continue;
-                    Target t = keepPinned != null && keepPinned.View == w ? keepPinned : keepHover != null && keepHover.View == w ? keepHover : null;
+                    Target t = Reuse(keepPinned, keepHover, null, w);
                     if (t == null)
                     {
                         string name = Names.Wgo(w.Data.id);
@@ -117,6 +177,24 @@ namespace GK2Map
                     if (t.Renderers.Length > 0) Candidates.Add(t);
                 }
             }
+        }
+
+        private static Target Reuse(Target a, Target b, Door door, Wgo view)
+        {
+            if (a != null && a.Door == door && (door != null || a.View == view)) return a;
+            if (b != null && b.Door == door && (door != null || b.View == view)) return b;
+            return null;
+        }
+
+        /// <summary>Para onde a porta leva: o nome da zona de destino, ou "Lado de fora"; null se o destino é desconhecido.</summary>
+        private static string DoorName(Atlas atlas, Door door)
+        {
+            Place target = atlas.Through(door);
+            if (target == null) return null;
+            if (!target.Outdoor) return string.IsNullOrEmpty(target.Title) ? null : target.Title;
+            WorldZone zone = atlas.TitleZoneAt(door.Dest.Position);
+            string title = zone != null ? LLBase.L("wz_" + zone.Id) : null;
+            return string.IsNullOrEmpty(title) || title == "wz_" + zone.Id ? L10n.Outside : title;
         }
 
         private static readonly List<Renderer> TmpRenderers = new List<Renderer>();
@@ -132,7 +210,11 @@ namespace GK2Map
                 string type = r.GetType().Name;
                 if (type == "ParticleSystemRenderer" || type == "TrailRenderer" || type == "LineRenderer") return true;
                 string n = r.name;
-                return n.EndsWith("_sh", StringComparison.Ordinal) || n.Contains("blackout") || n.Contains("LightFaker") || n.Contains("shadow");
+                // "-hed", "-bdy"...: cópias de lado do sprite do personagem, só para luz e sombra.
+                if (n == "sh" || n.StartsWith("-", StringComparison.Ordinal) || n.EndsWith("_sh", StringComparison.Ordinal)) return true;
+                if (n.Contains("blackout") || n.Contains("LightFaker") || n.IndexOf("shadow", StringComparison.OrdinalIgnoreCase) >= 0) return true;
+                Material m = r.sharedMaterial;
+                return m != null && m.HasProperty("_SpriteInvisible") && m.GetFloat("_SpriteInvisible") > 0.5f;
             });
             return TmpRenderers.ToArray();
         }
@@ -144,7 +226,7 @@ namespace GK2Map
             float bestArea = float.MaxValue;
             foreach (Target t in Candidates)
             {
-                if (t.View == null || !TryRect(t) || !t.Rect.Contains(mouse)) continue;
+                if (!TryRect(t) || !t.Rect.Contains(mouse)) continue;
                 float area = t.Rect.width * t.Rect.height;
                 if (area < bestArea) { best = t; bestArea = area; }
             }
@@ -160,6 +242,15 @@ namespace GK2Map
                 Vector3 feet = t.View.transform.position;
                 Vector3 a = CameraSystem.WorldToScreenPoint(feet - cam.right * 0.4f);
                 Vector3 b = CameraSystem.WorldToScreenPoint(feet + cam.right * 0.4f + cam.up * 1.3f);
+                t.Rect = Rect.MinMaxRect(Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y), Mathf.Max(a.x, b.x), Mathf.Max(a.y, b.y));
+                return true;
+            }
+            if (t.Door != null && (t.View == null || t.Renderers.Length == 0))
+            {
+                // Porta sem desenho próprio (só o gatilho no vão): caixa do tamanho de uma passagem.
+                Transform cam = CameraSystem.Instance.WorldCamera.transform;
+                Vector3 a = CameraSystem.WorldToScreenPoint(t.Anchor - cam.right * 0.6f);
+                Vector3 b = CameraSystem.WorldToScreenPoint(t.Anchor + cam.right * 0.6f + cam.up * 1.4f);
                 t.Rect = Rect.MinMaxRect(Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y), Mathf.Max(a.x, b.x), Mathf.Max(a.y, b.y));
                 return true;
             }
@@ -211,7 +302,12 @@ namespace GK2Map
             var list = new List<LazyWidgetDataBase>();
             TextStyle header = Style("headerTextStyle"), text = Style("descriptionTextStyle"), small = Style("smallDescriptionTextStyle");
             list.Add(new UITooltipTextWidgetData(t.Name, TextAlignmentOptions.Center, header));
-            if (details)
+            if (t.Door != null)
+            {
+                list.Add(new UITooltipSeparatorWidgetData());
+                list.Add(new UITooltipTextWidgetData(view.Atlas.AreaOf(t.Door.Dest.Position) != null ? L10n.DoorEnter : L10n.DoorLeave, TextAlignmentOptions.Center, text));
+            }
+            else if (details)
             {
                 var body = new List<LazyWidgetDataBase>();
                 AddQuality(body, t.Data);
