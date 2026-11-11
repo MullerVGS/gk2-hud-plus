@@ -50,6 +50,8 @@ namespace GK2Map
         public readonly List<Place> ArrowPlaces = new List<Place>();
         public readonly List<Door> Doors = new List<Door>();
         public readonly List<Bounds> KnownWorld = new List<Bounds>();
+        /// <summary>Lugares de construção da cidade (placas de reparo): objetos onde alguma <c>TownBuildingDef</c> pode ser erguida.</summary>
+        public readonly List<WgoData> Sites = new List<WgoData>();
         public WorldZone[] Zones = new WorldZone[0];
 
         private List<IndoorAreaData> areas;
@@ -91,6 +93,15 @@ namespace GK2Map
                     break;
                 }
             }
+
+            var siteIds = new HashSet<string>();
+            foreach (TownBuildingDef def in GameBalance.Me.townBuildingDefs)
+                foreach (string id in def.craftsIn)
+                {
+                    if (string.IsNullOrEmpty(id) || !siteIds.Add(id)) continue;
+                    WgoData site = MainGame.WorldData.GetWgoData(id);
+                    if (site != null && !site.IsHidden && site.TownBuildingWgoComponent != null) a.Sites.Add(site);
+                }
 
             // Cada setinha do mapa fica com a porta de rua mais próxima que leva a um interior já visitado.
             if (arrows != null)

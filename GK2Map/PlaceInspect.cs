@@ -158,6 +158,24 @@ namespace GK2Map
                 Candidates.Add(t);
             }
 
+            foreach (WgoData site in atlas.Sites)
+            {
+                Vector3 p = site.Position;
+                if (Mathf.Abs(p.x - focus.x) > half.x || Mathf.Abs(p.z - focus.z) > half.y || site.IsHidden) continue;
+                if ((atlas.AreaOf(p) == null) != outdoor) continue;
+                Wgo w = GameScene.GetWgoViewGlobal(site.UniqueId);
+                if (w == null || !w.gameObject.activeInHierarchy || !Seen.Add(w)) continue;
+                Target t = Reuse(keepPinned, keepHover, null, w);
+                if (t == null)
+                {
+                    string name = Names.Wgo(site.id);
+                    if (name == null) continue;
+                    t = new Target { View = w, Data = site, Name = name };
+                }
+                t.Renderers = BodyRenderers(w.gameObject);
+                if (t.Renderers.Length > 0) Candidates.Add(t);
+            }
+
             atlas.VisitedZonesIn(focus, half.x, half.y, TmpZones);
             foreach (WorldZone zone in TmpZones)
             {
@@ -307,6 +325,7 @@ namespace GK2Map
                 list.Add(new UITooltipSeparatorWidgetData());
                 list.Add(new UITooltipTextWidgetData(view.Atlas.AreaOf(t.Door.Dest.Position) != null ? L10n.DoorEnter : L10n.DoorLeave, TextAlignmentOptions.Center, text));
             }
+            else if (AddBuildSite(list, t.Data, text)) { }
             else if (details)
             {
                 var body = new List<LazyWidgetDataBase>();
@@ -321,6 +340,41 @@ namespace GK2Map
             }
             Names.Scrub(list);
             UITooltip.Show(list, proxy);
+        }
+
+        /// <summary>
+        /// Lugar de construção da cidade ainda vazio: o que o jogo oferece erguer ali
+        /// (<c>TownBuildingWgoComponent.GetAvailableBuildings</c>, que já respeita o que está liberado) e o custo de cada
+        /// opção, no widget nativo de itens necessários (mostra quanto o jogador tem de cada um).
+        /// </summary>
+        private static bool AddBuildSite(List<LazyWidgetDataBase> list, WgoData w, TextStyle text)
+        {
+            TownBuildingWgoComponent comp = w.TownBuildingWgoComponent;
+            if (comp == null) return false;
+            if (comp.IsActive)
+            {
+                string built = Names.Text(comp.TownBuildingId);
+                if (built == null) return false;
+                list.Add(new UITooltipSeparatorWidgetData());
+                list.Add(new UITooltipTextWidgetData(built, TextAlignmentOptions.Center, text));
+                return true;
+            }
+            bool any = false;
+            MultiInventory have = MainGame.PlayerController != null ? MainGame.PlayerController.WorkerMultiInventory : null;
+            foreach (TownBuildingDef def in comp.GetAvailableBuildings(w))
+            {
+                string name = Names.Text(def.id);
+                if (name == null) continue;
+                list.Add(new UITooltipSeparatorWidgetData());
+                list.Add(new UITooltipTextWidgetData(name, TextAlignmentOptions.Center, text));
+                if (have != null && def.needItems != null && def.needItems.Count > 0)
+                {
+                    var cost = new UITooltipNeedsItemWidgetData(def.needItems, have);
+                    if (cost.CraftItemCellsData.Count > 0) list.Add(cost);
+                }
+                any = true;
+            }
+            return any;
         }
 
         /// <summary>A mesma condição e o mesmo widget que o jogo usa para a qualidade de um objeto (<c>Wgo.SetWorldZoneWidgets</c>).</summary>

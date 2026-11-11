@@ -107,8 +107,11 @@ Mod de jogador (`GK2Map/`, `arthur.gk2.map`), só informação, nas duas janelas
   ("Morgue 6/7") montado por `ZoneInfo.cs` só com leitura: o caminho nativo (`GetQualityString`, `WZQual`) grava no save.
 - **Clima (0.2.0)**: ao trocar o preset de luz a vista também pausa/solta o clima como o teleporte faz
   (`WeatherSystem.SetPauseState(TimeOfDay, indoorPreset)`), senão chove dentro dos interiores; restaura ao sair.
+- **Custo de construção (0.2.1)**: placas de reparo da cidade (`repair_sign_*`, `TownBuildingPlace`) mostram no hover o
+  que o jogo oferece erguer ali (`TownBuildingWgoComponent.GetAvailableBuildings`, que respeita o que está liberado) e o
+  custo de cada opção no widget nativo `UITooltipNeedsItemWidgetData(needItems, WorkerMultiInventory)`.
 - Cenários: `gk2map-zoom.cs`, `gk2map-local.cs` (hover/entrar/scroll/sair/lista), `gk2map-inspecionar.cs`,
-  `gk2map-estado.cs` (lugar, nível, pilha, portas; scroll sobre um alvo).
+  `gk2map-estado.cs` (lugar, nível, pilha, portas; scroll sobre um alvo), `gk2map-ir.cs` (vista externa num objeto).
 - O overlay de FPS de terceiros nos prints do blue marcava 11–14; a telemetria do blue (`gk2_fps`) no mesmo período
   ficou em 84–238. Consultar: `ssh vps 'docker exec victoriametrics wget -qO- "http://127.0.0.1:8428/api/v1/query_range?..."'`.
 - A placa "Портовый район" no canto do green é do jogo (aparece sem o mod ao carregar o save de teste na mina).
