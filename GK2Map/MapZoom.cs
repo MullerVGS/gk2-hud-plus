@@ -43,6 +43,8 @@ namespace GK2Map
         private Place hovered;
         private RectTransform hoverProxy;
         private bool pressOnPlace;
+        private Rect? explored;
+        private readonly List<GameObject> hiddenLabels = new List<GameObject>();
 
         public MapPageWidget Widget => widget;
         public ScrollRect Scroll => scroll;
@@ -60,6 +62,7 @@ namespace GK2Map
             if (scroll == null || map == null || scroll.content == null || scroll.viewport == null) return;
             baseSize = map.sizeDelta;
             CollectMarkers();
+            ComputeExplored();
             // O jogo acabou de centralizar no jogador com o mapa em escala 1; refaz na escala atual.
             Vector2 focus = scroll.content.anchoredPosition;
             zoom = 1f;
@@ -221,8 +224,82 @@ namespace GK2Map
                 if (m.Key != null) m.Key.localScale = m.Value * markerInv;
         }
 
+        private static readonly AccessTools.FieldRef<UIMapZone, bool> AlwaysVisibleRef = AccessTools.FieldRefAccess<UIMapZone, bool>("alwaysVisible");
+        private static readonly Vector3[] CornerBuffer = new Vector3[4];
+
+        /// <summary>
+        /// Área já explorada do mapa: a união das áreas de nuvens das regiões que o jogo marca como conhecidas
+        /// (<c>KnowledgeSystem.knownMapZones</c>), mais onde o jogador está. A arte tem trechos sem nuvem e rótulos
+        /// soltos fora de qualquer região (o jogo conta com o jogador não rolar até lá); com o zoom afastado eles
+        /// apareceriam de uma vez, então a vista do mapa fica presa a essa área e o que está fora dela some.
+        /// </summary>
+        private void ComputeExplored()
+        {
+            explored = null;
+            foreach (GameObject go in hiddenLabels) if (go != null) go.SetActive(true);
+            hiddenLabels.Clear();
+            GameSave save = MainGame.Instance != null ? MainGame.Instance.GameSave : null;
+            if (save == null) return;
+            List<string> known = save.knowledgeSystem.knownMapZones;
+            bool any = false;
+            float x0 = float.MaxValue, y0 = float.MaxValue, x1 = float.MinValue, y1 = float.MinValue;
+            void Grow(Vector2 a, Vector2 b)
+            {
+                any = true;
+                x0 = Mathf.Min(x0, a.x); y0 = Mathf.Min(y0, a.y);
+                x1 = Mathf.Max(x1, b.x); y1 = Mathf.Max(y1, b.y);
+            }
+            foreach (UIMapZone zone in map.GetComponentsInChildren<UIMapZone>(true))
+            {
+                if (!known.Contains(zone.Id) && !AlwaysVisibleRef(zone)) continue;
+                RectTransform clouds = zone.transform.Find("Clouds") as RectTransform;
+                if (clouds == null) continue;
+                clouds.GetWorldCorners(CornerBuffer);
+                Grow(map.InverseTransformPoint(CornerBuffer[0]), map.InverseTransformPoint(CornerBuffer[2]));
+            }
+            if (!any) return;
+            if (player != null && player.gameObject.activeSelf)
+            {
+                Vector2 p = player.anchoredPosition;
+                Grow(p - new Vector2(80f, 80f), p + new Vector2(80f, 80f));
+            }
+            Vector2 half = baseSize * 0.5f;
+            Rect e = Rect.MinMaxRect(Mathf.Max(x0, -half.x), Mathf.Max(y0, -half.y), Mathf.Min(x1, half.x), Mathf.Min(y1, half.y));
+            explored = e;
+            // Rótulos soltos (fora de qualquer região) e marcos fora da área explorada não aparecem.
+            foreach (TextMeshProUGUI label in map.GetComponentsInChildren<TextMeshProUGUI>(true))
+            {
+                if (label.GetComponentInParent<UIMapZone>(true) != null || (milestones != null && label.transform.IsChildOf(milestones))) continue;
+                if (label.gameObject.activeSelf && !e.Contains((Vector2)map.InverseTransformPoint(label.transform.position)))
+                {
+                    label.gameObject.SetActive(false);
+                    hiddenLabels.Add(label.gameObject);
+                }
+            }
+            if (milestones != null)
+                foreach (Transform t in milestones)
+                    if (t.gameObject.activeSelf && !e.Contains((Vector2)map.InverseTransformPoint(t.position))) t.gameObject.SetActive(false);
+        }
+
+        private void LateUpdate()
+        {
+            if (scroll == null || scroll.content == null || explored == null || PlaceView.Active) return;
+            Vector2 pos = scroll.content.anchoredPosition;
+            Vector2 clamped = Clamp(pos);
+            if ((clamped - pos).sqrMagnitude > 0.0001f) scroll.content.anchoredPosition = clamped;
+        }
+
         public Vector2 Clamp(Vector2 pos)
         {
+            if (explored.HasValue && zoom > 0f)
+            {
+                Rect e = explored.Value;
+                Vector2 view = scroll.viewport.rect.size * (0.5f / zoom);
+                Vector2 c = -pos / zoom;
+                c.x = e.width <= view.x * 2f ? e.center.x : Mathf.Clamp(c.x, e.xMin + view.x, e.xMax - view.x);
+                c.y = e.height <= view.y * 2f ? e.center.y : Mathf.Clamp(c.y, e.yMin + view.y, e.yMax - view.y);
+                pos = -c * zoom;
+            }
             Vector2 half = (scroll.content.sizeDelta - scroll.viewport.rect.size) * 0.5f;
             pos.x = half.x <= 0f ? 0f : Mathf.Clamp(pos.x, -half.x, half.x);
             pos.y = half.y <= 0f ? 0f : Mathf.Clamp(pos.y, -half.y, half.y);
@@ -265,6 +342,9 @@ namespace GK2Map
                 if (m.Key != null) m.Key.localScale = m.Value;
             markers.Clear();
             labels.Clear();
+            foreach (GameObject go in hiddenLabels) if (go != null) go.SetActive(true);
+            hiddenLabels.Clear();
+            explored = null;
             zoom = 1f;
             map.localScale = Vector3.one;
             scroll.content.sizeDelta = baseSize;

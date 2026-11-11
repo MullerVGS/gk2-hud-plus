@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.Reflection;
 using HarmonyLib;
@@ -18,7 +19,6 @@ namespace GK2Map
     internal class PlaceView : MonoBehaviour
     {
         private const float CameraBack = 10f;
-        private const float RefreshDistance = 0.5f;
         private const float ZoomSeconds = 0.15f;
         private const float DragThreshold = 6f;
         private const float KeyboardSpeed = 14f;
@@ -40,8 +40,6 @@ namespace GK2Map
         private Vector3 focus;
         private float ortho;
         private int level;
-        private Vector3 lastRefreshPos;
-        private float lastRefreshOrtho;
         private bool exited;
 
         private TimeOfDayPresets savedLight;
@@ -184,13 +182,40 @@ namespace GK2Map
             Vector3 pos = focus - t.forward * CameraBack - t.right * (off.x * units) - t.up * (off.y * units);
             t.position = pos;
             cam.orthographicSize = ortho;
-            if (force || (pos - lastRefreshPos).sqrMagnitude > RefreshDistance * RefreshDistance || Mathf.Abs(ortho - lastRefreshOrtho) > 0.01f)
-            {
-                lastRefreshPos = pos;
-                lastRefreshOrtho = ortho;
-                RefreshChunks(true);
-            }
+            if (force) RefreshChunks(true);
+            NotifyCameraMoved();
         }
+
+        /// <summary>
+        /// Com o Cinemachine desligado ninguém avisa o jogo que a câmera andou, e é nesse aviso
+        /// (<c>CinemachineCore.CameraUpdatedEvent</c>) que as bolhas dos objetos se reposicionam e o
+        /// <c>ChunkManager</c> refaz a visibilidade. A vista dispara o mesmo aviso a cada frame.
+        /// </summary>
+        private void NotifyCameraMoved()
+        {
+            if (brain == null) return;
+            if (cameraEvent == null)
+            {
+                Assembly cine = brain.GetType().Assembly;
+                Type core = cine.GetType("Cinemachine.CinemachineCore") ?? cine.GetType("Unity.Cinemachine.CinemachineCore");
+                FieldInfo f = core?.GetField("CameraUpdatedEvent", BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static);
+                cameraEvent = f?.GetValue(null);
+                cameraEventInvoke = cameraEvent?.GetType().GetMethod("Invoke", new[] { brain.GetType() });
+                cameraEventArgs = new object[] { brain };
+                if (cameraEventInvoke == null)
+                {
+                    Plugin.Log.LogWarning("CameraUpdatedEvent não encontrado: bolhas não vão acompanhar a vista");
+                    brainEventMissing = true;
+                }
+            }
+            if (brainEventMissing) { RefreshChunks(false); return; }
+            cameraEventInvoke.Invoke(cameraEvent, cameraEventArgs);
+        }
+
+        private object cameraEvent;
+        private MethodInfo cameraEventInvoke;
+        private object[] cameraEventArgs;
+        private bool brainEventMissing;
 
         private static readonly FieldInfo LightField = AccessTools.Field(typeof(EnvironmentEngine), "timesOfDay");
         private static readonly FieldInfo LightsField = AccessTools.Field(typeof(EnvironmentEngine), "availablePresets");
@@ -304,22 +329,48 @@ namespace GK2Map
             return null;
         }
 
-        /// <summary>O escurecimento nativo cobre a tela toda; aqui ele é refeito em quatro faixas em volta do vão.</summary>
+        private const int BlackSortingOrder = 45;
+
+        /// <summary>
+        /// Em volta do vão: o escurecimento nativo (que cobria a tela toda) é refeito em quatro faixas, e por baixo
+        /// do HUD entra um fundo preto, porque o mundo ali é o do local visto e vazaria pela borda da moldura. O preto
+        /// fica acima das bolhas de objetos (ordem 40) e abaixo do HUD (50).
+        /// </summary>
         private void BuildShadowStrips(Image shadowImage)
         {
             RectTransform host = shadowImage.rectTransform;
+            Strips(host, shadowImage.color, shadowImage.sprite, shadowImage.raycastTarget);
+
+            Canvas rootCanvas = host.GetComponentInParent<Canvas>();
+            Transform uiRoot = rootCanvas != null ? rootCanvas.transform.parent : null;
+            if (uiRoot == null) return;
+            var go = new GameObject("GK2Map_Black", typeof(RectTransform), typeof(Canvas));
+            var rt = (RectTransform)go.transform;
+            rt.SetParent(uiRoot, false);
+            rt.anchorMin = Vector2.zero;
+            rt.anchorMax = Vector2.one;
+            rt.offsetMin = rt.offsetMax = Vector2.zero;
+            Canvas canvas = go.GetComponent<Canvas>();
+            canvas.overrideSorting = true;
+            canvas.sortingOrder = BlackSortingOrder;
+            created.Add(go);
+            Strips(rt, Color.black, null, false);
+        }
+
+        private void Strips(RectTransform host, Color color, Sprite sprite, bool raycast)
+        {
             Vector3[] c = new Vector3[4];
             Viewport.GetWorldCorners(c);
             Vector2 lo = host.InverseTransformPoint(c[0]);
             Vector2 hi = host.InverseTransformPoint(c[2]);
             Rect r = host.rect;
-            Strip(host, shadowImage, r.xMin, r.yMin, lo.x, r.yMax);
-            Strip(host, shadowImage, hi.x, r.yMin, r.xMax, r.yMax);
-            Strip(host, shadowImage, lo.x, hi.y, hi.x, r.yMax);
-            Strip(host, shadowImage, lo.x, r.yMin, hi.x, lo.y);
+            Strip(host, color, sprite, raycast, r.xMin, r.yMin, lo.x, r.yMax);
+            Strip(host, color, sprite, raycast, hi.x, r.yMin, r.xMax, r.yMax);
+            Strip(host, color, sprite, raycast, lo.x, hi.y, hi.x, r.yMax);
+            Strip(host, color, sprite, raycast, lo.x, r.yMin, hi.x, lo.y);
         }
 
-        private void Strip(RectTransform host, Image model, float x0, float y0, float x1, float y1)
+        private void Strip(RectTransform host, Color color, Sprite sprite, bool raycast, float x0, float y0, float x1, float y1)
         {
             if (x1 - x0 <= 0f || y1 - y0 <= 0f) return;
             var go = new GameObject("GK2Map_Shadow", typeof(RectTransform), typeof(CanvasRenderer), typeof(Image));
@@ -330,11 +381,9 @@ namespace GK2Map
             rt.anchoredPosition = new Vector2(x0, y0);
             rt.sizeDelta = new Vector2(x1 - x0, y1 - y0);
             Image img = go.GetComponent<Image>();
-            img.sprite = model.sprite;
-            img.type = model.type;
-            img.material = model.material;
-            img.color = model.color;
-            img.raycastTarget = model.raycastTarget;
+            img.sprite = sprite;
+            img.color = color;
+            img.raycastTarget = raycast;
             created.Add(go);
         }
 

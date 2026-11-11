@@ -17,7 +17,7 @@ namespace GK2Map
     {
         public const string Guid = "arthur.gk2.map";
         public const string Name = "GK2 Map";
-        public const string Version = "0.1.0";
+        public const string Version = "0.1.1";
 
         internal static Plugin Instance;
         internal static BepInEx.Logging.ManualLogSource Log;

@@ -76,14 +76,24 @@ Mod de jogador (`GK2Map/`, `arthur.gk2.map`), só informação, nas duas janelas
 - **Vista do local**: o mundo inteiro (interiores incluídos) vive na cena `RuinedTemple` e é ligado por pedaços conforme
   a câmera do mundo. A vista desliga o `CinemachineBrain`, leva a câmera do mundo para o interior e chama o
   `ChunkManager` no modo de carga gradual; some com o pergaminho e o fundo `Back` da moldura e refaz o `BgShadow` em
-  faixas, então o mundo aparece pelo vão da janela. Luz e som ambiente do interior vêm do preset da porta
+  faixas (preto por baixo, ver 0.1.1), então o mundo aparece pelo vão da janela. Luz e som ambiente do interior vêm do preset da porta
   (`TeleportTo("destino", "preset")`), trocando só `EnvironmentEngine.timesOfDay` (o nome que vai para o save não muda).
   Abre no enquadramento em que a zona cabe (escala normal ou metade); scroll alterna, arrasto/WASD andam dentro das
   zonas visitadas do mesmo interior; scroll para trás, botão direito, trocar de aba ou fechar a janela restauram tudo.
   Custo medido: 90–220 ms na primeira abertura de um local na sessão, ~10 ms depois.
 - **Inspeção** (só leitura): hover mostra o nome do objeto; clique fixa o tooltip nativo com qualidade (widget nativo),
   craft em andamento e conteúdo do inventário. Nomes vêm do `GK2Hud/Names.cs` (linkado no csproj).
+- **Spoiler (0.1.1)**: a arte do mapa tem trechos sem nuvem e rótulos soltos fora de qualquer região (o nativo conta
+  com o jogador não rolar até lá; o zoom afastado mostrava tudo de uma vez). A vista do mapa fica presa à área explorada
+  (união das áreas de nuvens das regiões em `knownMapZones` + posição do jogador), em todos os níveis; rótulo solto e
+  marco fora dela somem. Qualquer coisa nova que o mapa mostre passa por esse recorte.
+- **Câmera sem Cinemachine (0.1.1)**: bolhas de objetos, HUD e `ChunkManager` só se atualizam no
+  `Cinemachine.CinemachineCore.CameraUpdatedEvent`; a vista dispara o evento a cada frame (sem isso as bolhas ficam
+  presas na tela ao arrastar). Fora da moldura: faixas do escurecimento nativo + um canvas preto na ordem 45 (acima das
+  bolhas, 40; abaixo do HUD, 50). Personagens usam caixa fixa a partir dos pés (os limites do esqueleto são enormes).
 - Cenários: `gk2map-zoom.cs`, `gk2map-local.cs` (hover/entrar/scroll/sair/lista), `gk2map-inspecionar.cs`.
+- O overlay de FPS de terceiros nos prints do blue marcava 11–14; a telemetria do blue (`gk2_fps`) no mesmo período
+  ficou em 84–238. Consultar: `ssh vps 'docker exec victoriametrics wget -qO- "http://127.0.0.1:8428/api/v1/query_range?..."'`.
 - A placa "Портовый район" no canto do green é do jogo (aparece sem o mod ao carregar o save de teste na mina).
 
 ## Blue-green

@@ -26,6 +26,8 @@ namespace GK2Map
             public WgoData Data;
             public string Name;
             public Renderer[] Renderers;
+            /// <summary>Personagem (NPC, zumbi): os limites do esqueleto são bem maiores que o desenho.</summary>
+            public bool Character;
             public Rect Rect;
         }
 
@@ -110,6 +112,8 @@ namespace GK2Map
                         t = new Target { View = w, Data = w.Data, Name = name };
                     }
                     t.Renderers = BodyRenderers(w.gameObject);
+                    t.Character = false;
+                    foreach (Renderer r in t.Renderers) if (r.name == "bdy") { t.Character = true; break; }
                     if (t.Renderers.Length > 0) Candidates.Add(t);
                 }
             }
@@ -149,6 +153,16 @@ namespace GK2Map
 
         private static bool TryRect(Target t)
         {
+            if (t.Character && t.View != null)
+            {
+                // Caixa do tamanho do desenho de um personagem, a partir dos pés (posição do objeto).
+                Transform cam = CameraSystem.Instance.WorldCamera.transform;
+                Vector3 feet = t.View.transform.position;
+                Vector3 a = CameraSystem.WorldToScreenPoint(feet - cam.right * 0.4f);
+                Vector3 b = CameraSystem.WorldToScreenPoint(feet + cam.right * 0.4f + cam.up * 1.3f);
+                t.Rect = Rect.MinMaxRect(Mathf.Min(a.x, b.x), Mathf.Min(a.y, b.y), Mathf.Max(a.x, b.x), Mathf.Max(a.y, b.y));
+                return true;
+            }
             bool any = false;
             float x0 = float.MaxValue, y0 = float.MaxValue, x1 = float.MinValue, y1 = float.MinValue;
             foreach (Renderer r in t.Renderers)
