@@ -10,5 +10,8 @@
     <Reference Include="$(Refs)/Managed/FlowCanvas.dll" Private="false" />
     <Reference Include="$(Refs)/Managed/NodeCanvas.dll" Private="false" />
     <Reference Include="$(Refs)/Managed/ParadoxNotion.dll" Private="false" />
+    <Reference Include="$(Refs)/Managed/PackageTools.dll" Private="false" />
+    <Reference Include="$(Refs)/Managed/Drawing.dll" Private="false" />
+    <Reference Include="$(Refs)/Managed/Unity.Mathematics.dll" Private="false" />
   </ItemGroup>
 </Project>

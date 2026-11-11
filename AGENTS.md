@@ -110,6 +110,14 @@ Mod de jogador (`GK2Map/`, `arthur.gk2.map`), só informação, nas duas janelas
 - **Porão (0.2.1)**: porta cujo destino cai em corredor (fora de qualquer `WorldZone`, ex.: escada do cruzamento) vale
   se alguma zona da mesma área interna já foi visitada. Dentro de um interior a vista anda pelas zonas visitadas com
   folga de 5 unidades (corredores) e, se todas as zonas da área já foram visitadas, pela área interna inteira.
+- **Limite do cenário (0.2.1)**: as regiões do mapa e as áreas internas são maiores que o terreno desenhado; fora dele a
+  câmera mostra vazio. No mundo aberto a vista lê quatro linhas de 1 px nas próprias bordas (fim do frame, a cada
+  0,1 s) e empurra o foco para dentro onde a borda é uma faixa lisa (129 px com variação ≤1 por canal). Não servem: cor
+  do vazio (preto de dia, azulado à noite pelo pós-processamento; com faixa de 49 px/tolerância 2 o terreno escuro da
+  noite dava falso positivo), ladrilhos `LazyTerrainMeshData` (existem em camadas, também onde nada aparece) e a malha
+  de navegação (prende a vista em platôs e custa caro). Em interior basta o centro estar sobre um ladrilho (`TerrainMap`).
+- **O que é inspecionável (0.2.1)**: contorno em árvore e arbusto foi considerado exagero. Só entram portas, placas de
+  construção, personagens e objetos cujo `WGODef.interactionType` não é `None` (enfeite) nem `Work` (natureza colhível).
 - **Custo de construção (0.2.1)**: placas de reparo da cidade (`repair_sign_*`, `TownBuildingPlace`) mostram no hover o
   que o jogo oferece erguer ali (`TownBuildingWgoComponent.GetAvailableBuildings`, que respeita o que está liberado) e o
   custo de cada opção no widget nativo `UITooltipNeedsItemWidgetData(needItems, WorkerMultiInventory)`.

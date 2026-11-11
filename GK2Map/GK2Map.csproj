@@ -5,5 +5,7 @@
   <ItemGroup>
     <!-- Nomes mostráveis de objetos: a mesma fonte do GK2Hud, coberta pelo gk2 check. -->
     <Compile Include="../GK2Hud/Names.cs" Link="Shared/Names.cs" />
+    <!-- BurstableBounds (limites dos ladrilhos de terreno) usa float3. -->
+    <Reference Include="$(Refs)/Managed/Unity.Mathematics.dll" Private="false" />
   </ItemGroup>
 </Project>

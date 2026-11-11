@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
 using HarmonyLib;
@@ -104,6 +105,7 @@ namespace GK2Map
             BuildUi();
             savedLight = EnvironmentEngine.Instance != null ? LightField.GetValue(EnvironmentEngine.Instance) as TimeOfDayPresets : null;
             outline.Attach(cam);
+            StartCoroutine(ProbeVoid());
             Show(place, place.Center, place.Outdoor ? 0 : -1);
         }
 
@@ -116,6 +118,8 @@ namespace GK2Map
             ortho = OrthoFor(level);
             anchoring = false;
             pressed = dragging = false;
+            hasLastGround = false;
+            voidPush = Vector2.zero;
             focus = ClampFocus(focus);
             PlaceInspect.Clear();
             ApplyLight();
@@ -295,6 +299,120 @@ namespace GK2Map
         /// de uma região conhecida do mapa, para não mostrar vizinhança ainda não explorada.
         /// </summary>
         private Vector3 ClampFocus(Vector3 p)
+        {
+            return ClampToGround(ClampToBoxes(p));
+        }
+
+        private Vector3 lastGround;
+        private bool hasLastGround;
+
+        /// <summary>
+        /// Interior: o centro da vista fica sobre chão (<see cref="TerrainMap"/>); a sala é menor que a vista, e fora
+        /// dela é só preto. No mundo aberto o limite é o que a tela mostra (<see cref="ProbeVoid"/>).
+        /// </summary>
+        private Vector3 ClampToGround(Vector3 p)
+        {
+            if (place.Outdoor)
+            {
+                if (voidPush.sqrMagnitude > 0f)
+                {
+                    p.x += voidPush.x;
+                    p.z += voidPush.y;
+                    voidPush = Vector2.zero;
+                }
+                return p;
+            }
+            TerrainMap terrain = Plugin.Instance != null ? Plugin.Instance.Terrain : null;
+            if (terrain == null || terrain.Empty) return p;
+            if (terrain.TryGround(p.x, p.z, out _)) { lastGround = p; hasLastGround = true; return p; }
+            return hasLastGround ? lastGround : p;
+        }
+
+        private const float ProbeSeconds = 0.1f;
+        private const float ProbeStep = 0.8f;
+        private const int ProbeInset = 4;
+        private const int ProbePerEdge = 9;
+        private const int FlatRun = 64;
+        private const int FlatTolerance = 1;
+        private Vector2 voidPush;
+        private Texture2D probeRow, probeColumn;
+
+        /// <summary>
+        /// Limite do mundo aberto pela própria imagem. Os dados do jogo não dizem onde há chão desenhado (os ladrilhos
+        /// de terreno existem em camadas, também onde nada aparece), mas fora do cenário a câmera mostra uma cor
+        /// lisa. A cada 0,1 s, no fim do frame, quatro linhas de 1 pixel nas bordas da vista são lidas da tela;
+        /// cada ponto que mostra o vazio empurra o foco para dentro (empurrões opostos se anulam).
+        /// </summary>
+        private IEnumerator ProbeVoid()
+        {
+            var endOfFrame = new WaitForEndOfFrame();
+            float next = 0f;
+            while (!exited)
+            {
+                yield return endOfFrame;
+                if (exited || cam == null) yield break;
+                if (!place.Outdoor || Time.unscaledTime < next) continue;
+                next = Time.unscaledTime + ProbeSeconds;
+                Vector3[] c = new Vector3[4];
+                Viewport.GetWorldCorners(c);
+                int x0 = Mathf.Clamp(Mathf.CeilToInt(c[0].x) + ProbeInset, 0, Screen.width - 1), x1 = Mathf.Clamp(Mathf.FloorToInt(c[2].x) - ProbeInset, 0, Screen.width - 1);
+                int y0 = Mathf.Clamp(Mathf.CeilToInt(c[0].y) + ProbeInset, 0, Screen.height - 1), y1 = Mathf.Clamp(Mathf.FloorToInt(c[2].y) - ProbeInset, 0, Screen.height - 1);
+                int w = x1 - x0 + 1, h = y1 - y0 + 1;
+                if (w < 16 || h < 16) continue;
+                if (probeRow == null || probeRow.width != w)
+                {
+                    if (probeRow != null) Destroy(probeRow);
+                    probeRow = new Texture2D(w, 1, TextureFormat.RGB24, false);
+                }
+                if (probeColumn == null || probeColumn.height != h)
+                {
+                    if (probeColumn != null) Destroy(probeColumn);
+                    probeColumn = new Texture2D(1, h, TextureFormat.RGB24, false);
+                }
+                Vector2 push = Vector2.zero;
+                push += ProbeLine(probeRow, new Rect(x0, y0, w, 1), true, new Vector2(0f, 1f));
+                push += ProbeLine(probeRow, new Rect(x0, y1, w, 1), true, new Vector2(0f, -1f));
+                push += ProbeLine(probeColumn, new Rect(x0, y0, 1, h), false, new Vector2(1f, 0f));
+                push += ProbeLine(probeColumn, new Rect(x1, y0, 1, h), false, new Vector2(-1f, 0f));
+                voidPush = push.sqrMagnitude < 0.01f ? Vector2.zero : push.normalized * ProbeStep * (ortho / savedOrtho);
+            }
+        }
+
+        /// <summary>
+        /// Vazio = trecho liso: todos os pixels a até <see cref="FlatRun"/> de distância têm praticamente a mesma cor.
+        /// A cor em si não serve (preto de dia, azulado à noite, conforme o pós-processamento); o cenário de verdade
+        /// tem textura, pontilhado de luz e névoa, e não fica liso por tantos pixels.
+        /// </summary>
+        private static bool Flat(Color32[] px, int at)
+        {
+            Color32 c = px[at];
+            int from = Mathf.Max(0, at - FlatRun), to = Mathf.Min(px.Length - 1, at + FlatRun);
+            if (to - from < FlatRun) return false;
+            for (int i = from; i <= to; i++)
+            {
+                Color32 p = px[i];
+                if (Mathf.Abs(p.r - c.r) > FlatTolerance || Mathf.Abs(p.g - c.g) > FlatTolerance || Mathf.Abs(p.b - c.b) > FlatTolerance) return false;
+            }
+            return true;
+        }
+
+        /// <summary>Lê uma linha da tela e soma um empurrão (para dentro e para longe do ponto) por amostra vazia.</summary>
+        private static Vector2 ProbeLine(Texture2D line, Rect rect, bool horizontal, Vector2 inward)
+        {
+            line.ReadPixels(rect, 0, 0, false);
+            Color32[] px = line.GetPixels32();
+            Vector2 push = Vector2.zero;
+            for (int i = 0; i < ProbePerEdge; i++)
+            {
+                float t = i / (float)(ProbePerEdge - 1);
+                if (!Flat(px, Mathf.Min(px.Length - 1, Mathf.RoundToInt(t * (px.Length - 1))))) continue;
+                float along = (0.5f - t) * 2f;
+                push += inward + (horizontal ? new Vector2(along, 0f) : new Vector2(0f, along)) * 0.5f;
+            }
+            return push;
+        }
+
+        private Vector3 ClampToBoxes(Vector3 p)
         {
             Vector2 shrink = place.Outdoor ? ViewHalfExtents() : Vector2.zero;
             Vector3 best = p;
@@ -569,6 +687,9 @@ namespace GK2Map
             exited = true;
             if (Current == this) Current = null;
             outline.Detach();
+            if (probeRow != null) Destroy(probeRow);
+            if (probeColumn != null) Destroy(probeColumn);
+            probeRow = probeColumn = null;
             stack.Clear();
             PlaceInspect.Clear();
             foreach (GameObject go in created) if (go != null) Destroy(go);

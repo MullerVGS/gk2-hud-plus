@@ -28,6 +28,20 @@ namespace GK2Map
         /// <summary>Nível de zoom atual do mapa (índice em <see cref="MapZoom.Levels"/>), comum às duas janelas de mapa.</summary>
         internal int ZoomIndex = MapZoom.DefaultLevel;
 
+        private TerrainMap terrain;
+
+        /// <summary>Mapa de onde há chão, montado na primeira vez que a vista precisa e refeito se o mundo for recarregado.</summary>
+        internal TerrainMap Terrain
+        {
+            get
+            {
+                ChunkManager cm = LazyBearTechnology.LazySingleton<ChunkManager>.Instance;
+                if (cm == null) return null;
+                if (terrain == null || !terrain.IsFor(cm) || terrain.Empty) terrain = new TerrainMap(cm);
+                return terrain;
+            }
+        }
+
         private Harmony harmony;
         private Texture arrowsTexture;
         private List<Vector2> arrows;

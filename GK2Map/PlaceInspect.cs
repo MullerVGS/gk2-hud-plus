@@ -192,6 +192,10 @@ namespace GK2Map
                     t.Renderers = BodyRenderers(w.gameObject);
                     t.Character = false;
                     foreach (Renderer r in t.Renderers) if (r.name == "bdy") { t.Character = true; break; }
+                    // Só o que importa: personagens e objetos de uso (bancada, baú, canteiro, estação...). Natureza
+                    // colhível (árvore, arbusto, toco: tipo Work) e enfeite (tipo None) não ganham destaque nem tooltip.
+                    WGODef.InteractionType kind = w.Data.Definition.interactionType;
+                    if (!t.Character && (kind == WGODef.InteractionType.None || kind == WGODef.InteractionType.Work)) continue;
                     if (t.Renderers.Length > 0) Candidates.Add(t);
                 }
             }
