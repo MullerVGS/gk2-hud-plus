@@ -12,7 +12,8 @@ namespace GK2Hud.Quests
     internal static class QuestContent
     {
         private const int MaxEarlier = 4;
-        private const int MaxNotes = 5;
+        private const int MaxNotes = 4;
+        private const int MaxStory = 5;
 
         /// <summary>Um nó da árvore: título, NPC e onde ele está, estado com a data, texto atual e os passos anteriores do nó.</summary>
         public static List<LazyWidgetDataBase> Node(QuestData q, bool hint)
@@ -56,6 +57,66 @@ namespace GK2Hud.Quests
             {
                 list.Add(new UITooltipSeparatorWidgetData());
                 list.Add(Text(QuestL10n.T("about", npc), s.Small, TextAlignmentOptions.Center));
+            }
+            Names.Scrub(list);
+            return list;
+        }
+
+        /// <summary>O básico para o hover: título, NPC e onde ele está, estado com a data.</summary>
+        public static List<LazyWidgetDataBase> Basic(QuestData q)
+        {
+            Styles s = Styles.Read();
+            var list = new List<LazyWidgetDataBase>();
+            if (s == null || q?.Definition == null) return list;
+            string title = QuestModel.Title(q);
+            if (title != null) list.Add(Text(title, s.Header, TextAlignmentOptions.Center));
+            string npcId = q.Definition.wgoNpcId;
+            string npc = QuestModel.NpcName(npcId);
+            if (npc != null)
+            {
+                string where = QuestModel.Where(npcId);
+                list.Add(Text(Links.Wrap(Links.Npc, npcId, npc) + (where != null ? " · " + where : ""), s.Small, TextAlignmentOptions.Center));
+            }
+            list.Add(Text(Status(q, s), s.Small, TextAlignmentOptions.Center));
+            Names.Scrub(list);
+            return list;
+        }
+
+        /// <summary>
+        /// A página do diário de um nó: quem e onde, como o jogador chegou ali (os nós anteriores do fio e os passos
+        /// anteriores do próprio nó, com o dia), o que vale agora e para onde o fio segue.
+        /// </summary>
+        public static List<LazyWidgetDataBase> Page(QuestData q)
+        {
+            List<LazyWidgetDataBase> list = Basic(q);
+            Styles s = Styles.Read();
+            if (s == null || list.Count == 0) return list;
+            string text = QuestModel.Text(q);
+            var story = new List<string>();
+            var seen = new HashSet<string> { text ?? "" };
+            foreach (QuestData o in QuestModel.Path(q, 3).Concat(QuestModel.Chain(q).Where(o => o != q)))
+            {
+                string t = QuestModel.Text(o);
+                if (t != null && seen.Add(t)) story.Add(DayPrefix(o, s) + t);
+            }
+            if (story.Count > 0)
+            {
+                list.Add(new UITooltipSeparatorWidgetData());
+                list.Add(Text(QuestL10n.T("how"), s.SmallSelected, TextAlignmentOptions.Center));
+                if (story.Count > MaxStory) list.Add(Text(QuestL10n.T("more", story.Count - MaxStory), s.Small, TextAlignmentOptions.Center));
+                foreach (string l in story.Skip(System.Math.Max(0, story.Count - MaxStory))) list.Add(Text(l, s.Small, TextAlignmentOptions.Center));
+            }
+            list.Add(new UITooltipSeparatorWidgetData());
+            list.Add(Text(QuestL10n.T(q.status == QuestStatus.Completed ? "outcome" : "now"), s.SmallSelected, TextAlignmentOptions.Center));
+            if (text != null) list.Add(Text(text, s.Description, TextAlignmentOptions.Center));
+            string needs = Needs(q, s);
+            if (needs != null) list.Add(Text(needs, s.Small, TextAlignmentOptions.Center));
+            List<string> next = QuestModel.Next(q).Select(n => new { n, t = QuestModel.Title(n) }).Where(x => x.t != null)
+                .Select(x => Links.Wrap(Links.Quest, x.n.id, x.t)).Distinct().ToList();
+            if (next.Count > 0)
+            {
+                list.Add(new UITooltipSeparatorWidgetData());
+                list.Add(Text(s.SmallSelected.ApplyStyleToString(QuestL10n.T("leads") + ": ") + string.Join(", ", next), s.Small, TextAlignmentOptions.Center));
             }
             Names.Scrub(list);
             return list;

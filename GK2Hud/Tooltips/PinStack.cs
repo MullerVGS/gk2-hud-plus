@@ -23,6 +23,9 @@ namespace GK2Hud.Tooltips
         public List<TMP_Text> LinkTexts = new List<TMP_Text>();   // textos com <link>, coletados no render
         public Sprite Image;                    // imagem da construção (popup de estação), entre o cabeçalho e o resto; retrato de NPC no topo
         public bool Portrait;                   // a imagem é retrato de NPC: no topo da bolha, recortada e com o azul-chave trocado
+        public List<Sprite> Strip;              // retratos anteriores à imagem (poses do caminho até o nó), à esquerda dela e apagados
+        public float MinWidth;                  // largura mínima do conteúdo (página acoplada: não encolhe com texto curto)
+        public bool Docked;                     // página acoplada a uma janela: clique fora, Esc e botão direito não a fecham
         public System.Func<List<LazyWidgetDataBase>> Live;   // conteúdo que muda com o tempo (tooltip de mundo): refeito enquanto fixada
         public string LiveSig;                  // assinatura do último conteúdo vivo renderizado
 
@@ -204,9 +207,53 @@ namespace GK2Hud.Tooltips
             img.type = Image.Type.Simple;
             img.preserveAspect = true;
             img.raycastTarget = false;
-            if (b.Portrait) Quests.QuestModel.FitPortrait(le, img);
+            if (b.Portrait)
+            {
+                Quests.QuestModel.FitPortrait(le, img);
+                if (b.Strip != null && b.Strip.Count > 0) PlaceStrip(b, hrt, le, rt);
+                if (b.MinWidth > le.minWidth) le.minWidth = le.preferredWidth = b.MinWidth;
+            }
             LayoutRebuilder.ForceRebuildLayoutImmediate(b.Rt);
             return rt;
+        }
+
+        /// <summary>
+        /// Tirinha de poses: os retratos anteriores (apagados) e setas à esquerda do retrato atual, tudo centrado no
+        /// mesmo espaço. Cada pose ocupa a largura do desenho dela; as posições são inteiras (pixels de arte).
+        /// </summary>
+        private static void PlaceStrip(Bubble b, RectTransform holder, LayoutElement le, RectTransform current)
+        {
+            const float Gap = 10f;
+            var widths = new List<float>();
+            var images = new List<RectTransform>();
+            float height = le.minHeight;
+            foreach (Sprite s in b.Strip)
+            {
+                var go = new GameObject("Pose", typeof(RectTransform));
+                var rt = (RectTransform)go.transform;
+                rt.SetParent(holder, false);
+                rt.anchorMin = rt.anchorMax = rt.pivot = new Vector2(0.5f, 0.5f);
+                var img = go.AddComponent<Image>();
+                img.sprite = s;
+                var tmp = go.AddComponent<LayoutElement>();
+                tmp.ignoreLayout = true;
+                Quests.QuestModel.FitPortrait(tmp, img);
+                img.color = new Color(1f, 1f, 1f, 0.45f);
+                widths.Add(tmp.minWidth);
+                height = Mathf.Max(height, tmp.minHeight);
+                images.Add(rt);
+            }
+            float currentWidth = le.minWidth, total = currentWidth;
+            foreach (float w in widths) total += w + Gap;
+            float x = -total * 0.5f;
+            for (int i = 0; i < images.Count; i++)
+            {
+                images[i].anchoredPosition += new Vector2(Mathf.Round(x + widths[i] * 0.5f), 0f);
+                x += widths[i] + Gap;
+            }
+            current.anchoredPosition += new Vector2(Mathf.Round(x + currentWidth * 0.5f), 0f);
+            le.minWidth = le.preferredWidth = Mathf.Ceil(total * 0.5f) * 2f;
+            le.minHeight = le.preferredHeight = height;
         }
 
         /// <summary>O VLG centraliza com meia unidade quando a largura é fracionária: alinha o canto do sprite à grade de 2 px.</summary>
@@ -302,6 +349,21 @@ namespace GK2Hud.Tooltips
             CloseTransient();
             for (int k = Pinned.Count - 1; k >= i; k--)
             {
+                Destroy(Pinned[k]);
+                Pinned.RemoveAt(k);
+            }
+        }
+
+        /// <summary>Há algo além da página acoplada (bolha fixada pelo jogador ou transitória)?</summary>
+        public bool AnyFloating => Transient != null || Pinned.Exists(b => !b.Docked);
+
+        /// <summary>Fecha tudo menos a página acoplada (ela é fechada por quem a abriu).</summary>
+        public void CloseFloating()
+        {
+            CloseTransient();
+            for (int k = Pinned.Count - 1; k >= 0; k--)
+            {
+                if (Pinned[k].Docked) continue;
                 Destroy(Pinned[k]);
                 Pinned.RemoveAt(k);
             }

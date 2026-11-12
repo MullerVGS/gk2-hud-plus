@@ -131,6 +131,106 @@ namespace GK2Hud.Quests
                 .OrderByDescending(x => x.q.Definition.TreePos.y).ThenByDescending(x => x.i).Select(x => x.q).ToList();
         }
 
+        // ---------------- fio ----------------
+
+        /// <summary>A quest que representa um nó vivido: a em andamento, senão a última concluída da posição.</summary>
+        private static QuestData NodeAt(Vector2Int pos)
+        {
+            QuestCollectionData c = Collection;
+            if (c == null) return null;
+            QuestData best = null;
+            foreach (QuestData o in c.quests)
+            {
+                if (!Lived(o) || o.Definition.TreePos != pos) continue;
+                if (o.status == QuestStatus.InProgress) return o;
+                best = o;
+            }
+            return best;
+        }
+
+        private static IEnumerable<Vector2Int> Neighbors(Vector2Int pos, bool up)
+        {
+            QuestCollectionData c = Collection;
+            if (c == null) yield break;
+            var seen = new HashSet<Vector2Int> { pos };
+            foreach (QuestData o in c.quests)
+            {
+                if (o?.Definition == null || !o.Definition.hasPosInBalance || o.Definition.TreePos != pos) continue;
+                foreach (QuestDef d in up ? o.Definition.parentDefinitionList : o.Definition.childDefinitionList)
+                    if (d != null && d.hasPosInBalance && seen.Add(d.TreePos)) yield return d.TreePos;
+            }
+        }
+
+        /// <summary>O fio de um nó: ele, tudo que veio antes (pais dos pais) e tudo que sai dele (filhos dos filhos).</summary>
+        public static HashSet<Vector2Int> Thread(QuestData q)
+        {
+            var set = new HashSet<Vector2Int>();
+            if (q?.Definition == null) return set;
+            Vector2Int start = q.Definition.TreePos;
+            set.Add(start);
+            foreach (bool up in new[] { true, false })
+            {
+                var stack = new Stack<Vector2Int>();
+                stack.Push(start);
+                while (stack.Count > 0)
+                    foreach (Vector2Int n in Neighbors(stack.Pop(), up))
+                        if (set.Add(n)) stack.Push(n);
+            }
+            return set;
+        }
+
+        /// <summary>Os nós vividos que levaram a este, do mais antigo ao mais recente (um pai por passo), sem o próprio.</summary>
+        public static List<QuestData> Path(QuestData q, int max)
+        {
+            var path = new List<QuestData>();
+            if (q?.Definition == null) return path;
+            var seen = new HashSet<Vector2Int> { q.Definition.TreePos };
+            Vector2Int pos = q.Definition.TreePos;
+            while (path.Count < max)
+            {
+                QuestData parent = null;
+                foreach (Vector2Int p in Neighbors(pos, true))
+                {
+                    if (seen.Contains(p)) continue;
+                    QuestData n = NodeAt(p);
+                    if (n != null && n.status == QuestStatus.Completed) { parent = n; break; }
+                }
+                if (parent == null) break;
+                seen.Add(parent.Definition.TreePos);
+                path.Insert(0, parent);
+                pos = parent.Definition.TreePos;
+            }
+            return path;
+        }
+
+        /// <summary>Os nós que saem deste e que o jogador já vê na árvore.</summary>
+        public static List<QuestData> Next(QuestData q)
+        {
+            var list = new List<QuestData>();
+            if (q?.Definition == null) return list;
+            foreach (Vector2Int p in Neighbors(q.Definition.TreePos, false))
+            {
+                QuestData n = NodeAt(p);
+                if (n != null && !n.isHidden && !n.isUnknown) list.Add(n);
+            }
+            return list;
+        }
+
+        /// <summary>A pose do nó: o ícone da quest na árvore (cada passo da história tem a sua).</summary>
+        public static Sprite Pose(QuestData q)
+        {
+            string id = q?.Definition?.iconId;
+            if (string.IsNullOrEmpty(id)) return null;
+            EasySpritesCollection sprites = LazySingletonSO<EasySpritesCollection>.Instance;
+            if (!sprites.HasSprite(id)) return null;
+            if (!portraits.TryGetValue(id, out Sprite s) || s == null)
+            {
+                s = sprites.GetSprite(id);
+                portraits[id] = s;
+            }
+            return s;
+        }
+
         // ---------------- quando ----------------
 
         public struct Moment

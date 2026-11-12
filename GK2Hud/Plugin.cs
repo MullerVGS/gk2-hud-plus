@@ -21,7 +21,7 @@ namespace GK2Hud
     {
         public const string Guid = "arthur.gk2.hud";
         public const string Name = "GK2 Hud";
-        public const string Version = "0.8.0";
+        public const string Version = "0.9.0";
 
         internal static BepInEx.Logging.ManualLogSource Log;
 
@@ -103,8 +103,10 @@ namespace GK2Hud
                 if (tabOn.Value) CalendarTab = new CalendarTab(harmony);
             }
             ConfigEntry<bool> questsOn = Config.Bind("Quests", "Enabled", true,
-                "Árvore de quests: nome do NPC sob cada nó, tooltip com retrato, lugar atual do NPC, data e passos anteriores; o botão de fixar abre a ficha do NPC.");
-            if (questsOn.Value) Quests = new QuestTreeFeature(harmony);
+                "Árvore de quests: mouse parado num nó mostra o básico; o clique abre a página do diário (a janela cresce) e acende o fio do nó; o botão de fixar abre a ficha do NPC.");
+            ConfigEntry<float> questsDelay = Config.Bind("Quests", "HoverDelay", 0.8f,
+                new ConfigDescription("Segundos com o mouse parado num nó da árvore até o tooltip básico aparecer.", new AcceptableValueRange<float>(0f, 5f)));
+            if (questsOn.Value) Quests = new QuestTreeFeature(harmony, questsDelay);
             leakSweeper.Sweep();   // vazamentos da 0.1.0 (o hotfix entra por hot-reload, com o jogo aberto)
             Log.LogInfo($"{Name} {Version} carregado");
         }
@@ -119,6 +121,7 @@ namespace GK2Hud
             Journal?.Update();
             Wheel?.Update();
             CalendarTab?.Update();
+            Quests?.Update();
         }
 
         private void OnDestroy()

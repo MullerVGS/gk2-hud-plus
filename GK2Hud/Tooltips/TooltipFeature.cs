@@ -168,7 +168,6 @@ namespace GK2Hud.Tooltips
             f.pending = null;
             // O Draw da célula ainda sob o mouse chama ShowItemCell de novo: não reabre o nativo por cima da bolha fixada.
             if (f.suppressTarget != null && target == f.suppressTarget) return false;
-            Quests.QuestTreeFeature.Current?.OnNativeShow(target);
             // Só enriquece se a entidade é deste tooltip (mesmo alvo, mesmo frame).
             if (e != null && e.Target == target && e.Frame == Time.frameCount)
             {
@@ -185,7 +184,7 @@ namespace GK2Hud.Tooltips
             TooltipFeature f = Current;
             if (f == null || key is null) return true;   // GameKey (Enumeration) tem == que sempre dá false com null
             int frame = Time.frameCount;
-            if (f.escFrame != frame && !(f.Stack.Any && Input.GetKeyDown(KeyCode.Escape))) return true;
+            if (f.escFrame != frame && !(f.Stack.AnyFloating && Input.GetKeyDown(KeyCode.Escape))) return true;
             if (!f.IsEscKey(key)) return true;
             __result = false;
             return false;
@@ -225,10 +224,10 @@ namespace GK2Hud.Tooltips
                 if (Stack.Any) Stack.CloseAll();
                 return;
             }
-            if (esc && Stack.Any)
+            if (esc && Stack.AnyFloating)
             {
                 escFrame = Time.frameCount;
-                Stack.CloseAll();
+                Stack.CloseFloating();
                 return;
             }
             Vector2 mouse = VirtualMouse ?? (Vector2)Input.mousePosition;
@@ -238,11 +237,11 @@ namespace GK2Hud.Tooltips
             else if (right)
             {
                 Bubble b = PinnedAt(mouse);
-                if (b != null) Stack.CloseFrom(b);
+                if (b != null && !b.Docked) Stack.CloseFrom(b);
             }
-            else if (left && Stack.Any && PinnedAt(mouse) == null && !(Stack.Transient?.Contains(mouse) ?? false))
+            else if (left && Stack.AnyFloating && PinnedAt(mouse) == null && !(Stack.Transient?.Contains(mouse) ?? false))
             {
-                Stack.CloseAll();
+                Stack.CloseFloating();
             }
             UpdateHover(mouse);
             Stack.RefreshLive(Styles.Read(), World.WorldContent.Signature);
@@ -279,7 +278,7 @@ namespace GK2Hud.Tooltips
                 return;
             }
             Bubble b = PinnedAt(mouse);
-            if (b != null) Stack.CloseFrom(b);
+            if (b != null && !b.Docked) Stack.CloseFrom(b);
         }
 
         private void PinTransient()
@@ -307,7 +306,7 @@ namespace GK2Hud.Tooltips
             }
             else
             {
-                Stack.CloseAll();
+                Stack.CloseFloating();
             }
             Bubble b = Stack.Create(parent == null ? 0 : parent.Depth + 1);
             if (b == null) return;

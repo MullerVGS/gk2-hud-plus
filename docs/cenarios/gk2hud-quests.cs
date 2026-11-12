@@ -6,11 +6,12 @@ using LazyBearTechnology;
 using UnityEngine;
 using UnityEngine.UI;
 
-// GK2Hud: abre a árvore de quests focada em QUEST, passa o "mouse" no nó (tooltip com retrato) e, com FIXAR, aperta o botão de fixar (abre a ficha do NPC ao lado).
+// GK2Hud: abre a árvore de quests, rola até QUEST e, conforme MODO, deixa o "mouse" parado no nó (tooltip básico), aperta o botão de fixar (ficha do NPC) ou clica (página do diário, janela crescida, fio aceso).
 public static class Snippet
 {
     const string QUEST = "81_guards_elections_ask";
-    const bool FIXAR = true;
+    const string MODO = "abrir";   // hover (tooltip básico) | fixar (botão do meio: ficha do NPC) | abrir (clique: página do diário)
+    const float ESPERA = 0.6f;     // segundos depois do clique (0,1 pega a animação no meio)
 
     public static object Run() { return Go(); }
 
@@ -46,11 +47,22 @@ public static class Snippet
         if (node == null) { yield return "nó " + QUEST + " não está na árvore visível"; yield break; }
         AccessTools.Property(tips.GetType(), "VirtualMouse").SetValue(tips, (Vector2?)(Vector2)node.transform.position);
         node.button.ForceOnEnter();
-        for (int i = 0; i < 3; i++) yield return null;
-        if (FIXAR)
+        if (MODO == "hover" || MODO == "fixar")
+        {
+            float t1 = Time.realtimeSinceStartup;
+            while (Time.realtimeSinceStartup - t1 < 1.2f) yield return null;   // o tooltip básico espera o mouse parar ([Quests] HoverDelay)
+        }
+        if (MODO == "fixar")
         {
             AccessTools.Field(tips.GetType(), "TestPin").SetValue(tips, true);
             for (int i = 0; i < 4; i++) yield return null;
+        }
+        if (MODO == "abrir")
+        {
+            node.button.ForceOnClick();
+            node.button.ForceOnExit();
+            float t2 = Time.realtimeSinceStartup;
+            while (Time.realtimeSinceStartup - t2 < ESPERA) yield return null;   // a janela cresce em 0,25 s
         }
         yield return AccessTools.Method(quests.GetType(), "Describe").Invoke(quests, null) + "\n" + AccessTools.Method(tips.GetType(), "Describe").Invoke(tips, null);
     }

@@ -24,6 +24,10 @@ namespace GK2Hud.Quests
             ["wants"] = "Waiting on me",
             ["notes"] = "What I learned",
             ["day_short"] = "Day {0}",
+            ["how"] = "How I got here",
+            ["now"] = "Now",
+            ["outcome"] = "Outcome",
+            ["leads"] = "Leads to",
         };
 
         private static readonly Dictionary<string, string> PtBr = new Dictionary<string, string>
@@ -44,6 +48,10 @@ namespace GK2Hud.Quests
             ["wants"] = "Esperando por mim",
             ["notes"] = "O que eu soube",
             ["day_short"] = "Dia {0}",
+            ["how"] = "Como cheguei aqui",
+            ["now"] = "Agora",
+            ["outcome"] = "Resultado",
+            ["leads"] = "Leva a",
         };
 
         public static string T(string key)
