@@ -53,7 +53,7 @@ namespace GK2Hud.Journal
     [Serializable]
     internal sealed class JournalFile
     {
-        public int version = 1;   // 2: tecnologias reveladas (JournalKinds.Reveal)
+        public int version = 1;   // 2: tecnologias reveladas (JournalKinds.Reveal); 3: início de quest (JournalKinds.QStart)
         public string slot;
         public int startDay;
         public float startTod;
@@ -66,7 +66,8 @@ namespace GK2Hud.Journal
         public const string Quest = "quest", Tech = "tech", Building = "building", Town = "town", Craft = "craft", Alchemy = "alchemy",
             Perk = "perk", DayIcon = "dayicon", Tutorial = "tutorial", Sermon = "sermon",
             Reveal = "reveal",   // tecnologia que nasce escondida (TechDef.hiddenAtStart) e apareceu na Tech Tree
-            Phrase = "phrase";   // resposta de diálogo já escolhida (KnowledgeSystem.blackListPhrases): só para datar revelações, nunca listada
+            Phrase = "phrase",   // resposta de diálogo já escolhida (KnowledgeSystem.blackListPhrases): só para datar revelações, nunca listada
+            QStart = "qstart";   // quest da árvore que começou (em andamento ou já concluída): data de início na árvore de quests, nunca listada
 
         /// <summary>Ordem de exibição dentro do dia.</summary>
         public static readonly string[] Order = { Sermon, Quest, Reveal, Tech, Building, Town, Craft, Alchemy, Perk, DayIcon, Tutorial };
@@ -167,6 +168,13 @@ namespace GK2Hud.Journal
                 file.version = 2;
                 Dirty();
             }
+            if (file.version < 3)
+            {
+                // Diário de antes do início de quest: o que já começou entra sem data (não "começou agora").
+                foreach (string key in current) if (KindOf(key) == JournalKinds.QStart && !file.baseline.Contains(key)) file.baseline.Add(key);
+                file.version = 3;
+                Dirty();
+            }
             int before = file.entries.Count;
             // Linha do tempo abandonada: o que foi anotado depois do ponto carregado não aconteceu neste save.
             file.entries.RemoveAll(e => e.When > now + 0.0005);
@@ -202,7 +210,7 @@ namespace GK2Hud.Journal
         private void Restart(string slot, HashSet<string> current, string why)
         {
             EnvironmentData env = MainGame.Instance.GameSave.environmentData;
-            file = new JournalFile { version = 2, slot = slot, startDay = env.Day, startTod = env.TimeOfDay, baseline = current.OrderBy(x => x).ToList() };
+            file = new JournalFile { version = 3, slot = slot, startDay = env.Day, startTod = env.TimeOfDay, baseline = current.OrderBy(x => x).ToList() };
             seen.Clear();
             foreach (string key in current) seen.Add(key);
             counts.Clear();
@@ -227,7 +235,8 @@ namespace GK2Hud.Journal
             changed |= Count(JournalKinds.Tutorial, ks.unlockedTutorials?.Count ?? 0);
             changed |= Count(JournalKinds.Phrase, ks.blackListPhrases?.Count ?? 0);
             changed |= Count(JournalKinds.Perk, gameSave.perkSystemData?.activePerks?.Count ?? 0);
-            changed |= Count(JournalKinds.Quest, CompletedQuestCount());
+            changed |= Count(JournalKinds.Quest, QuestCount(QuestStatus.Completed));
+            changed |= Count(JournalKinds.QStart, QuestCount(QuestStatus.InProgress));
             if (!changed) return;
             if (AddNew(Snapshot(), approx: false) > 0) version++;
         }
@@ -253,12 +262,12 @@ namespace GK2Hud.Journal
             return true;
         }
 
-        private int CompletedQuestCount()
+        private int QuestCount(QuestStatus status)
         {
             List<QuestData> qs = gameSave.questSystemData?.questCollection?.quests;
             if (qs == null) return 0;
             int n = 0;
-            foreach (QuestData q in qs) if (q != null && q.status == QuestStatus.Completed) n++;
+            foreach (QuestData q in qs) if (q != null && q.status == status) n++;
             return n;
         }
 
@@ -302,8 +311,11 @@ namespace GK2Hud.Journal
             List<QuestData> qs = gameSave.questSystemData?.questCollection?.quests;
             if (qs != null)
                 foreach (QuestData q in qs)
-                    if (q != null && q.status == QuestStatus.Completed && q.Definition != null && q.Definition.hasPosInBalance)
-                        set.Add(JournalKinds.Quest + ":" + q.id);
+                {
+                    if (q == null || q.Definition == null || !q.Definition.hasPosInBalance) continue;
+                    if (q.status == QuestStatus.Completed) set.Add(JournalKinds.Quest + ":" + q.id);
+                    if (q.status == QuestStatus.Completed || q.status == QuestStatus.InProgress) set.Add(JournalKinds.QStart + ":" + q.id);
+                }
             return set;
         }
 

@@ -6,7 +6,7 @@ using UnityEngine;
 
 namespace GK2Hud.Tooltips
 {
-    internal enum EntityKind { Item, Craft, Perk, Station }
+    internal enum EntityKind { Item, Craft, Perk, Station, Npc, Quest }
 
     /// <summary>A entidade por trás de um tooltip: gravada pelos prefixes dos Show* e consumida no funil.</summary>
     internal sealed class Entity
@@ -47,6 +47,8 @@ namespace GK2Hud.Tooltips
                 case Links.Craft: return id.StartsWith("mix") ? null : ForCraft(gb.GetDataOrNull<CraftDef>(id));
                 case Links.Perk: return ForPerk(gb.GetDataOrNull<PerkDef>(id));
                 case Links.Station: return ForStation(id);
+                case Links.Npc: return Quests.QuestModel.NpcName(id) == null ? null : new Entity { Kind = EntityKind.Npc, Id = id };
+                case Links.Quest: return Quests.QuestModel.Lived(Quests.QuestModel.Get(id)) ? new Entity { Kind = EntityKind.Quest, Id = id } : null;
             }
             return null;
         }

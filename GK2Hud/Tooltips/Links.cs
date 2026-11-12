@@ -17,6 +17,8 @@ namespace GK2Hud.Tooltips
         public const string Craft = "craft";
         public const string Perk = "perk";
         public const string Station = "wgo";
+        public const string Npc = "npc";
+        public const string Quest = "quest";
 
         private static readonly Regex LinkRx = new Regex("<link=\"([^\"]+)\">(.*?)</link>", RegexOptions.Compiled);
 

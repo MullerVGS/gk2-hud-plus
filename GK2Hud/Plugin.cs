@@ -3,6 +3,7 @@ using BepInEx.Configuration;
 using GK2Hud.Calendar;
 using GK2Hud.Hud;
 using GK2Hud.Journal;
+using GK2Hud.Quests;
 using GK2Hud.Tooltips;
 using GK2Hud.World;
 using HarmonyLib;
@@ -20,7 +21,7 @@ namespace GK2Hud
     {
         public const string Guid = "arthur.gk2.hud";
         public const string Name = "GK2 Hud";
-        public const string Version = "0.7.7";
+        public const string Version = "0.8.0";
 
         internal static BepInEx.Logging.ManualLogSource Log;
 
@@ -40,6 +41,8 @@ namespace GK2Hud
         internal CalendarTab CalendarTab { get; private set; }
 
         internal JournalTracker Journal { get; private set; }
+
+        internal QuestTreeFeature Quests { get; private set; }
 
         private readonly LeakSweeper leakSweeper = new LeakSweeper();
 
@@ -99,6 +102,9 @@ namespace GK2Hud
                 Wheel = new WheelFeature(wheelClock, clockStep, wheelDelay, fade, wheelPopup);
                 if (tabOn.Value) CalendarTab = new CalendarTab(harmony);
             }
+            ConfigEntry<bool> questsOn = Config.Bind("Quests", "Enabled", true,
+                "Árvore de quests: nome do NPC sob cada nó, tooltip com retrato, lugar atual do NPC, data e passos anteriores; o botão de fixar abre a ficha do NPC.");
+            if (questsOn.Value) Quests = new QuestTreeFeature(harmony);
             leakSweeper.Sweep();   // vazamentos da 0.1.0 (o hotfix entra por hot-reload, com o jogo aberto)
             Log.LogInfo($"{Name} {Version} carregado");
         }
@@ -117,6 +123,8 @@ namespace GK2Hud
 
         private void OnDestroy()
         {
+            Quests?.Dispose();
+            Quests = null;
             WorldHover?.Dispose();
             WorldHover = null;
             Tooltips?.Dispose();

@@ -21,7 +21,8 @@ namespace GK2Hud.Tooltips
         public int RootCorner = -1;             // raiz: ponta ativa do nativo
         public int Side = 1;                    // +1 abre à direita da mãe, -1 à esquerda
         public List<TMP_Text> LinkTexts = new List<TMP_Text>();   // textos com <link>, coletados no render
-        public Sprite Image;                    // imagem da construção (popup de estação), entre o cabeçalho e o resto
+        public Sprite Image;                    // imagem da construção (popup de estação), entre o cabeçalho e o resto; retrato de NPC no topo
+        public bool Portrait;                   // a imagem é retrato de NPC: no topo da bolha, recortada e com o azul-chave trocado
         public System.Func<List<LazyWidgetDataBase>> Live;   // conteúdo que muda com o tempo (tooltip de mundo): refeito enquanto fixada
         public string LiveSig;                  // assinatura do último conteúdo vivo renderizado
 
@@ -188,7 +189,7 @@ namespace GK2Hud.Tooltips
             var holder = new GameObject(ImageName, typeof(RectTransform));
             var hrt = (RectTransform)holder.transform;
             hrt.SetParent(b.Rt, false);
-            hrt.SetSiblingIndex(Mathf.Min(ImageSiblingIndex, b.Rt.childCount - 1));
+            hrt.SetSiblingIndex(b.Portrait ? 0 : Mathf.Min(ImageSiblingIndex, b.Rt.childCount - 1));
             Vector2 size = b.Image.rect.size * (50f / b.Image.pixelsPerUnit);   // canvas UI tem referencePixelsPerUnit 50: 1 unidade por px de arte
             var le = holder.AddComponent<LayoutElement>();
             le.minHeight = le.preferredHeight = size.y;
@@ -203,6 +204,7 @@ namespace GK2Hud.Tooltips
             img.type = Image.Type.Simple;
             img.preserveAspect = true;
             img.raycastTarget = false;
+            if (b.Portrait) Quests.QuestModel.FitPortrait(le, img);
             LayoutRebuilder.ForceRebuildLayoutImmediate(b.Rt);
             return rt;
         }

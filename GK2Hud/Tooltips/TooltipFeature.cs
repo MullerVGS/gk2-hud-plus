@@ -168,6 +168,7 @@ namespace GK2Hud.Tooltips
             f.pending = null;
             // O Draw da célula ainda sob o mouse chama ShowItemCell de novo: não reabre o nativo por cima da bolha fixada.
             if (f.suppressTarget != null && target == f.suppressTarget) return false;
+            Quests.QuestTreeFeature.Current?.OnNativeShow(target);
             // Só enriquece se a entidade é deste tooltip (mesmo alvo, mesmo frame).
             if (e != null && e.Target == target && e.Frame == Time.frameCount)
             {
@@ -315,6 +316,8 @@ namespace GK2Hud.Tooltips
             b.Data = new List<LazyWidgetDataBase>(lastData);
             b.Live = World.WorldHoverFeature.Current?.LiveFor(lastTarget) ?? Calendar.WheelFeature.Current?.LiveFor(lastTarget);
             if (b.Live != null) b.LiveSig = World.WorldContent.Signature(lastData);
+            // Nó da árvore de quests: a bolha leva o retrato e, depois de fixada, abre ao lado a ficha do NPC.
+            string childLink = parent == null ? Quests.QuestTreeFeature.Current?.OnPinning(b, lastTarget) : null;
             if (parent != null)
             {
                 b.SourceRect = ScreenRectOf(lastTarget);
@@ -331,6 +334,17 @@ namespace GK2Hud.Tooltips
             UITooltip.HideImmediately();
             suppressTarget = lastTarget;
             ResetHover();
+            if (childLink != null) PinChild(b, childLink);
+        }
+
+        /// <summary>Abre e já fixa a bolha de um termo da bolha mãe (o mesmo caminho do hover no termo + fixar).</summary>
+        private void PinChild(Bubble parent, string link)
+        {
+            Rect rect = default;
+            foreach (KeyValuePair<string, Rect> l in Links.AllLinks(parent.Rt))
+                if (l.Key == link) { rect = l.Value; break; }
+            OpenTransient(parent, link, rect);
+            if (Stack.Transient != null && Stack.Transient.SourceLink == link) PinTransient();
         }
 
         private void UpdateHover(Vector2 mouse)
@@ -385,6 +399,12 @@ namespace GK2Hud.Tooltips
             b.SourceLink = link;
             b.SourceRect = termRect;
             if (e.Kind == EntityKind.Station) b.Image = Content.StationImage(e.Id);
+            else if (e.Kind == EntityKind.Npc && parent.Image == null)
+            {
+                // A ficha aberta a partir do tooltip do nó não repete o retrato que a mãe já mostra.
+                b.Image = Quests.QuestModel.Portrait(e.Id);
+                b.Portrait = true;
+            }
             Stack.Transient = b;
             Stack.Render(b, Styles.Read());
             transientAway = 0f;

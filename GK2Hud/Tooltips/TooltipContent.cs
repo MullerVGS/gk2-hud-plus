@@ -163,6 +163,10 @@ namespace GK2Hud.Tooltips
             GameBalance gb = GameBalance.Me;
             switch (e.Kind)
             {
+                case EntityKind.Npc:
+                    return Quests.QuestContent.Npc(e.Id);
+                case EntityKind.Quest:
+                    return Quests.QuestContent.Node(Quests.QuestModel.Get(e.Id), hint: false);
                 case EntityKind.Item:
                     Native.AddItemWidgets(list, e.ItemDef);
                     ReplaceCraftedAt(list, s, ItemStations(e.Id));

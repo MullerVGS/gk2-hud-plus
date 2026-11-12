@@ -43,6 +43,7 @@ namespace GK2Hud.Journal
                     return string.IsNullOrEmpty(n) || n == id || Names.IsDevId(n) ? CalendarL10n.T("jk_sermon") : n;
                 }
                 case JournalKinds.Phrase:
+                case JournalKinds.QStart:
                     return null;
                 case JournalKinds.DayIcon:
                 {

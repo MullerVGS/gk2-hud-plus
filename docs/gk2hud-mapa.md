@@ -335,3 +335,33 @@ nos tooltips de item/receita/perk/estação; o que já existia antes do diário 
 - Cenários: `gk2hud-diario.cs` (libera tech + receitas/construções, perk, conclui quest da árvore; `virar` passa o dia —
   muda o save, volte com `gk2 save reset`), `gk2hud-diario-hover.cs` (escolhe dia e passa o mouse numa linha),
   `recarregar.cs` (menu → Continue, descarta o não salvo), `gk2hud-sermao.cs` (simula um sermão: novo `currentSermon`).
+
+## Árvore de quests (pasta `Quests/`, 0.8.0, 12/11)
+
+Pedido: entender a aba Quests (só rolava para cima e para baixo; sem nome de NPC, sem data, sem o que cada
+conversa contou). O desenho nativo (nós com coroa, linhas) fica como está.
+
+- **Um nó é uma sequência**: várias quests têm a mesma `QuestDef.TreePos`; quando a seguinte começa, o jogo esconde a
+  concluída (`QuestSystemData.StartQuest`). O histórico do nó são as quests `Completed`/`InProgress` daquela posição
+  (`QuestModel.Chain`), cada uma com o texto que o jogo escreve ao concluir (`quest_closed_<id>_d`; 115 de 241 só têm
+  `quest_open_<id>_d`, que então serve de marco). É a "informação importante da conversa" sem histórico de diálogo.
+- **Rótulo no nó**: nome do NPC (`QuestDef.wgoNpcId` → `Names.Text`) numa plaquinha `craft_window-header_1-value_cell`
+  (9-slice) com `tiny_font-item_quantity`, filho do `QuestTreeElementWidget` (widget do pool do jogo: destruir no
+  Dispose). NPC sem texto no jogo (bandidos, fada, burro, guarda) fica sem plaquinha.
+- **Hover**: postfix em `QuestTreeElementWidget.OnSelect/OnDeselect` abre o `UITooltip` nativo no nó: retrato, título,
+  NPC · onde está, estado + data do diário, texto, itens que a conversa cobra, passos anteriores do nó.
+- **Retrato**: `WGODef.Portrait` é 96×96 com o desenho no meio (recorte do atlas em `textureRect`/`textureRectOffset`)
+  e contorno em azul-chave; o material do `UINpcWidget.portrait` (cor `_Color` = `toReplace`) troca o azul. O tooltip
+  nativo não tem widget de imagem: o retrato é um filho próprio do `UITooltip`, ligado só quando o alvo é um nó
+  (`OnNativeShow` no funil) e reposto no topo depois do Show (o Show nativo põe os widgets dele na frente).
+- **Botão de fixar** (meio): fixa o tooltip do nó e abre fixada ao lado a ficha do NPC (`npc:<id>`): onde está,
+  reputação (como o `UINpcWidget`), o que ele espera (quests em andamento, com link `quest:<id>`) e o que as quests
+  dele contaram, com o dia.
+- **Onde o NPC está**: posição do `WgoData` do NPC (`WorldData.gameSceneDataList`), não `WgoData.WorldZoneData` (fica
+  velho: bandido em "town", freira em "tavern"). Interior = menor `WorldZone` nomeada (`wz_<id>`) e visitada que contém
+  o ponto; céu aberto = região do mapa (`UIMapZone` em `knownMapZones`, retângulo `Clouds`) que contém o ponto convertido
+  como o `MapPageWidget` faz. Fora disso: "paradeiro desconhecido" (sem spoiler de lugar não visitado).
+- **Datas**: o save não guarda quando uma quest começou ou acabou. O diário já anotava as concluídas; a 0.8.0 anota o
+  início (`qstart`, nunca listado; diário versão 3 põe o que já tinha começado como "antes do diário").
+- Cenário: `gk2hud-quests.cs` (QUEST, FIXAR). Referência: `docs/referencia/questtree-nativa.png`.
+- Não feito: visão afastada/zoom da árvore (o `LazyScrollRect` só instancia nós visíveis) e data desenhada no nó.
