@@ -339,8 +339,10 @@ namespace GK2Hud.Quests
             ((RectTransform)page.transform).GetWorldCorners(c);
             Rect r = pageBubble.ScreenRect();
             float m = GK2Hud.Tooltips.Bubble.FrameMargin;
-            float x = Mathf.Round((c[2].x - 4f - (r.xMax - m)) / 2f) * 2f, y = Mathf.Round((c[2].y - 4f - (r.yMax - m)) / 2f) * 2f;
-            if (x != 0f || y != 0f) pageBubble.Rt.position += new Vector3(x, y, 0f);
+            // Canto superior direito da moldura visível na grade de 2 px de tela (1 px de arte), em posição absoluta.
+            float right = Mathf.Round((c[2].x - 4f) / 2f) * 2f, top = Mathf.Round((c[2].y - 4f) / 2f) * 2f;
+            float x = right - (r.xMax - m), y = top - (r.yMax - m);
+            if (Mathf.Abs(x) > 0.01f || Mathf.Abs(y) > 0.01f) pageBubble.Rt.position += new Vector3(x, y, 0f);
             CanvasGroup g = Native.GroupOf(pageBubble.Tip);
             if (g != null) g.alpha = extraTarget > 0f ? Mathf.Clamp01((extra / extraTarget - 0.5f) * 2f) : 0f;
         }
