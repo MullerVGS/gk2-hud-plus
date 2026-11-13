@@ -282,7 +282,10 @@ alinhamento com o HUD existente; não cobre informação nativa; legível com fu
 - `SteamApps.GetAppInstallDir` aponta para a pasta do blue mesmo no green; hoje só é usado em log e na importação de
   save da demo.
 - Green não pode usar o app id do jogo (ver Blue-green); conferir com `RunningAppID` no registro do Steam.
-- Depois de update do jogo: `gk2 green stop && gk2 green-sync && gk2 decomp`, depois recompilar tudo.
+- Depois de update do jogo: `gk2 green stop && gk2 green-sync && gk2 decomp && gk2 gatilhos`, recompilar tudo e
+  `gk2 check GK2Hud`. Compilar contra o jogo novo não prova que o blue funciona: copie para o green os DLLs de
+  `Mods/Code` do blue e rode os cenários de cada mod (compatibilidade binária, reflexão por string). A
+  `NullReferenceException` em `LazyTerrainMeshPool.InitAsync` ao carregar o save é do jogo (v1.012.7, aparece sem mods).
 
 ## Mecânicas já mapeadas
 

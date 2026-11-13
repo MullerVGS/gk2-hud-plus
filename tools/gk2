@@ -12,7 +12,8 @@ BLUE_DATA="$WINHOME/AppData/LocalLow/Lazy Bear Games/Graveyard Keeper 2"
 GREEN_DATA="$WINHOME/AppData/LocalLow/Lazy Bear Games/GK2 Green Instance"
 # Porta da DevBridge: a do .cfg do green (fonte única). Fora da faixa efêmera do Linux: no WSL mirrored ela fica
 # reservada no Windows e a ponte não consegue abrir a porta (ip_local_port_range muda a cada boot do WSL).
-PORT=${GK2_BRIDGE_PORT:-$(sed -n 's/^Port *= *\([0-9]*\).*/\1/p' "$GREEN/BepInEx/config/arthur.gk2.devbridge.cfg" 2>/dev/null | head -1)}
+PORT=${GK2_BRIDGE_PORT:-$(sed -n 's/^Port *= *\([0-9]*\).*/\1/p' "$GREEN/BepInEx/config/arthur.gk2.devbridge.cfg" 2>/dev/null | head -1 || true)}
+PORT=${PORT:-27777}  # padrão do Bridge.cs; o cfg só existe depois da primeira carga da DevBridge
 PORT=${PORT:-27777}
 URL="http://127.0.0.1:$PORT"
 SHOTS="$HERE/.shots"
@@ -105,7 +106,13 @@ case "$cmd" in
   green-sync)
     # Re-sincroniza a cópia green com o jogo (após atualização do Steam), preservando o BepInEx de desenvolvimento.
     ps1 green.ps1 status | grep -q parado || die "pare o green antes (gk2 green stop)"
-    powershell.exe -NoProfile -Command "robocopy '$(winpath "$BLUE")' '$GREEN_WIN' /MIR /NFL /NDL /NJH /NP /R:1 /W:1 /XD '$GREEN_WIN\\BepInEx\\plugins' '$GREEN_WIN\\BepInEx\\config' '$GREEN_WIN\\BepInEx\\dev' '$GREEN_WIN\\BepInEx\\cache' /XF steam_appid.txt; exit 0" | tr -d '\r' | tail -3
+    # O BepInEx de desenvolvimento do green fica fora do espelho. O robocopy compara /XD com o caminho da origem
+    # (e protege do /PURGE o que casar no destino): passar os dois lados, senão plugins e config do blue sobrescrevem
+    # os do green e a DevBridge some (aconteceu em 13/11). GK2.WorkshopSync guarda os itens instalados nesta cópia:
+    # com o do blue, o jogo apaga do green os plugins que vieram de Mods/Code do blue.
+    xd=""; for d in plugins config dev cache hot GK2Insight-dump gk2check GK2.WorkshopSync; do
+      xd="$xd '$(winpath "$BLUE")\\BepInEx\\$d' '$GREEN_WIN\\BepInEx\\$d'"; done
+    powershell.exe -NoProfile -Command "robocopy '$(winpath "$BLUE")' '$GREEN_WIN' /MIR /NFL /NDL /NJH /NP /R:1 /W:1 /XD $xd /XF steam_appid.txt; exit 0" | tr -d '\r' | tail -3
     python3 - "$GREEN/GraveyardKeeper2_Data" <<'EOF'
 import sys, os
 old, new = b'Graveyard Keeper 2', b'GK2 Green Instance'
