@@ -6,6 +6,7 @@ using GK2Hud.Journal;
 using GK2Hud.Quests;
 using GK2Hud.Tooltips;
 using GK2Hud.World;
+using GK2Shared;
 using HarmonyLib;
 using UnityEngine;
 
@@ -21,11 +22,12 @@ namespace GK2Hud
     {
         public const string Guid = "arthur.gk2.hud";
         public const string Name = "GK2 Hud";
-        public const string Version = "0.9.0";
+        public const string Version = "0.9.1";
 
         internal static BepInEx.Logging.ManualLogSource Log;
 
-        private Harmony harmony;
+        /// <summary>Cada feature é uma parte isolada: se quebrar (ex.: depois de um update do jogo), só ela desliga.</summary>
+        internal ModGuard Guard { get; private set; }
 
         /// <summary>Acessado por reflexão nos cenários de teste (docs/cenarios/gk2hud-*.cs).</summary>
         internal TooltipFeature Tooltips { get; private set; }
@@ -49,7 +51,7 @@ namespace GK2Hud
         private void Awake()
         {
             Log = Logger;
-            harmony = new Harmony(Guid);
+            Guard = new ModGuard(Logger, Guid, Name);
             ConfigEntry<bool> tooltipsOn = Config.Bind("Tooltips", "Enabled", true, "Tooltips com informação extra, fixáveis e aninhados.");
             ConfigEntry<KeyboardShortcut> pinKey = Config.Bind("Tooltips", "PinKey", new KeyboardShortcut(KeyCode.Mouse2),
                 "Fixa o tooltip visível (ou fecha a bolha fixada sob o mouse). Padrão: botão do meio. T é a Tech Tree do jogo.");
@@ -57,7 +59,8 @@ namespace GK2Hud
             ConfigEntry<int> maxDepth = Config.Bind("Tooltips", "MaxDepth", 6, "Máximo de bolhas fixadas empilhadas.");
             if (tooltipsOn.Value)
             {
-                Tooltips = new TooltipFeature(harmony, pinKey, hoverDelay, maxDepth);
+                Tooltips = Guard.Feature("Tooltips", "tooltips", "tooltips", h => new TooltipFeature(h, pinKey, hoverDelay, maxDepth),
+                    f => f.Update(), f => { f.Dispose(); Tooltips = null; });
             }
             ConfigEntry<bool> worldOn = Config.Bind("World", "Enabled", true,
                 "Tooltip ao parar o mouse sobre algo em andamento no mundo (craft, plantação, corpo...). O botão de fixar dos tooltips também fixa este.");
@@ -65,7 +68,8 @@ namespace GK2Hud
                 new ConfigDescription("Segundos com o mouse parado sobre o objeto até o tooltip aparecer.", new AcceptableValueRange<float>(0f, 5f)));
             if (worldOn.Value)
             {
-                WorldHover = new WorldHoverFeature(worldDelay);
+                WorldHover = Guard.Feature("World", "world tooltip", "tooltip do mundo", h => new WorldHoverFeature(worldDelay),
+                    f => f.Update(), f => { f.Dispose(); WorldHover = null; });
             }
             ConfigEntry<bool> hudOn = Config.Bind("Hud", "Enabled", true, "Informações extras no HUD (dia da semana, hora, números de energia e insanidade).");
             ConfigEntry<bool> plateOn = Config.Bind("Hud", "DayPlate", false,
@@ -83,8 +87,10 @@ namespace GK2Hud
                 "Medalhão dos dias gira com a hora: cada dia tem sua fatia (divisórias de bronze) e passa sob o seletor de baixo, que fica parado; ao meio-dia tudo fica na posição do jogo.");
             if (hudOn.Value)
             {
-                HudInfo = new HudFeature(plateOn, clockOn, weekDayOn, barsMode, barsMax, clockStep, fade);
-                WheelSpin = new WheelSpinFeature(wheelSpinOn);
+                HudInfo = Guard.Feature("Hud", "HUD numbers", "números do HUD", h => new HudFeature(plateOn, clockOn, weekDayOn, barsMode, barsMax, clockStep, fade),
+                    f => f.Update(), f => { f.Dispose(); HudInfo = null; });
+                WheelSpin = Guard.Feature("WheelSpin", "medallion rotation", "giro do medalhão", h => new WheelSpinFeature(wheelSpinOn),
+                    f => f.Update(), f => { f.Dispose(); WheelSpin = null; });
             }
             ConfigEntry<bool> calendarOn = Config.Bind("Calendar", "Enabled", true, "Calendário: aba no TAB, hora e popup no medalhão dos dias.");
             ConfigEntry<HudNumbersMode> wheelClock = Config.Bind("Calendar", "WheelClockMode", HudNumbersMode.Hover,
@@ -98,15 +104,22 @@ namespace GK2Hud
                 "Diário por save (desbloqueios e quests de cada dia) no calendário e nos tooltips. Fica em BepInEx/config/" + Guid + "/; o save do jogo não é tocado.");
             if (calendarOn.Value)
             {
-                if (journalOn.Value) Journal = new JournalTracker();
-                Wheel = new WheelFeature(wheelClock, clockStep, wheelDelay, fade, wheelPopup);
-                if (tabOn.Value) CalendarTab = new CalendarTab(harmony);
+                if (journalOn.Value)
+                    Journal = Guard.Feature("Journal", "journal", "diário", h => new JournalTracker(),
+                        f => f.Update(), f => { f.Dispose(); Journal = null; });
+                Wheel = Guard.Feature("Wheel", "medallion", "medalhão", h => new WheelFeature(wheelClock, clockStep, wheelDelay, fade, wheelPopup),
+                    f => f.Update(), f => { f.Dispose(); Wheel = null; });
+                if (tabOn.Value)
+                    CalendarTab = Guard.Feature("CalendarTab", "Calendar tab", "aba Calendário", h => new CalendarTab(h),
+                        f => f.Update(), f => { f.Dispose(); CalendarTab = null; });
             }
             ConfigEntry<bool> questsOn = Config.Bind("Quests", "Enabled", true,
                 "Árvore de quests: mouse parado num nó mostra o básico; o clique abre a página do diário (a janela cresce) e acende o fio do nó; o botão de fixar abre a ficha do NPC.");
             ConfigEntry<float> questsDelay = Config.Bind("Quests", "HoverDelay", 0.8f,
                 new ConfigDescription("Segundos com o mouse parado num nó da árvore até o tooltip básico aparecer.", new AcceptableValueRange<float>(0f, 5f)));
-            if (questsOn.Value) Quests = new QuestTreeFeature(harmony, questsDelay);
+            if (questsOn.Value)
+                Quests = Guard.Feature("Quests", "quest tree", "árvore de quests", h => new QuestTreeFeature(h, questsDelay),
+                    f => f.Update(), f => { f.Dispose(); Quests = null; });
             leakSweeper.Sweep();   // vazamentos da 0.1.0 (o hotfix entra por hot-reload, com o jogo aberto)
             Log.LogInfo($"{Name} {Version} carregado");
         }
@@ -114,35 +127,12 @@ namespace GK2Hud
         private void Update()
         {
             leakSweeper.Tick();
-            Tooltips?.Update();
-            WorldHover?.Update();
-            HudInfo?.Update();
-            WheelSpin?.Update();
-            Journal?.Update();
-            Wheel?.Update();
-            CalendarTab?.Update();
-            Quests?.Update();
+            Guard.Update();
         }
 
         private void OnDestroy()
         {
-            Quests?.Dispose();
-            Quests = null;
-            WorldHover?.Dispose();
-            WorldHover = null;
-            Tooltips?.Dispose();
-            Tooltips = null;
-            HudInfo?.Dispose();
-            HudInfo = null;
-            WheelSpin?.Dispose();
-            WheelSpin = null;
-            Wheel?.Dispose();
-            Wheel = null;
-            CalendarTab?.Dispose();
-            CalendarTab = null;
-            Journal?.Dispose();
-            Journal = null;
-            harmony?.UnpatchSelf();
+            Guard?.Dispose();   // descarta na ordem inversa da criação e solta os patches de cada parte
         }
     }
 }

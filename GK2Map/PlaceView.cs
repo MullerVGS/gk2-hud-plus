@@ -187,6 +187,12 @@ namespace GK2Map
 
         private void Update()
         {
+            try { UpdateBody(); }
+            catch (System.Exception e) { Plugin.Fail(e, "PlaceView.Update"); }
+        }
+
+        private void UpdateBody()
+        {
             if (exited) return;
             if (cam == null || owner == null || owner.Scroll == null) { Exit(); return; }
             Vector2 mouse = MapZoom.Mouse;

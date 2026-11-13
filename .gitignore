@@ -6,3 +6,5 @@ dumps/
 .shots/
 tools/snippet/work/
 __pycache__/
+decomp.anterior/
+.update/

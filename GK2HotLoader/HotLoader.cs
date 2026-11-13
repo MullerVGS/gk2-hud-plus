@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Security.Cryptography;
 using BepInEx;
+using BepInEx.Configuration;
 using GK2Shared;
 using LazyBearTechnology;
 using UnityEngine;
@@ -13,19 +14,20 @@ namespace GK2HotLoader
     /// <summary>
     /// Aplica mods promovidos com o jogo aberto. Observa só <c>BepInEx/hot/*.dll</c> (escrito pelo <c>gk2 promote</c>),
     /// troca a versão em execução e avisa com a notificação nativa do jogo. Não abre porta nem executa código avulso.
+    /// Ao abrir o jogo, compara a versão dele com a última conferida (<c>gk2 update conferir</c>) e avisa se mudou.
     /// </summary>
     [BepInPlugin(Guid, Name, Version)]
     public class HotLoader : BaseUnityPlugin
     {
         public const string Guid = "arthur.gk2.hotloader";
         public const string Name = "GK2 HotLoader";
-        public const string Version = "0.1.0";
+        public const string Version = "0.2.0";
 
         private const float PollSeconds = 2f;
 
         private readonly Dictionary<string, string> appliedHashes = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<string, BaseUnityPlugin> loaded = new Dictionary<string, BaseUnityPlugin>();
-        private readonly Queue<string> pendingNotices = new Queue<string>();
+        private readonly Queue<Func<string>> pendingNotices = new Queue<Func<string>>();
         private string hotDir;
         private float nextPoll;
         private bool busy;
@@ -41,6 +43,25 @@ namespace GK2HotLoader
                 if (hash != null) appliedHashes[Path.GetFileName(file)] = hash;
             }
             Logger.LogInfo($"{Name} {Version} observando {hotDir} ({appliedHashes.Count} já aplicados)");
+            CheckGameVersion();
+        }
+
+        /// <summary>Versão do jogo diferente da conferida: os mods rodam, mas o jogador sabe que ainda não foram testados.</summary>
+        private void CheckGameVersion()
+        {
+            ConfigEntry<string> verified = Config.Bind("Game", "VerifiedVersion", "",
+                "Versão do jogo em que os mods foram conferidos (gravada por `gk2 update conferir`). Em outra versão, um aviso aparece ao entrar no jogo.");
+            string current = Application.version;
+            if (string.IsNullOrEmpty(verified.Value))
+            {
+                verified.Value = current;   // primeira execução: a versão em que o HotLoader foi instalado
+                return;
+            }
+            if (verified.Value == current) return;
+            Logger.LogWarning($"jogo na versão {current}; mods conferidos na {verified.Value}");
+            pendingNotices.Enqueue(() => IsPortuguese()
+                ? $"Jogo atualizado para {current}: mods ainda não conferidos nesta versão"
+                : $"Game updated to {current}: mods not yet checked on this version");
         }
 
         private void Update()
@@ -86,7 +107,7 @@ namespace GK2HotLoader
                     BaseUnityPlugin plugin = PluginReloader.Start(type, gameObject, loaded);
                     string message = $"{plugin.Info.Metadata.Name} {Updated()} {plugin.Info.Metadata.Version}";
                     Logger.LogInfo(message + $" ({fileName})");
-                    pendingNotices.Enqueue(message);
+                    pendingNotices.Enqueue(() => message);
                 }
                 catch (Exception e)
                 {
@@ -99,17 +120,36 @@ namespace GK2HotLoader
         private void Fail(string fileName, Exception e)
         {
             Logger.LogError($"falha ao aplicar {fileName}: {e}");
-            pendingNotices.Enqueue($"{Path.GetFileNameWithoutExtension(fileName)}: {(IsPortuguese() ? "falha ao atualizar (ver log)" : "update failed (see log)")}");
+            string mod = Path.GetFileNameWithoutExtension(fileName);
+            pendingNotices.Enqueue(() => $"{mod}: {(IsPortuguese() ? "falha ao atualizar (ver log)" : "update failed (see log)")}");
+        }
+
+        private float readySince = -1f;
+
+        /// <summary>Em jogo e visível: save carregado, tela de carregamento fechada há 1,5 s. Antes disso o aviso some
+        /// atrás do carregamento, e tocar no UINotificator antes do LazyUI.Init quebra a UI do jogo.</summary>
+        private bool ReadyForNotice()
+        {
+            bool ready = false;
+            if (MainGame.PlayerData != null && MainGame.PlayerController != null && LazyUI.IsInitialized)
+            {
+                try { ready = !LazyUI.Get<UILoadingOverlay>().IsShown; }
+                catch (Exception) { ready = false; }
+            }
+            if (!ready) { readySince = -1f; return false; }
+            if (readySince < 0f) readySince = Time.realtimeSinceStartup;
+            return Time.realtimeSinceStartup - readySince >= 1.5f;
         }
 
         private void FlushNotices()
         {
             if (pendingNotices.Count == 0) return;
+            if (!ReadyForNotice()) return;
             UINotificator notificator = LazySingleton<UINotificator>.Instance;
-            if (notificator == null || MainGame.PlayerData == null) return; // espera estar em jogo para o aviso aparecer
+            if (notificator == null) return;
             try
             {
-                notificator.ShowSimpleTextNotification(pendingNotices.Dequeue());
+                notificator.ShowSimpleTextNotification(pendingNotices.Dequeue()());
             }
             catch (Exception e)
             {

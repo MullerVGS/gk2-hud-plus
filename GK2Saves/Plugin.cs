@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using BepInEx;
 using BepInEx.Configuration;
+using GK2Shared;
 using HarmonyLib;
 using LazyBearTechnology;
 using UnityEngine;
@@ -19,12 +20,13 @@ namespace GK2Saves
     {
         public const string Guid = "arthur.gk2.saves";
         public const string Name = "GK2 Saves";
-        public const string Version = "0.1.0";
+        public const string Version = "0.1.1";
 
         internal static BepInEx.Logging.ManualLogSource Log;
         internal static Plugin Instance;
 
-        private Harmony harmony;
+        /// <summary>Save/Load é uma parte isolada: se quebrar, os botões e os patches saem e o menu de pausa volta ao nativo.</summary>
+        internal ModGuard Guard { get; private set; }
 
         internal History History { get; private set; }
 
@@ -47,12 +49,16 @@ namespace GK2Saves
                 new AcceptableValueRange<int>(1, 100)));
             fixBackupSlot = Config.Bind("Saves", "FixBackupSlot", true,
                 "Jogando um backup do jogo (ex.: carregado pela lista do menu principal), o próximo save vai para o slot principal em vez de criar Steam_1_backup_1_backup_1.");
-            History = new History(History.DefaultRoot, keep.Value);
-            Buttons = new PauseButtons(OnSaveClicked, OnLoadClicked);
-            harmony = new Harmony(Guid);
-            Patches.Apply(harmony);
-            UIGamePauseWindow pause = LazyUI.IsInitialized ? LazyUI.GetWindow<UIGamePauseWindow>() : null;
-            if (pause != null && pause.IsShown) Buttons.Refresh(pause);
+            Guard = new ModGuard(Logger, Guid, Name);
+            Guard.Feature("SaveLoad", "Save/Load", "Save/Load", h =>
+            {
+                History = new History(History.DefaultRoot, keep.Value);
+                Buttons = new PauseButtons(OnSaveClicked, OnLoadClicked);
+                Patches.Apply(h);
+                UIGamePauseWindow pause = LazyUI.IsInitialized ? LazyUI.GetWindow<UIGamePauseWindow>() : null;
+                if (pause != null && pause.IsShown) Buttons.Refresh(pause);
+                return this;
+            }, dispose: p => p.StopSaveLoad());
             Log.LogInfo($"{Name} {Version} carregado");
         }
 
@@ -191,14 +197,21 @@ namespace GK2Saves
             catch (Exception e) { Log.LogWarning("aviso: " + e.Message); }
         }
 
+        private void Update() => Guard.Update();
+
         private void OnDestroy()
         {
+            Guard?.Dispose();
+            if (Instance == this) Instance = null;
+        }
+
+        private void StopSaveLoad()
+        {
             StopAllCoroutines();
+            busy = false;
             Buttons?.Dispose();
             Buttons = null;
-            harmony?.UnpatchSelf();
             Patches.InGameWindow = false;
-            if (Instance == this) Instance = null;
         }
     }
 }

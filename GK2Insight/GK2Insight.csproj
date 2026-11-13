@@ -2,4 +2,7 @@
   <PropertyGroup>
     <AssemblyName>GK2Insight</AssemblyName>
   </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../Shared/ModGuard.cs" Link="Shared/ModGuard.cs" />
+  </ItemGroup>
 </Project>

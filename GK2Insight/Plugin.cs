@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using BepInEx.Configuration;
 using GK2Insight.Telemetry;
+using GK2Shared;
 using UnityEngine;
 
 namespace GK2Insight
@@ -16,7 +17,7 @@ namespace GK2Insight
     {
         public const string Guid = "arthur.gk2.insight";
         public const string Name = "GK2 Insight";
-        public const string Version = "0.3.0";
+        public const string Version = "0.3.1";
 
         internal static BepInEx.Logging.ManualLogSource Log;
 
@@ -36,6 +37,9 @@ namespace GK2Insight
 
         private Hud hud;
         private Telemetry.Telemetry telemetry;
+
+        /// <summary>Telemetria e painéis são partes isoladas: se uma quebrar, a outra segue.</summary>
+        internal ModGuard Guard { get; private set; }
         private static readonly HashSet<string> Warned = new HashSet<string>();
 
         private void Awake()
@@ -58,19 +62,24 @@ namespace GK2Insight
             telemetryUrl = Config.Bind("Telemetry", "Url", "https://metrics-ingest.example.com", "Base do vmauth (import Prometheus e jsonline).");
             telemetryToken = Config.Bind("Telemetry", "Token", "", "Bearer do usuário gk2-client no vmauth. Vazio = só mede, não envia.");
             Warned.Clear();
+            Guard = new ModGuard(Logger, Guid, Name);
             if (telemetryEnabled.Value)
             {
-                telemetry = new Telemetry.Telemetry(telemetryUrl.Value, telemetryToken.Value);
-                telemetry.LayersVisible = () => (localVisible.Value, techVisible.Value);
+                telemetry = Guard.Feature("Telemetry", "telemetry", "telemetria", h =>
+                {
+                    var t = new Telemetry.Telemetry(telemetryUrl.Value, telemetryToken.Value);
+                    t.LayersVisible = () => (localVisible.Value, techVisible.Value);
+                    return t;
+                }, t => t.OnFrame(), t => { t.Dispose(); telemetry = null; });
             }
-            hud = new Hud(telemetry?.Cost, fontSize.Value);
+            hud = Guard.Feature("Panels", "panels", "painéis", h => new Hud(telemetry?.Cost, fontSize.Value),
+                _ => TickPanels(), x => { x.Dispose(); hud = null; });
             Log.LogInfo($"{Name} {Version} carregado");
         }
 
         private void OnDestroy()
         {
-            hud?.Dispose();
-            telemetry?.Dispose();
+            Guard?.Dispose();
         }
 
         internal static void WarnOnce(string where, Exception e)
@@ -78,9 +87,10 @@ namespace GK2Insight
             if (Warned.Add(where + e.Message)) Log.LogWarning($"{where}: {e}");
         }
 
-        private void Update()
+        private void Update() => Guard.Update();
+
+        private void TickPanels()
         {
-            telemetry?.OnFrame();
             long t0 = SelfCost.Now();
             if (dumpKey.Value.IsDown()) Dumper.DumpAll();
             else if (techKey.Value.IsDown()) techVisible.Value = !techVisible.Value;

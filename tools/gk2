@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 # CLI único para desenvolver mods do Graveyard Keeper 2 na instância green. Rode `gk2 help`.
 set -euo pipefail
+trap 'echo "gk2: falhou na linha $LINENO: $BASH_COMMAND" >&2' ERR
 
 HERE=$(cd "$(dirname "$(readlink -f "$0")")/.." && pwd)
 BLUE=${GK2_BLUE_DIR:-/mnt/d/SteamLibrary/steamapps/common/Graveyard Keeper 2}
@@ -14,7 +15,6 @@ GREEN_DATA="$WINHOME/AppData/LocalLow/Lazy Bear Games/GK2 Green Instance"
 # reservada no Windows e a ponte não consegue abrir a porta (ip_local_port_range muda a cada boot do WSL).
 PORT=${GK2_BRIDGE_PORT:-$(sed -n 's/^Port *= *\([0-9]*\).*/\1/p' "$GREEN/BepInEx/config/arthur.gk2.devbridge.cfg" 2>/dev/null | head -1 || true)}
 PORT=${PORT:-27777}  # padrão do Bridge.cs; o cfg só existe depois da primeira carga da DevBridge
-PORT=${PORT:-27777}
 URL="http://127.0.0.1:$PORT"
 SHOTS="$HERE/.shots"
 BUILDER=gk2-builder
@@ -104,15 +104,19 @@ case "$cmd" in
     esac
     ;;
   green-sync)
-    # Re-sincroniza a cópia green com o jogo (após atualização do Steam), preservando o BepInEx de desenvolvimento.
+    # Re-sincroniza a cópia green com o jogo (após atualização do Steam). Copia só o que é do jogo: tudo fora de
+    # BepInEx (espelhado), os arquivos da raiz (sem apagar nada) e BepInEx/core e patchers. O resto do BepInEx do green
+    # (plugins, config, hot, dev, estado do WorkshopSync) é do ambiente de desenvolvimento e nunca é tocado. Em 13/11 o
+    # espelho com exclusões levou plugins, config e o estado do WorkshopSync do blue para o green.
     ps1 green.ps1 status | grep -q parado || die "pare o green antes (gk2 green stop)"
-    # O BepInEx de desenvolvimento do green fica fora do espelho. O robocopy compara /XD com o caminho da origem
-    # (e protege do /PURGE o que casar no destino): passar os dois lados, senão plugins e config do blue sobrescrevem
-    # os do green e a DevBridge some (aconteceu em 13/11). GK2.WorkshopSync guarda os itens instalados nesta cópia:
-    # com o do blue, o jogo apaga do green os plugins que vieram de Mods/Code do blue.
-    xd=""; for d in plugins config dev cache hot GK2Insight-dump gk2check GK2.WorkshopSync; do
-      xd="$xd '$(winpath "$BLUE")\\BepInEx\\$d' '$GREEN_WIN\\BepInEx\\$d'"; done
-    powershell.exe -NoProfile -Command "robocopy '$(winpath "$BLUE")' '$GREEN_WIN' /MIR /NFL /NDL /NJH /NP /R:1 /W:1 /XD $xd /XF steam_appid.txt; exit 0" | tr -d '\r' | tail -3
+    src=$(winpath "$BLUE"); opts="/NFL /NDL /NJH /NJS /NP /R:1 /W:1"; ps=""
+    rc() { ps+="robocopy $1 $opts; if (\$LASTEXITCODE -ge 8) { \$falhas += '$2' }; "; }
+    for d in "$BLUE"/*/; do n=$(basename "$d"); [ "$n" = BepInEx ] && continue; rc "'$src\\$n' '$GREEN_WIN\\$n' /MIR" "$n"; done
+    rc "'$src' '$GREEN_WIN' /XF steam_appid.txt" "raiz"
+    for d in core patchers; do rc "'$src\\BepInEx\\$d' '$GREEN_WIN\\BepInEx\\$d' /MIR" "BepInEx/$d"; done
+    out=$(powershell.exe -NoProfile -Command "\$falhas = @(); $ps if (\$falhas.Count) { 'FALHOU: ' + (\$falhas -join ', ') } else { 'COPIA_OK' }" | tr -d '\r' | grep -E 'COPIA_OK|FALHOU' || true)
+    [ "$out" = COPIA_OK ] || die "green-sync incompleto: ${out:-sem resposta do robocopy}"; echo "cópia ok"
+    for d in "$GREEN"/*/; do n=$(basename "$d"); [ -e "$BLUE/$n" ] || echo "aviso: $n só existe no green (o jogo removeu? apague à mão se for o caso)"; done
     python3 - "$GREEN/GraveyardKeeper2_Data" <<'EOF'
 import sys, os
 old, new = b'Graveyard Keeper 2', b'GK2 Green Instance'
@@ -231,6 +235,101 @@ im.save(sys.argv[1])" "$out" "$crop"
     esac
     sha256sum "$dll"
     ;;
+  update)
+    # Roteiro completo depois de um update do jogo, com relatório em .update/. `gk2 update conferir` marca a versão
+    # como conferida no blue (o GK2 HotLoader para de avisar) depois de olhar o relatório e os prints.
+    U="$HERE/.update"; mkdir -p "$U"
+    if [ "${1:-}" = conferir ]; then
+      [ -f "$U/ultima" ] || die "rode gk2 update antes"
+      . "$U/ultima"
+      [ "$VEREDITO" = ok ] || die "o último gk2 update não passou ($VEREDITO): veja $RELATORIO"
+      cmp -s <(sha256sum < "$BLUE/GraveyardKeeper2_Data/Managed/Assembly-CSharp.dll") <(echo "$HASH") || die "o jogo mudou depois do último gk2 update: rode de novo"
+      cfg="$BLUE/BepInEx/config/arthur.gk2.hotloader.cfg"
+      python3 - "$cfg" "$VERSAO" <<'EOF'
+import os, re, sys
+path, version = sys.argv[1:3]
+text = open(path, encoding="utf-8-sig").read() if os.path.exists(path) else ""
+line = f"VerifiedVersion = {version}"
+if re.search(r"(?m)^VerifiedVersion\s*=.*$", text):
+    text = re.sub(r"(?m)^VerifiedVersion\s*=.*$", line, text)
+elif "[Game]" in text:
+    text = text.replace("[Game]", "[Game]\n\n" + line, 1)
+else:
+    text = text.rstrip() + ("\n\n" if text.strip() else "") + "[Game]\n\n" + line + "\n"
+open(path, "w", encoding="utf-8").write(text)
+print(f"versão {version} marcada como conferida em {path}")
+EOF
+      exit 0
+    fi
+    hash=$(sha256sum < "$BLUE/GraveyardKeeper2_Data/Managed/Assembly-CSharp.dll")
+    if [ -f "$U/ultima" ] && grep -qF "HASH='$hash'" "$U/ultima" && [ "${1:-}" != --forcar ]; then
+      echo "o jogo não mudou desde o último gk2 update (--forcar roda de novo)"; exit 0
+    fi
+    ts=$(date +%Y%m%d-%H%M); R="$U/$ts.md"; falhas=()
+    section() { printf '\n## %s\n\n' "$1" >> "$R"; echo "== $1"; }
+    echo "# gk2 update $ts" > "$R"
+
+    section "Sincronização"
+    "$0" green stop >/dev/null 2>&1 || true
+    "$0" green-sync | tee -a "$R"
+
+    section "Código do jogo × mods"
+    refs >/dev/null
+    if [ -d "$HERE/decomp" ]; then rm -rf "$HERE/decomp.anterior"; mv "$HERE/decomp" "$HERE/decomp.anterior"; fi
+    "$0" decomp >/dev/null
+    if [ -d "$HERE/decomp.anterior" ]; then
+      python3 "$HERE/tools/update/relatorio.py" "$HERE/decomp.anterior" "$HERE/decomp" "$HERE" > "$U/codigo.md"
+      cat "$U/codigo.md" >> "$R"; alertas=$(sed -n 's/^ALERTAS //p' "$U/codigo.md"); echo "alertas: $alertas"
+      [ "$alertas" = 0 ] || falhas+=("código: $alertas alerta(s)")
+    else echo "- sem decomp anterior para comparar" >> "$R"; fi
+
+    section "Build contra o jogo novo"
+    projetos="GK2DevBridge GK2HotLoader GK2Insight GK2Hud GK2Map GK2Saves GK2ZombieRefund"
+    for p in $projetos; do
+      if dll=$(build "$p" 2>"$U/build-$p.log"); then
+        avisos=$(grep -c -i "warning" "$U/build-$p.log" || true)
+        install_green "$dll" "$p" >/dev/null; echo "- $p ok ($avisos aviso(s))" | tee -a "$R"
+      else echo "- $p FALHOU (ver .update/build-$p.log)" | tee -a "$R"; falhas+=("build de $p"); fi
+    done
+
+    section "Índice e barreira (builds novos no green)"
+    ps1 green.ps1 start >/dev/null; wait_bridge
+    "$0" run "$HERE/docs/cenarios/continuar.cs" | grep -q '"em jogo"' || die "o save de teste não carregou no green (ver gk2 log)"
+    versao=$("$0" run "$HERE/tools/update/versao.cs" | sed -n 's/.*"result": "\(.*\)".*/\1/p')
+    echo "- versão do jogo: $versao" | tee -a "$R"
+    if "$0" gatilhos > "$U/gatilhos.log" 2>&1; then tail -1 "$U/gatilhos.log" | sed 's/^/- /' >> "$R"; else echo "- gatilhos FALHOU" | tee -a "$R"; falhas+=("gatilhos"); fi
+    if "$0" check GK2Hud > "$U/check.log" 2>&1; then echo "- gk2 check GK2Hud ok" | tee -a "$R"
+    else echo "- gk2 check GK2Hud FALHOU (ver .update/check.log)" | tee -a "$R"; falhas+=("check GK2Hud"); fi
+
+    section "Mods do blue (Mods/Code) no green"
+    "$0" green stop >/dev/null 2>&1
+    for pack in "$BLUE_DATA"/Mods/Code/*/; do
+      for dll in "$pack"BepInEx/plugins/*/*.dll; do
+        [ -f "$dll" ] || continue; p=$(basename "$(dirname "$dll")")
+        mkdir -p "$GREEN/BepInEx/plugins/$p"; cp "$dll" "$GREEN/BepInEx/plugins/$p/"
+        echo "- $p $(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' "$pack/modinfo.json" 2>/dev/null)" | tee -a "$R"
+      done
+    done
+    "$0" save reset >/dev/null
+    ps1 green.ps1 start >/dev/null; wait_bridge
+    "$0" run "$HERE/docs/cenarios/continuar.cs" | grep -q '"em jogo"' || die "o save de teste não carregou com os mods do blue (ver gk2 log)"
+    printf '\nBateria (%s):\n\n' "tools/update/smoke.txt" >> "$R"
+    if python3 "$HERE/tools/update/smoke.py" "$0" "$HERE/tools/update/smoke.txt" "$U/cenarios" "upd-$ts" | tee -a "$R"; then :; else falhas+=("bateria"); fi
+    printf '\nLog do jogo:\n\n' >> "$R"
+    if python3 "$HERE/tools/update/excecoes.py" "$GREEN_DATA/Player.log" "$HERE/tools/update/excecoes-do-jogo.txt" | tee -a "$R"; then :; else falhas+=("erros no log"); fi
+
+    section "Green de volta aos builds do repo"
+    "$0" green stop >/dev/null 2>&1
+    for p in $projetos; do [ -f "$HERE/$p/bin/Release/$p.dll" ] && install_green "$HERE/$p/bin/Release/$p.dll" "$p" >/dev/null; done
+    "$0" save reset >/dev/null; echo "- builds do repo reinstalados, save de teste restaurado, green parado" | tee -a "$R"
+
+    veredito=ok; [ ${#falhas[@]} -eq 0 ] || veredito="falhou: ${falhas[*]}"
+    section "Veredito"
+    echo "- $veredito" | tee -a "$R"
+    printf "VERSAO='%s'\nHASH='%s'\nVEREDITO='%s'\nRELATORIO='%s'\n" "$versao" "$hash" "$veredito" "$R" > "$U/ultima"
+    echo "relatório: $R"
+    if [ "$veredito" = ok ]; then echo "olhe os prints (.shots/*upd-$ts*) e rode: gk2 update conferir"; else exit 1; fi
+    ;;
   decomp)
     refs; rm -rf "$HERE/decomp"; mkdir -p "$HERE/decomp"
     docker run --rm -e DOTNET_ROLL_FORWARD=Major -v "$HERE":/w -w /w "$SDK_IMAGE" bash -c 'dotnet tool install -g ilspycmd --version 8.2.0.7535 >/dev/null 2>&1; export PATH=$PATH:/root/.dotnet/tools; for a in Assembly-CSharp LazyBearTechnology; do ilspycmd -p -o decomp/$a -r refs/Managed refs/Managed/$a.dll >/dev/null 2>&1; done'
@@ -241,6 +340,8 @@ im.save(sys.argv[1])" "$out" "$crop"
     cat <<'EOF'
 green start|stop|restart|status|show|hide|sync-settings   instância green (D:\GK2-green, janela fora da tela)
 green-sync                 re-sincroniza o green com o jogo após update (green parado)
+update [--forcar|conferir]  depois de update do jogo: sync, relatório do código × mods, build, gatilhos, check e
+                           bateria com os DLLs do blue → .update/<data>.md; `conferir` marca a versão no blue
 save snapshot|reset        snapshot = copia o save do blue; reset = green volta ao snapshot
 build <Proj>               compila (container gk2-builder persistente)
 bridge                     compila e instala a DevBridge no green (reinicia o green)

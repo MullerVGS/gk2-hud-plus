@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 using BepInEx;
+using GK2Shared;
 using HarmonyLib;
 using LazyBearTechnology;
 using UnityEngine;
@@ -22,42 +23,56 @@ namespace GK2ZombieRefund
     {
         public const string Guid = "arthur.gk2.zombierefund";
         public const string Name = "GK2 Zombie Refund";
-        public const string Version = "0.2.0";
+        public const string Version = "0.2.1";
 
         internal static Plugin Instance;
         internal static BepInEx.Logging.ManualLogSource Log;
 
-        private Harmony harmony;
+        /// <summary>O refund é uma parte isolada: se quebrar, a linha do tooltip, o clique direito e os patches saem.</summary>
+        internal ModGuard Guard { get; private set; }
         private readonly List<Component> added = new List<Component>();
 
         private void Awake()
         {
             Instance = this;
             Log = Logger;
-            harmony = new Harmony(Guid);
-            harmony.Patch(AccessTools.Method(typeof(TalentLevelUpWidget), nameof(TalentLevelUpWidget.Redraw)),
-                postfix: new HarmonyMethod(typeof(Plugin), nameof(RedrawPostfix)));
-            harmony.Patch(AccessTools.Method(typeof(UITooltip), nameof(UITooltip.ShowTalentLevelUpWidget)),
-                prefix: new HarmonyMethod(typeof(Tooltip), nameof(Tooltip.Prefix)));
-            foreach (TalentLevelUpWidget w in FindObjectsByType<TalentLevelUpWidget>(FindObjectsInactive.Include, FindObjectsSortMode.None))
-                if (w.Data != null) Decorate(w);
+            Guard = new ModGuard(Logger, Guid, Name);
+            Guard.Feature("Refund", "perk refund", "refund de perk", h =>
+            {
+                h.Patch(AccessTools.Method(typeof(TalentLevelUpWidget), nameof(TalentLevelUpWidget.Redraw)),
+                    postfix: new HarmonyMethod(typeof(Plugin), nameof(RedrawPostfix)));
+                h.Patch(AccessTools.Method(typeof(UITooltip), nameof(UITooltip.ShowTalentLevelUpWidget)),
+                    prefix: new HarmonyMethod(typeof(Tooltip), nameof(Tooltip.Prefix)));
+                foreach (TalentLevelUpWidget w in FindObjectsByType<TalentLevelUpWidget>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                    if (w.Data != null) Decorate(w);
+                return this;
+            }, dispose: p => p.RemoveAdded());
             Log.LogInfo($"{Name} {Version} carregado");
         }
 
+        private void Update() => Guard.Update();
+
         private void OnDestroy()
         {
-            harmony?.UnpatchSelf();
+            Guard?.Dispose();
+            if (Instance == this) Instance = null;
+        }
+
+        /// <summary>Erro fora dos patches (clique, diálogo): conta para a parte e, repetido, desliga o refund.</summary>
+        internal static void Fail(Exception e, string where) => Instance?.Guard.Report("Refund", e, where);
+
+        private void RemoveAdded()
+        {
             foreach (Component c in added) if (c != null) Destroy(c);
             added.Clear();
             UIDialogWindow dialog = LazyUI.IsInitialized ? LazyUI.GetWindow<UIDialogWindow>() : null;
             if (dialog != null && dialog.IsShown && Confirm.Open) dialog.Close();
-            if (Instance == this) Instance = null;
         }
 
         private static void RedrawPostfix(TalentLevelUpWidget __instance)
         {
             try { Instance?.Decorate(__instance); }
-            catch (Exception e) { Log.LogError(e); }
+            catch (Exception e) { Fail(e, "TalentLevelUpWidget.Redraw"); }
         }
 
         private void Decorate(TalentLevelUpWidget w)
@@ -183,7 +198,7 @@ namespace GK2ZombieRefund
             }
             catch (Exception e)
             {
-                Plugin.Log.LogError(e);
+                Plugin.Fail(e, "UITooltip.ShowTalentLevelUpWidget");
                 return true;
             }
         }
@@ -217,7 +232,7 @@ namespace GK2ZombieRefund
         {
             if (e.button != PointerEventData.InputButton.Right) return;
             try { Confirm.Ask(GetComponent<TalentLevelUpWidget>()); }
-            catch (Exception ex) { Plugin.Log.LogError(ex); }
+            catch (Exception ex) { Plugin.Fail(ex, "clique direito"); }
         }
     }
 }

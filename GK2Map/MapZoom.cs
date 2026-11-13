@@ -162,6 +162,12 @@ namespace GK2Map
 
         private void Update()
         {
+            try { UpdateBody(); }
+            catch (System.Exception e) { Plugin.Fail(e, "MapZoom.Update"); }
+        }
+
+        private void UpdateBody()
+        {
             Plugin p = Plugin.Instance;
             if (p == null || scroll == null || map == null) return;
             if (PlaceView.Active) return;
@@ -306,6 +312,12 @@ namespace GK2Map
         }
 
         private void LateUpdate()
+        {
+            try { LateUpdateBody(); }
+            catch (System.Exception e) { Plugin.Fail(e, "MapZoom.LateUpdate"); }
+        }
+
+        private void LateUpdateBody()
         {
             if (scroll == null || scroll.content == null || explored == null || PlaceView.Active) return;
             Vector2 pos = scroll.content.anchoredPosition;

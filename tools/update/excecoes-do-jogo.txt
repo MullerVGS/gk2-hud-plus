@@ -1,0 +1,3 @@
+# Erros que o próprio jogo registra sem nenhum mod (conferido com o green só com a DevBridge). Um trecho por linha;
+# o erro que contiver o trecho não conta como problema no gk2 update.
+LazyTerrainMeshPool.InitAsync

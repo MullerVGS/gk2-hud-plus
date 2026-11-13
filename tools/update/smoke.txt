@@ -1,0 +1,31 @@
+# Bateria do gk2 update: cada linha roda um cenário no green com o save de teste carregado.
+# cenário [CONSTANTE=valor ...] | regex esperada no resultado (ou log:regex no log do jogo) | nome do print (vazio = sem print)
+# As constantes trocam `const`/`static` do cenário (texto vira string entre aspas automaticamente).
+docs/cenarios/fechar-janelas.cs | fechadas |
+docs/cenarios/gk2hud-mundo-hover.cs | showing=True | hud-mundo
+docs/cenarios/gk2hud-mundo-hover.cs LIMPAR=true | limpo |
+docs/cenarios/gk2hud-pilha.cs ITEM=nails_iron | fixou nativo | hud-pilha
+docs/cenarios/gk2hud-fechar.cs | antes |
+docs/cenarios/fechar-janelas.cs | fechadas |
+docs/cenarios/gk2hud-calendario.cs | showing=True | hud-calendario
+docs/cenarios/gk2hud-calendario.cs ALVO=limpar | . |
+docs/cenarios/gk2hud-quests.cs | page=\(x | hud-quests
+docs/cenarios/gk2hud-fechar.cs | antes |
+docs/cenarios/fechar-janelas.cs | fechadas |
+docs/cenarios/gk2map-zoom.cs | zoom índice | map-zoom
+docs/cenarios/gk2map-local.cs | vista ativa: True | map-local
+docs/cenarios/gk2map-local.cs ACAO=sair | vista ativa: False |
+docs/cenarios/fechar-janelas.cs | fechadas |
+docs/cenarios/pausa.cs | pausa aberta | saves-pausa
+docs/cenarios/gk2saves-clicar.cs | clicado Load | saves-load
+docs/cenarios/fechar-janelas.cs | fechadas |
+docs/cenarios/gk2saves-clicar.cs BOTAO=Save | clicado Save |
+docs/cenarios/fechar-janelas.cs | log:save manual ok |
+docs/cenarios/zumbi-perks.cs ZUMBI=McDead | aberta | 
+docs/cenarios/gk2zombierefund-clicar.cs NO=ztalent_apprentice_carpenter | hover: | refund-hover
+docs/cenarios/gk2zombierefund-clicar.cs NO=ztalent_apprentice_carpenter ACAO=direito | diálogo aberto | refund-dialogo
+docs/cenarios/gk2zombierefund-clicar.cs NO=ztalent_apprentice_carpenter ACAO=nao | diálogo fechado |
+docs/cenarios/fechar-janelas.cs | fechadas |
+docs/cenarios/insight-camadas.cs | local ligada | insight
+docs/cenarios/insight-camadas.cs LOCAL=false TECH=false | local desligada |
+docs/cenarios/guard-desligar.cs | do mod → engolida, do jogo → repassada |

@@ -174,6 +174,7 @@ gk2 save snapshot|reset                          save de teste a partir do blue 
 gk2 promote <Mod> [--green]                      entrega com o jogo aberto (blue, com aprovação) ou ensaio no green
 gk2 gatilhos [onde <termo>]                      índice do jogo: quem libera ícone/tutorial/resposta/recurso, onde está cada fala
 gk2 check GK2Hud                                 barreira do promote (ids na tela, calendário × índice, auditoria do save)
+gk2 update [--forcar] | gk2 update conferir     depois de update do jogo (ver "Update do jogo")
 gk2 bridge | green-sync | decomp                 manutenção (ver abaixo)
 ```
 
@@ -190,7 +191,9 @@ Peças:
 - **GK2 HotLoader** (`GK2HotLoader/`): entrega sem reabrir. Observa só `<jogo>/BepInEx/hot/*.dll` a cada 2 s; quando
   o hash muda, troca o plugin em execução (mesmo `Shared/PluginReloader.cs` da DevBridge) e mostra a notificação
   nativa do jogo ("GK2 Insight updated to 0.1.1"; em pt se o jogo estiver em pt). Ao abrir o jogo, marca o que já está
-  na pasta como aplicado, porque o pacote `Mods/Code` carregou a mesma versão. Ele próprio e a DevBridge não se
+  na pasta como aplicado, porque o pacote `Mods/Code` carregou a mesma versão. Desde a 0.2.0 compara
+  `Application.version` com `[Game] VerifiedVersion` do `arthur.gk2.hotloader.cfg` e, se diferem, avisa ao entrar no
+  jogo "Game updated to X: mods not yet checked on this version" (gravado por `gk2 update conferir`). Ele próprio e a DevBridge não se
   recarregam a quente. Falha vira aviso "update failed (see log)" e o jogo segue.
 - **Fallback sem ponte**: `gk2 winshot` (PrintWindow da janela green).
 
@@ -264,6 +267,13 @@ alinhamento com o HUD existente; não cobre informação nativa; legível com fu
   GameObject/UI criado e desinscrever eventos estáticos (`EnvironmentEngine.OnNewDayStarted` etc.). Nada de estado
   estático que sobreviva ao reload.
 - Configuração por `Config.Bind` (vai para `BepInEx/config/<guid>.cfg`). Nunca escrever em `BepInEx/plugins`.
+- **ModGuard** (`Shared/ModGuard.cs`, linkado no csproj): toda feature nasce por `Guard.Feature(id, en, pt, h => new
+  X(h, ...), update, dispose)` com o Harmony `h` da própria parte, e o `Update` do plugin chama só `Guard.Update()`.
+  Parte que não inicia, ou erra 5 vezes em 60 s (Update, patch, ou `Guard.Report` de MonoBehaviour/callback próprio),
+  desliga sozinha: sai do Update, solta os patches, é descartada e mostra o aviso nativo "<Mod> · <parte>: turned off
+  after an error (see log)". Exceção que nasce num patch da parte é engolida por um finalizer (a do jogo passa intacta).
+  O `Awake` só cria partes; chamada ao jogo fora delas derruba o plugin inteiro se a API mudar. Teste:
+  `docs/cenarios/guard-desligar.cs` (estado, finalizer, desligar).
 - Só leitura do estado do jogo, salvo pedido de gameplay.
 
 ## Armadilhas conhecidas
@@ -282,10 +292,28 @@ alinhamento com o HUD existente; não cobre informação nativa; legível com fu
 - `SteamApps.GetAppInstallDir` aponta para a pasta do blue mesmo no green; hoje só é usado em log e na importação de
   save da demo.
 - Green não pode usar o app id do jogo (ver Blue-green); conferir com `RunningAppID` no registro do Steam.
-- Depois de update do jogo: `gk2 green stop && gk2 green-sync && gk2 decomp && gk2 gatilhos`, recompilar tudo e
-  `gk2 check GK2Hud`. Compilar contra o jogo novo não prova que o blue funciona: copie para o green os DLLs de
-  `Mods/Code` do blue e rode os cenários de cada mod (compatibilidade binária, reflexão por string). A
-  `NullReferenceException` em `LazyTerrainMeshPool.InitAsync` ao carregar o save é do jogo (v1.012.7, aparece sem mods).
+- `LazySingleton<T>.Instance` cria um componente vazio quando o do jogo ainda não existe: tocar em
+  `LazySingleton<UINotificator>.Instance` antes do `LazyUI.Init` quebra a UI inteira do jogo (UILoadingOverlay some,
+  NRE por frame). Aviso nativo só depois de save carregado e `UILoadingOverlay` fechado (`ReadyForNotice` no HotLoader
+  e no ModGuard).
+- A ponte guarda só as últimas 4000 linhas de log; para a sessão inteira, leia o `Player.log` do green.
+
+## Update do jogo
+
+`gk2 update` (≈10 min) faz o roteiro inteiro e grava `.update/<data>.md`:
+1. `green-sync`: copia só o que é do jogo (tudo fora de `BepInEx`, arquivos da raiz, `BepInEx/core` e `patchers`); o
+   resto do `BepInEx` do green nunca é tocado.
+2. `decomp` com o anterior guardado em `decomp.anterior/` e `tools/update/relatorio.py`: tipos usados pelos mods que
+   mudaram ou sumiram e membros acessados por reflexão (string) que não existem mais.
+3. Build de todos os projetos contra o jogo novo, instalados no green; `gk2 gatilhos` e `gk2 check GK2Hud`.
+4. Os DLLs de `Mods/Code` do blue (o que vai rodar de verdade) no green: bateria `tools/update/smoke.txt` (cenários com
+   constantes trocadas, regex esperada, prints `.shots/*upd-<data>*`) e `tools/update/excecoes.py` no `Player.log`
+   (erros do próprio jogo, conferidos sem mods, ficam em `tools/update/excecoes-do-jogo.txt`).
+5. Green volta aos builds do repo e ao save de teste.
+
+Veredito ok + prints olhados → `gk2 update conferir` grava a versão em `[Game] VerifiedVersion` no
+`arthur.gk2.hotloader.cfg` do blue (único arquivo do blue que ele escreve) e o aviso de versão some. Se algo falhar,
+o ModGuard já protege o jogador enquanto isso: a parte quebrada desliga sozinha com aviso.
 
 ## Mecânicas já mapeadas
 

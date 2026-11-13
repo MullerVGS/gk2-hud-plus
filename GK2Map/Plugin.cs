@@ -1,6 +1,7 @@
 using System;
 using BepInEx;
 using BepInEx.Configuration;
+using GK2Shared;
 using HarmonyLib;
 using System.Collections.Generic;
 using UnityEngine;
@@ -17,7 +18,7 @@ namespace GK2Map
     {
         public const string Guid = "arthur.gk2.map";
         public const string Name = "GK2 Map";
-        public const string Version = "0.2.1";
+        public const string Version = "0.2.2";
 
         internal static Plugin Instance;
         internal static BepInEx.Logging.ManualLogSource Log;
@@ -42,7 +43,9 @@ namespace GK2Map
             }
         }
 
-        private Harmony harmony;
+        /// <summary>O mod inteiro é uma parte: se quebrar, a vista sai, o zoom volta ao nativo e os patches saem.</summary>
+        internal ModGuard Guard { get; private set; }
+
         private Texture arrowsTexture;
         private List<Vector2> arrows;
 
@@ -65,29 +68,42 @@ namespace GK2Map
             Log = Logger;
             ZoomEnabled = Config.Bind("Map", "Zoom", true, "Scroll do mouse aproxima e afasta o mapa.");
             PlacesEnabled = Config.Bind("Map", "Places", true, "Nas setinhas amarelas do mapa, aproximar ou clicar mostra o interior do local.");
-            harmony = new Harmony(Guid);
-            harmony.Patch(AccessTools.Method(typeof(MapPageWidget), nameof(MapPageWidget.Redraw)),
-                postfix: new HarmonyMethod(typeof(Plugin), nameof(RedrawPostfix)));
-            foreach (MapPageWidget w in FindObjectsByType<MapPageWidget>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
-                Attach(w);
+            Guard = new ModGuard(Logger, Guid, Name);
+            Guard.Feature("Map", "map", "mapa", h =>
+            {
+                h.Patch(AccessTools.Method(typeof(MapPageWidget), nameof(MapPageWidget.Redraw)),
+                    postfix: new HarmonyMethod(typeof(Plugin), nameof(RedrawPostfix)));
+                foreach (MapPageWidget w in FindObjectsByType<MapPageWidget>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+                    Attach(w);
+                return this;
+            }, dispose: p => p.RestoreAll());
             Log.LogInfo($"{Name} {Version} carregado");
         }
 
+        private void Update() => Guard.Update();
+
         private void OnDestroy()
         {
-            harmony?.UnpatchSelf();
+            Guard?.Dispose();
+            if (Instance == this) Instance = null;
+        }
+
+        private void RestoreAll()
+        {
             foreach (MapZoom z in FindObjectsByType<MapZoom>(FindObjectsInactive.Include, FindObjectsSortMode.None))
             {
                 z.Restore();
                 Destroy(z);
             }
-            if (Instance == this) Instance = null;
         }
+
+        /// <summary>Erro num componente do mod (MapZoom, PlaceView): conta para a parte e, repetido, desliga o mod.</summary>
+        internal static void Fail(Exception e, string where) => Instance?.Guard.Report("Map", e, where);
 
         private static void RedrawPostfix(MapPageWidget __instance)
         {
             try { Instance?.Attach(__instance); }
-            catch (Exception e) { Log.LogError(e); }
+            catch (Exception e) { Fail(e, "MapPageWidget.Redraw"); }
         }
 
         private void Attach(MapPageWidget w)
