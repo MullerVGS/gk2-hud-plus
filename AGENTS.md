@@ -102,12 +102,22 @@ Pacote público (`GK2HudPlus/`, `mullervgs.gk2.hudplus`, nome `GK2 HUD+`): os mo
   do dia) e cada receita prepara a cena (`hud-exterior-dia.cs`: quintal ao meio-dia). Região: até 588×384 em tamanho
   real no painel, até 1176×768 em meio tamanho (pixel de arte = 1 px). Mudou o comportamento de propósito? Regrave e
   olhe a tira de quadros antes de commitar.
+- **Save de gravação** (`Steam_2`, snapshot `GK2-green-saves/inicio`): jogo novo, ainda na masmorra da abertura, com
+  "Certificate, Please" concluída antes do diário e "What the Fairy?" concluída ao vivo no dia 1 (o diário tem a
+  anotação). Os clipes de árvore de quests, calendário, diário e medalhão saem dele, sem spoiler. Feito com
+  `jogo-novo.cs` (botão New Game, slot novo), `intro-conduzir.cs` (escolhe a primeira resposta até o jogador ficar livre:
+  `FreePlayerState`, controles liberados, sem cinemática) e `jogo-novo-quests.cs` (`StartQuest`/`CompleteQuest`, que
+  disparam a cadeia natural do jogo, e salva); guardado com `gk2 save inicio`. O diário do HUD+ fica fora do save
+  (`arthur.gk2.hud/journal-<slot>.json`): o snapshot e o `gk2 save reset` levam os dois juntos, senão o mod trata as
+  anotações como "antes do diário". O "Continue" pegaria o save mais recente: `continuar.cs`, `recarregar.cs` e
+  `carregar-slot.cs` carregam por nome (`tools/snippet/Slots.cs`; `continuar.cs` sempre `Steam_1`).
 - **Demos** (`docs/cenarios/demo-*.cs`) usam `tools/snippet/DemoKit.cs` (compilado com todo cenário): `Demo.Mouse(p)`
   move o cursor desenhado e o mouse virtual de todas as funcionalidades (HUD, tooltips, mundo, medalhão, mapa) de uma
   vez, em px de tela com origem em cima; `Glide`, `Wait`, `HoverOn`, `Enter`/`Exit`/`Click` (eventos de ponteiro na UI
   nativa), `Center` (UI) e `World` (mundo → tela). Cada demo termina no estado em que começou (o clipe roda em loop) e
-  aceita `FIM` para parar no meio e enquadrar com um print. Spoiler: só começo de jogo; o calendário e o diário do save de
-  teste (dia 121) ainda mostram eventos de meio de jogo, regravar com um save do começo.
+  aceita `FIM` para parar no meio e enquadrar com um print. Spoiler: só começo de jogo (o que mostra quests, calendário ou
+  diário usa o save de gravação). As áreas de tela do calendário saem dos próprios títulos ("Journal"), porque ele
+  encolhe com poucas faixas.
 - Cenários: `hudplus-funcionalidades.cs` (`listar`; `ligar`/`desligar` com `IDS`; `ciclo` desliga e religa cada uma e
   confere os patches), `hudplus-menu.cs` (`abrir` pelo botão da pausa, `trocar` ID, `hover` ID, `rolar` POS,
   `fechar`), `settings.cs`, `mods-nativo.cs`, `guard-desligar.cs` (MOD = GUID do HUD+, PARTE = id da funcionalidade).
@@ -243,7 +253,8 @@ gk2 run <cenario.cs>                             C# dentro do jogo (≈1,5 s): a
 gk2 rec status|todos|desatualizados|<Id>         clipes do menu (receitas em tools/rec/clips.txt); status acusa clipe defasado
 gk2 rec-clip <demo.cs> <x,y,w,h> <Id> [K=V]      grava um clipe avulso: previews/<Id>.webm + docs/media/<Id>.gif/.mp4
 gk2 log [n] [grep] | state | windows | ping
-gk2 save snapshot|reset                          save de teste a partir do blue (reset limpa backups e histórico do GK2Saves)
+gk2 save snapshot|reset|inicio                   save de teste a partir do blue (reset limpa backups e histórico do GK2Saves e
+                                                 restaura o Steam_2 de gravação com o diário; inicio guarda o Steam_2)
 gk2 promote <Mod> [--green]                      entrega com o jogo aberto (blue, com aprovação) ou ensaio no green
 gk2 gatilhos [onde <termo>]                      índice do jogo: quem libera ícone/tutorial/resposta/recurso, onde está cada fala
 gk2 check GK2HudPlus                             barreira do promote (ids na tela, calendário × índice, auditoria do save)

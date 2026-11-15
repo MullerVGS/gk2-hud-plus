@@ -2,17 +2,18 @@
 # Id | preparo (cenários antes de gravar, separados por ;, com K=V) | demo (gravado) | região x,y,w,h em px de tela | fontes
 # Fontes = arquivos cujo comportamento o clipe mostra: se mudarem, o clipe fica desatualizado e o `gk2 check GK2HudPlus` falha.
 # Região: até 588x384 aparece em tamanho real no painel; até 1176x768, em meio tamanho (pixel de arte = 1 px).
-# Só conteúdo do começo do jogo (spoiler). Todo lote começa do save de teste limpo (gk2 save reset).
+# Só conteúdo do começo do jogo (spoiler). Todo lote começa do save de teste limpo (gk2 save reset restaura Steam_1 e Steam_2).
 Tooltips | docs/cenarios/fechar-janelas.cs; docs/cenarios/hud-exterior-dia.cs | docs/cenarios/demo-tooltips.cs | 320,96,900,520 | GK2Hud/Tooltips/*.cs GK2Hud/Names.cs
 World | docs/cenarios/fechar-janelas.cs; docs/cenarios/hud-exterior-dia.cs | docs/cenarios/demo-world.cs | 200,180,1176,600 | GK2Hud/World/*.cs GK2Hud/Tooltips/TooltipContent.cs GK2Hud/Names.cs
-Quests | docs/cenarios/fechar-janelas.cs; docs/cenarios/hud-exterior-dia.cs | docs/cenarios/demo-quests.cs | 616,184,1176,592 | GK2Hud/Quests/*.cs GK2Hud/Names.cs
 Hud | docs/cenarios/fechar-janelas.cs; docs/cenarios/hud-exterior-dia.cs; docs/cenarios/gk2hud-recursos.cs | docs/cenarios/demo-hud.cs | 0,0,560,200 | GK2Hud/Hud/HudFeature.cs GK2Hud/Hud/HudConfig.cs GK2Hud/Hud/HudFader.cs
 HudDayPlate | docs/cenarios/fechar-janelas.cs; docs/cenarios/hud-exterior-dia.cs | docs/cenarios/demo-dayplate.cs | 0,0,560,240 | GK2Hud/Hud/HudFeature.cs GK2Hud/Hud/HudFader.cs GK2Hud/Hud/HudL10n.cs
 WheelSpin | docs/cenarios/fechar-janelas.cs; docs/cenarios/hud-exterior-dia.cs | docs/cenarios/demo-wheelspin.cs | 0,0,240,240 | GK2Hud/Hud/WheelSpinFeature.cs
-Journal | docs/cenarios/fechar-janelas.cs; docs/cenarios/hud-exterior-dia.cs; docs/cenarios/demo-calendar.cs MODO=diario-escolher | docs/cenarios/demo-calendar.cs MODO=diario | 414,180,1176,768 | GK2Hud/Journal/*.cs GK2Hud/Calendar/CalendarPage.cs GK2Hud/Names.cs
-Wheel | docs/cenarios/fechar-janelas.cs; docs/cenarios/hud-exterior-dia.cs | docs/cenarios/demo-calendar.cs MODO=medalhao | 0,0,760,736 | GK2Hud/Calendar/WheelFeature.cs GK2Hud/Calendar/CalendarModel.cs GK2Hud/Names.cs
-CalendarTab | docs/cenarios/fechar-janelas.cs; docs/cenarios/hud-exterior-dia.cs | docs/cenarios/demo-calendar.cs MODO=aba | 330,180,1176,592 | GK2Hud/Calendar/*.cs GK2Hud/Names.cs
 Map | docs/cenarios/fechar-janelas.cs; docs/cenarios/hud-exterior-dia.cs | docs/cenarios/demo-map.cs MODO=zoom | 372,182,1176,768 | GK2Map/MapZoom.cs GK2Map/PlaceView.cs GK2Map/Places.cs GK2Map/TerrainMap.cs GK2Map/MapModule.cs
 MapPlaces | docs/cenarios/fechar-janelas.cs; docs/cenarios/hud-exterior-dia.cs | docs/cenarios/demo-map.cs MODO=local | 372,182,1176,768 | GK2Map/*.cs
 SaveLoad | docs/cenarios/fechar-janelas.cs; docs/cenarios/hud-exterior-dia.cs; docs/cenarios/gk2saves-salvar-varios.cs VEZES=2; docs/cenarios/fechar-janelas.cs | docs/cenarios/demo-saves.cs | 600,200,760,680 | GK2Saves/*.cs
 Refund | docs/cenarios/fechar-janelas.cs; docs/cenarios/hud-exterior-dia.cs | docs/cenarios/demo-refund.cs | 640,200,640,700 | GK2ZombieRefund/*.cs
+# Jogo novo de gravação (Steam_2, snapshot "inicio"): árvore de quests, calendário, diário e medalhão sem spoiler.
+Quests | docs/cenarios/carregar-slot.cs SLOT=Steam_2 SE_PRECISO=true; docs/cenarios/fechar-janelas.cs | docs/cenarios/demo-quests.cs QUEST=6_intro_guards_burial | 616,184,1176,592 | GK2Hud/Quests/*.cs GK2Hud/Names.cs
+CalendarTab | docs/cenarios/carregar-slot.cs SLOT=Steam_2 SE_PRECISO=true; docs/cenarios/fechar-janelas.cs | docs/cenarios/demo-calendar.cs MODO=aba | 330,180,1176,592 | GK2Hud/Calendar/*.cs GK2Hud/Names.cs
+Journal | docs/cenarios/carregar-slot.cs SLOT=Steam_2 SE_PRECISO=true; docs/cenarios/fechar-janelas.cs; docs/cenarios/demo-calendar.cs MODO=diario-escolher | docs/cenarios/demo-calendar.cs MODO=diario | 744,180,1176,592 | GK2Hud/Journal/*.cs GK2Hud/Calendar/CalendarPage.cs GK2Hud/Names.cs
+Wheel | docs/cenarios/carregar-slot.cs SLOT=Steam_2 SE_PRECISO=true; docs/cenarios/fechar-janelas.cs; docs/cenarios/hud-exterior-dia.cs | docs/cenarios/demo-calendar.cs MODO=medalhao | 0,0,760,736 | GK2Hud/Calendar/WheelFeature.cs GK2Hud/Calendar/CalendarModel.cs GK2Hud/Names.cs

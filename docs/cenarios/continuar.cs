@@ -21,15 +21,8 @@ public static class Snippet
             yield return new WaitForSecondsRealtime(0.5f);
         }
         if (menu == null) { yield return "menu principal não apareceu"; yield break; }
-        Debug.Log("[cenario] continuar: clicando Continue");
-        menu.OnContinueButtonClicked();
-        while (Time.realtimeSinceStartup < deadline)
-        {
-            bool loading = LazyUI.Get<UILoadingOverlay>().IsShown;
-            if (!loading && MainGame.PlayerData != null && MainGame.PlayerController != null) break;
-            yield return new WaitForSecondsRealtime(0.5f);
-        }
-        yield return new WaitForSecondsRealtime(2f);
-        yield return MainGame.PlayerData != null ? "em jogo" : "tempo esgotado carregando";
+        // O Continue pegaria o save mais recente; o green tem slots de gravação, então carrega Steam_1 pelo nome.
+        yield return Slots.Load("Steam_1", fromGame: false);
+        yield return Slots.Result != null && Slots.Result.StartsWith("em jogo") ? "em jogo" : Slots.Result;
     }
 }

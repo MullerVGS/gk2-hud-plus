@@ -26,8 +26,27 @@ public static class Snippet
             .Where(m => area.Contains(Demo.Center(m.transform))).Cast<Component>().ToList();
     }
 
-    /// <summary>Linhas da coluna do diário (à direita, embaixo da linha do tempo).</summary>
-    static List<Component> JournalLines() => Marks(new Rect(980, 780, 520, 170)).OrderBy(m => Demo.Center(m.transform).y).ToList();
+    static TMPro.TMP_Text Text(string text) => Object.FindObjectsByType<TMPro.TMP_Text>(FindObjectsSortMode.None)
+        .FirstOrDefault(t => t.isActiveAndEnabled && t.text == text);
+
+    /// <summary>Área da coluna do diário, abaixo do título "Journal" (o calendário encolhe quando há poucas faixas).</summary>
+    static Rect JournalArea()
+    {
+        var title = Text("Journal");
+        Vector2 c = title != null ? Demo.Center(title.transform) : new Vector2(1280, 692);
+        return new Rect(c.x - 300, c.y + 40, 520, 260);
+    }
+
+    /// <summary>Área das marcas da linha do tempo: entre a régua de horas e os títulos de baixo.</summary>
+    static Rect TimelineArea()
+    {
+        var title = Text("Journal");
+        float bottom = title != null ? Demo.Center(title.transform).y - 20 : 660;
+        return new Rect(560, 330 - 0, 1040, bottom - 330 > 40 ? bottom - 330 : 330);
+    }
+
+    /// <summary>Linhas da coluna do diário.</summary>
+    static List<Component> JournalLines() => Marks(JournalArea()).OrderBy(m => Demo.Center(m.transform).y).ToList();
 
     static IEnumerator Touch(Component mark, bool click, float stay)
     {
@@ -84,7 +103,7 @@ public static class Snippet
         object tab = Demo.Hud("CalendarTab");
         if (tab == null) { yield return "aba Calendário desligada"; yield break; }
         yield return OpenTab(tab);
-        var timeline = new Rect(560, 330, 1030, 330);
+        Rect timeline = TimelineArea();
         Demo.Mouse(new Vector2(470, 760));
         yield return Demo.Wait(0.4f);
         if (MODO == "aba")
@@ -107,7 +126,7 @@ public static class Snippet
         int today = MainGame.Instance.GameSave.environmentData.Day;
         if (MODO == "diario-escolher")
         {
-            for (int d = today - 1; d > today - 60; d--)
+            for (int d = today; d > today - 60; d--)   // no jogo novo de gravação, o diário só tem o dia de hoje
             {
                 Call(tab, "TestOffset", d - today);   // seleciona e rola a linha do tempo até o dia
                 yield return null; yield return null;
@@ -120,20 +139,25 @@ public static class Snippet
         if (!System.IO.File.Exists(memo)) { yield return "rode antes MODO=diario-escolher"; yield break; }
         int day = int.Parse(System.IO.File.ReadAllText(memo));
         Call(tab, "TestOffset", day + 1 - today);   // a semana do dia na tela, com o dia seguinte escolhido
+        if (day == today) Call(tab, "TestOffset", 1);
         yield return Demo.Wait(0.6f);
+        string label = day == today ? "Today" : "Day " + day;
         var header = Object.FindObjectsByType<TMPro.TMP_Text>(FindObjectsSortMode.None)
-            .FirstOrDefault(t => t.isActiveAndEnabled && t.text == "Day " + day && Demo.Center(t.transform).y < 330);
+            .FirstOrDefault(t => t.isActiveAndEnabled && t.text == label && Demo.Center(t.transform).y < 330);
         Vector2 at = header != null ? Demo.Center(header.transform) : new Vector2(700, 290);
         yield return Demo.Glide(at + new Vector2(3, 5), 0.8f);
         Call(tab, "TestOffset", day - today);
         yield return Demo.Wait(1.0f);
         var lines = JournalLines();
         if (FIM == "meio") { yield return "dia " + day + ", " + lines.Count + " linhas no diário"; yield break; }
-        // Mira pelo texto visível da entrada (as áreas de hover das linhas não batem com o texto quando a lista rola).
-        var text = Object.FindObjectsByType<TMPro.TMP_Text>(FindObjectsSortMode.None)
-            .Where(t => t.isActiveAndEnabled && t.text.Length > 2 && new Rect(980, 785, 300, 170).Contains(Demo.Center(t.transform)))
-            .Where(t => t.GetComponentsInParent<MonoBehaviour>().Any(m => m.GetType().Name == "Hover"))
-            .OrderBy(t => Demo.Center(t.transform).y).FirstOrDefault();
+        // Mira pela entrada: a linha que tem o horário à direita ("Quest · 18:07") e o texto dela na mesma altura (os títulos
+        // de grupo, "Completed"/"Unlocked", não têm horário).
+        var texts = Object.FindObjectsByType<TMPro.TMP_Text>(FindObjectsSortMode.None)
+            .Where(t => t.isActiveAndEnabled && JournalArea().Contains(Demo.Center(t.transform))).ToList();
+        var stamp = texts.Where(t => t.GetParsedText().Contains("·") && t.GetParsedText().Contains(":")).OrderBy(t => Demo.Center(t.transform).y).FirstOrDefault();
+        var text = stamp == null ? null : texts.Where(t => t != stamp && Mathf.Abs(Demo.Center(t.transform).y - Demo.Center(stamp.transform).y) < 14
+                && Demo.Center(t.transform).x < Demo.Center(stamp.transform).x && t.GetComponentsInParent<MonoBehaviour>().Any(m => m.GetType().Name == "Hover"))
+            .OrderBy(t => Demo.Center(t.transform).x).FirstOrDefault();
         if (text != null)
         {
             var hover = text.GetComponentsInParent<MonoBehaviour>().First(m => m.GetType().Name == "Hover");

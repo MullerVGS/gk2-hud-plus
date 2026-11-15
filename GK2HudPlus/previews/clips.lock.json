@@ -9,11 +9,12 @@
       "GK2Hud/Calendar/CalendarTooltip.cs": "9a7aa4182a5f3044",
       "GK2Hud/Calendar/WheelFeature.cs": "a8dd1a213738abc0",
       "GK2Hud/Names.cs": "bf205c97a94198c1",
-      "clips.txt": "ee5a345ef03bb401",
-      "docs/cenarios/demo-calendar.cs": "2f28504cdd12a6e7",
+      "clips.txt": "2bc109b4d547d2f6",
+      "docs/cenarios/carregar-slot.cs": "0a7f164ef97a753d",
+      "docs/cenarios/demo-calendar.cs": "9246edf4e21ae113",
       "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
-      "docs/cenarios/hud-exterior-dia.cs": "df5f04f4e9866a77",
-      "tools/snippet/DemoKit.cs": "26d68e222f910497"
+      "tools/snippet/DemoKit.cs": "26d68e222f910497",
+      "tools/snippet/Slots.cs": "60719f4e37c234dd"
     },
     "game": "1.012.7"
   },
@@ -28,7 +29,8 @@
       "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
       "docs/cenarios/gk2hud-recursos.cs": "6bde9626d1ce1072",
       "docs/cenarios/hud-exterior-dia.cs": "df5f04f4e9866a77",
-      "tools/snippet/DemoKit.cs": "26d68e222f910497"
+      "tools/snippet/DemoKit.cs": "26d68e222f910497",
+      "tools/snippet/Slots.cs": "60719f4e37c234dd"
     },
     "game": "1.012.7"
   },
@@ -42,7 +44,8 @@
       "docs/cenarios/demo-dayplate.cs": "47ba65a526c21ec1",
       "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
       "docs/cenarios/hud-exterior-dia.cs": "df5f04f4e9866a77",
-      "tools/snippet/DemoKit.cs": "26d68e222f910497"
+      "tools/snippet/DemoKit.cs": "26d68e222f910497",
+      "tools/snippet/Slots.cs": "60719f4e37c234dd"
     },
     "game": "1.012.7"
   },
@@ -53,11 +56,12 @@
       "GK2Hud/Journal/JournalTracker.cs": "87a4342b476ec7e8",
       "GK2Hud/Journal/JournalView.cs": "bb7e6b0ce737604f",
       "GK2Hud/Names.cs": "bf205c97a94198c1",
-      "clips.txt": "e0d3ee6b92bf0d0d",
-      "docs/cenarios/demo-calendar.cs": "2f28504cdd12a6e7",
+      "clips.txt": "6cf1924f99ffa994",
+      "docs/cenarios/carregar-slot.cs": "0a7f164ef97a753d",
+      "docs/cenarios/demo-calendar.cs": "9246edf4e21ae113",
       "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
-      "docs/cenarios/hud-exterior-dia.cs": "df5f04f4e9866a77",
-      "tools/snippet/DemoKit.cs": "26d68e222f910497"
+      "tools/snippet/DemoKit.cs": "26d68e222f910497",
+      "tools/snippet/Slots.cs": "60719f4e37c234dd"
     },
     "game": "1.012.7"
   },
@@ -73,7 +77,8 @@
       "docs/cenarios/demo-map.cs": "8085bcfd23bf96ce",
       "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
       "docs/cenarios/hud-exterior-dia.cs": "df5f04f4e9866a77",
-      "tools/snippet/DemoKit.cs": "26d68e222f910497"
+      "tools/snippet/DemoKit.cs": "26d68e222f910497",
+      "tools/snippet/Slots.cs": "60719f4e37c234dd"
     },
     "game": "1.012.7"
   },
@@ -94,7 +99,8 @@
       "docs/cenarios/demo-map.cs": "8085bcfd23bf96ce",
       "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
       "docs/cenarios/hud-exterior-dia.cs": "df5f04f4e9866a77",
-      "tools/snippet/DemoKit.cs": "26d68e222f910497"
+      "tools/snippet/DemoKit.cs": "26d68e222f910497",
+      "tools/snippet/Slots.cs": "60719f4e37c234dd"
     },
     "game": "1.012.7"
   },
@@ -106,11 +112,12 @@
       "GK2Hud/Quests/QuestL10n.cs": "6a64edee9a8dd8af",
       "GK2Hud/Quests/QuestModel.cs": "56b4cae6290c9590",
       "GK2Hud/Quests/QuestTreeFeature.cs": "0c00e38e24d01b69",
-      "clips.txt": "c689d00b6b1d4db0",
+      "clips.txt": "1acce923c2e82d82",
+      "docs/cenarios/carregar-slot.cs": "0a7f164ef97a753d",
       "docs/cenarios/demo-quests.cs": "acc1d8f616f7aa95",
       "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
-      "docs/cenarios/hud-exterior-dia.cs": "df5f04f4e9866a77",
-      "tools/snippet/DemoKit.cs": "26d68e222f910497"
+      "tools/snippet/DemoKit.cs": "26d68e222f910497",
+      "tools/snippet/Slots.cs": "60719f4e37c234dd"
     },
     "game": "1.012.7"
   },
@@ -123,7 +130,8 @@
       "docs/cenarios/demo-refund.cs": "9ba0154267a4180e",
       "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
       "docs/cenarios/hud-exterior-dia.cs": "df5f04f4e9866a77",
-      "tools/snippet/DemoKit.cs": "26d68e222f910497"
+      "tools/snippet/DemoKit.cs": "26d68e222f910497",
+      "tools/snippet/Slots.cs": "60719f4e37c234dd"
     },
     "game": "1.012.7"
   },
@@ -142,7 +150,8 @@
       "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
       "docs/cenarios/gk2saves-salvar-varios.cs": "6ed5cd8e68f4e2a7",
       "docs/cenarios/hud-exterior-dia.cs": "df5f04f4e9866a77",
-      "tools/snippet/DemoKit.cs": "26d68e222f910497"
+      "tools/snippet/DemoKit.cs": "26d68e222f910497",
+      "tools/snippet/Slots.cs": "60719f4e37c234dd"
     },
     "game": "1.012.7"
   },
@@ -162,7 +171,8 @@
       "docs/cenarios/demo-tooltips.cs": "3db20f895d44fb54",
       "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
       "docs/cenarios/hud-exterior-dia.cs": "df5f04f4e9866a77",
-      "tools/snippet/DemoKit.cs": "26d68e222f910497"
+      "tools/snippet/DemoKit.cs": "26d68e222f910497",
+      "tools/snippet/Slots.cs": "60719f4e37c234dd"
     },
     "game": "1.012.7"
   },
@@ -172,11 +182,13 @@
       "GK2Hud/Calendar/CalendarModel.cs": "6a9ae8645b96b793",
       "GK2Hud/Calendar/WheelFeature.cs": "a8dd1a213738abc0",
       "GK2Hud/Names.cs": "bf205c97a94198c1",
-      "clips.txt": "7fbe4460cedde660",
-      "docs/cenarios/demo-calendar.cs": "2f28504cdd12a6e7",
+      "clips.txt": "9b7f7248824b689c",
+      "docs/cenarios/carregar-slot.cs": "0a7f164ef97a753d",
+      "docs/cenarios/demo-calendar.cs": "9246edf4e21ae113",
       "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
       "docs/cenarios/hud-exterior-dia.cs": "df5f04f4e9866a77",
-      "tools/snippet/DemoKit.cs": "26d68e222f910497"
+      "tools/snippet/DemoKit.cs": "26d68e222f910497",
+      "tools/snippet/Slots.cs": "60719f4e37c234dd"
     },
     "game": "1.012.7"
   },
@@ -188,7 +200,8 @@
       "docs/cenarios/demo-wheelspin.cs": "408520a0bfd3c8b6",
       "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
       "docs/cenarios/hud-exterior-dia.cs": "df5f04f4e9866a77",
-      "tools/snippet/DemoKit.cs": "26d68e222f910497"
+      "tools/snippet/DemoKit.cs": "26d68e222f910497",
+      "tools/snippet/Slots.cs": "60719f4e37c234dd"
     },
     "game": "1.012.7"
   },
@@ -205,7 +218,8 @@
       "docs/cenarios/demo-world.cs": "3e51b413f4fc2094",
       "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
       "docs/cenarios/hud-exterior-dia.cs": "df5f04f4e9866a77",
-      "tools/snippet/DemoKit.cs": "26d68e222f910497"
+      "tools/snippet/DemoKit.cs": "26d68e222f910497",
+      "tools/snippet/Slots.cs": "60719f4e37c234dd"
     },
     "game": "1.012.7"
   }

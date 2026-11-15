@@ -23,6 +23,7 @@ LOCK = os.path.join(repo, "GK2HudPlus/previews/clips.lock.json")
 PREVIEWS = os.path.join(repo, "GK2HudPlus/previews")
 MODULES = ["GK2Hud/HudModule.cs", "GK2Map/MapModule.cs", "GK2Saves/SavesModule.cs", "GK2ZombieRefund/RefundModule.cs"]
 KIT = "tools/snippet/DemoKit.cs"
+SLOTS = "tools/snippet/Slots.cs"
 
 
 def manifest():
@@ -45,7 +46,7 @@ def manifest():
 
 def files_of(clip):
     """Arquivos cujo conteúdo o clipe mostra: fontes, demo, preparo e o kit."""
-    paths = set([KIT])
+    paths = set([KIT, SLOTS])
     for spec in [clip["demo"]] + clip["prep"]:
         paths.add(spec.split()[0])
     for pattern in clip["sources"]:
@@ -125,7 +126,7 @@ def record(ids):
     lock = load_lock()
     # Todo lote parte do save de teste limpo (o relógio do green anda; o diário e o calendário dependem do dia).
     subprocess.run([gk2, "save", "reset"], capture_output=True)
-    run("docs/cenarios/recarregar.cs", "save de teste")
+    run("docs/cenarios/carregar-slot.cs SLOT=Steam_1", "save de teste")
     version = game_version()
     for cid in ids:
         c = clips.get(cid) or sys.exit(f"{cid}: não está em tools/rec/clips.txt")

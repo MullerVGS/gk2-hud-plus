@@ -134,8 +134,20 @@ EOF
       reset) [ -f "$SNAPSHOTS/snapshot/Steam_1.dat" ] || die "sem snapshot"; mkdir -p "$GREEN_DATA"
         rm -f "$GREEN_DATA"/Steam_1_*.dat "$GREEN_DATA"/Steam_1_*.info "$GREEN_DATA"/Steam_1*.new
         rm -rf "$GREEN/BepInEx/config/arthur.gk2.saves/history"
-        cp "$SNAPSHOTS"/snapshot/Steam_1.* "$GREEN_DATA/"; echo "save do green = snapshot, sem backups nem histórico do GK2Saves (recarregue o save no jogo)" ;;
-      *) die "save snapshot|reset" ;;
+        cp "$SNAPSHOTS"/snapshot/Steam_1.* "$GREEN_DATA/"; echo "save do green = snapshot, sem backups nem histórico do GK2Saves (recarregue o save no jogo)"
+        if [ -f "$SNAPSHOTS/inicio/Steam_2.dat" ]; then   # jogo novo de gravação (clipes sem spoiler)
+          rm -f "$GREEN_DATA"/Steam_2_*.dat "$GREEN_DATA"/Steam_2_*.info "$GREEN_DATA"/Steam_2*.new
+          cp "$SNAPSHOTS"/inicio/Steam_2.* "$GREEN_DATA/"
+          # O diário do GK2 HUD+ vive fora do save: volta junto, senão o mod trata as anotações como "antes do diário".
+          [ -f "$SNAPSHOTS/inicio/journal-Steam_2.json" ] && cp "$SNAPSHOTS/inicio/journal-Steam_2.json" "$GREEN/BepInEx/config/arthur.gk2.hud/"
+          echo "Steam_2 = jogo novo de gravação (snapshot inicio, com o diário)"
+        fi ;;
+      inicio) # guarda o Steam_2 do green (jogo novo de gravação, feito com jogo-novo.cs + intro-conduzir.cs + jogo-novo-quests.cs)
+        [ -f "$GREEN_DATA/Steam_2.dat" ] || die "o green não tem Steam_2"
+        mkdir -p "$SNAPSHOTS/inicio"; cp "$GREEN_DATA"/Steam_2.dat "$GREEN_DATA"/Steam_2.info "$SNAPSHOTS/inicio/"
+        j="$GREEN/BepInEx/config/arthur.gk2.hud/journal-Steam_2.json"; [ -f "$j" ] && cp "$j" "$SNAPSHOTS/inicio/"
+        ls -la "$SNAPSHOTS/inicio" ;;
+      *) die "save snapshot|reset|inicio" ;;
     esac
     ;;
   build) build "${1:?projeto}" ;;
