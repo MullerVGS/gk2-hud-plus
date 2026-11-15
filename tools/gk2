@@ -177,7 +177,10 @@ EOF
     ;;
   unload) api "/unload?guid=${1:?guid}" | pretty ;;
   rec)
-    # gk2 rec <cenario.cs> <x,y,w,h> <nome> [--fps n] [--antes s] [--depois s] [K=V ...]
+    # gk2 rec status [--estrito] | todos | desatualizados | <Id>...   (receitas em tools/rec/clips.txt; ver tools/rec/rec.py)
+    python3 "$HERE/tools/rec/rec.py" "$0" "$HERE" "$@" ;;
+  rec-clip)
+    # gk2 rec-clip <cenario.cs> <x,y,w,h> <nome> [--fps n] [--antes s] [--depois s] [K=V ...]
     # Grava um clipe da região (px de tela, alinhada em pares) enquanto o cenário roda. Saídas: GK2HudPlus/previews/<nome>.webm
     # (preview do menu, VP8) e docs/media/<nome>.gif e .mp4 (páginas). K=V troca constantes do cenário, como no smoke.
     src=${1:?cenário}; reg=${2:?x,y,w,h}; nome=${3:?nome}; shift 3
@@ -205,7 +208,7 @@ EOF
     read -r W H F < <(python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print(d["w"], d["h"], d["fps"])' "$out.json")
     mkdir -p "$HERE/GK2HudPlus/previews" "$HERE/docs/media"
     raw=(-loglevel error -y -f rawvideo -pix_fmt rgb24 -s "${W}x${H}" -r "$F" -i "$out.rgb")
-    ffmpeg "${raw[@]}" -c:v libvpx -crf 6 -b:v 2M -auto-alt-ref 0 -pix_fmt yuv420p "$HERE/GK2HudPlus/previews/$nome.webm" || die "ffmpeg webm falhou"
+    ffmpeg "${raw[@]}" -c:v libvpx -crf 10 -b:v 1M -auto-alt-ref 0 -pix_fmt yuv420p "$HERE/GK2HudPlus/previews/$nome.webm" || die "ffmpeg webm falhou"
     ffmpeg "${raw[@]}" -c:v libx264 -crf 16 -preset slow -pix_fmt yuv420p -movflags +faststart "$HERE/docs/media/$nome.mp4" || die "ffmpeg mp4 falhou"
     ffmpeg "${raw[@]}" -vf "scale=iw/2:ih/2:flags=neighbor,split[a][b];[a]palettegen=stats_mode=diff[p];[b][p]paletteuse=dither=none" "$HERE/docs/media/$nome.gif" || die "ffmpeg gif falhou"
     ffmpeg "${raw[@]}" -vf "select=eq(n\,$(( F * 3 / 2 )))" -frames:v 1 "$HERE/.shots/rec-$nome.png" 2>/dev/null || true
@@ -269,6 +272,7 @@ im.save(sys.argv[1])" "$out" "$crop"
     echo "$out" | grep -q '"ok": true' || { echo "$out" | tail -5; die "varredura no green falhou"; }
     python3 "$HERE/tools/check/check.py" "$HERE" "$GREEN/BepInEx/gk2check/gk2hud.json" "$idx"
     python3 "$HERE/tools/check/teste.py" "$HERE" "$GREEN/BepInEx/gk2check/gk2hud.json" "$idx" >/dev/null || die "a barreira deixou passar um bug conhecido (rode tools/check/teste.py)"
+    python3 "$HERE/tools/rec/rec.py" "$0" "$HERE" status --estrito | sed 's/^/clipes: /' || die "clipe do menu desatualizado ou faltando: gk2 rec desatualizados"
     ;;
   promote)
     # Entrega um mod aprovado. Blue: pacote Mods/Code (vale ao reabrir) + BepInEx/hot (o GK2 HotLoader aplica com o
@@ -409,6 +413,8 @@ deploy <Proj>              compila, instala no green e faz hot-reload
 unload <guid>              descarrega um plugin recarregável
 run <arquivo.cs>           executa um cenário C# dentro do jogo (static class Snippet { static object Run() })
 shot [nome] [--hideui] [--crop x,y,w,h] [--frames n]   print pelo Unity → .shots/
+rec status|todos|desatualizados|<Id>   clipes do menu do HUD+ (tools/rec/clips.txt); status diz quais ficaram velhos
+rec-clip <demo.cs> <x,y,w,h> <Id> [K=V]   grava um clipe avulso (WebM em previews/, GIF/MP4 em docs/media/)
 winshot [nome]             print pela janela (fallback, sem ponte)
 log [n] [grep] | state | ping | windows | ui [filtro] [prof] [inativos 0|1] | wait [s]
 promote <Proj> [--green|--sem-hot]   entrega o mod aprovado (blue: Mods/Code + hot-reload pelo HotLoader; --green: ensaio)

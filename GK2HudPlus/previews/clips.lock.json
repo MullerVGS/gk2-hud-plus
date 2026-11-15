@@ -1,0 +1,212 @@
+{
+  "CalendarTab": {
+    "date": "2026-11-15",
+    "files": {
+      "GK2Hud/Calendar/CalendarL10n.cs": "e6c6ad96ae87d358",
+      "GK2Hud/Calendar/CalendarModel.cs": "6a9ae8645b96b793",
+      "GK2Hud/Calendar/CalendarPage.cs": "92a1ca336c24a08c",
+      "GK2Hud/Calendar/CalendarTab.cs": "f4641de4143fd831",
+      "GK2Hud/Calendar/CalendarTooltip.cs": "9a7aa4182a5f3044",
+      "GK2Hud/Calendar/WheelFeature.cs": "a8dd1a213738abc0",
+      "GK2Hud/Names.cs": "bf205c97a94198c1",
+      "clips.txt": "ee5a345ef03bb401",
+      "docs/cenarios/demo-calendar.cs": "2f28504cdd12a6e7",
+      "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
+      "docs/cenarios/hud-exterior-dia.cs": "df5f04f4e9866a77",
+      "tools/snippet/DemoKit.cs": "26d68e222f910497"
+    },
+    "game": "1.012.7"
+  },
+  "Hud": {
+    "date": "2026-11-15",
+    "files": {
+      "GK2Hud/Hud/HudConfig.cs": "5bbf4845f7201dff",
+      "GK2Hud/Hud/HudFader.cs": "7e53c1aea27c6b47",
+      "GK2Hud/Hud/HudFeature.cs": "2dc9e8de2d86fab8",
+      "clips.txt": "9f31ceac1ef3ba9f",
+      "docs/cenarios/demo-hud.cs": "55e1dd09566b3565",
+      "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
+      "docs/cenarios/gk2hud-recursos.cs": "6bde9626d1ce1072",
+      "docs/cenarios/hud-exterior-dia.cs": "df5f04f4e9866a77",
+      "tools/snippet/DemoKit.cs": "26d68e222f910497"
+    },
+    "game": "1.012.7"
+  },
+  "HudDayPlate": {
+    "date": "2026-11-15",
+    "files": {
+      "GK2Hud/Hud/HudFader.cs": "7e53c1aea27c6b47",
+      "GK2Hud/Hud/HudFeature.cs": "2dc9e8de2d86fab8",
+      "GK2Hud/Hud/HudL10n.cs": "85e49cd85c00883c",
+      "clips.txt": "37683adb26fb8889",
+      "docs/cenarios/demo-dayplate.cs": "47ba65a526c21ec1",
+      "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
+      "docs/cenarios/hud-exterior-dia.cs": "df5f04f4e9866a77",
+      "tools/snippet/DemoKit.cs": "26d68e222f910497"
+    },
+    "game": "1.012.7"
+  },
+  "Journal": {
+    "date": "2026-11-15",
+    "files": {
+      "GK2Hud/Calendar/CalendarPage.cs": "92a1ca336c24a08c",
+      "GK2Hud/Journal/JournalTracker.cs": "87a4342b476ec7e8",
+      "GK2Hud/Journal/JournalView.cs": "bb7e6b0ce737604f",
+      "GK2Hud/Names.cs": "bf205c97a94198c1",
+      "clips.txt": "e0d3ee6b92bf0d0d",
+      "docs/cenarios/demo-calendar.cs": "2f28504cdd12a6e7",
+      "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
+      "docs/cenarios/hud-exterior-dia.cs": "df5f04f4e9866a77",
+      "tools/snippet/DemoKit.cs": "26d68e222f910497"
+    },
+    "game": "1.012.7"
+  },
+  "Map": {
+    "date": "2026-11-15",
+    "files": {
+      "GK2Map/MapModule.cs": "8d7577dada61e3b6",
+      "GK2Map/MapZoom.cs": "52ec3855c9d322d5",
+      "GK2Map/PlaceView.cs": "d672a3fd3a5294e4",
+      "GK2Map/Places.cs": "ee5418952960f700",
+      "GK2Map/TerrainMap.cs": "900ee922d691a2a3",
+      "clips.txt": "4d78252ea7e5bc46",
+      "docs/cenarios/demo-map.cs": "8085bcfd23bf96ce",
+      "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
+      "docs/cenarios/hud-exterior-dia.cs": "df5f04f4e9866a77",
+      "tools/snippet/DemoKit.cs": "26d68e222f910497"
+    },
+    "game": "1.012.7"
+  },
+  "MapPlaces": {
+    "date": "2026-11-15",
+    "files": {
+      "GK2Map/L10n.cs": "b9971b0b9f049693",
+      "GK2Map/MapModule.cs": "8d7577dada61e3b6",
+      "GK2Map/MapZoom.cs": "52ec3855c9d322d5",
+      "GK2Map/Outline.cs": "232b01b4333ea851",
+      "GK2Map/PlaceInspect.cs": "3c445805f6e5bea0",
+      "GK2Map/PlaceView.cs": "d672a3fd3a5294e4",
+      "GK2Map/Places.cs": "ee5418952960f700",
+      "GK2Map/Plugin.cs": "ee38b9eed4c01e57",
+      "GK2Map/TerrainMap.cs": "900ee922d691a2a3",
+      "GK2Map/ZoneInfo.cs": "1a9b89e6b50720ae",
+      "clips.txt": "8db060cad52df470",
+      "docs/cenarios/demo-map.cs": "8085bcfd23bf96ce",
+      "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
+      "docs/cenarios/hud-exterior-dia.cs": "df5f04f4e9866a77",
+      "tools/snippet/DemoKit.cs": "26d68e222f910497"
+    },
+    "game": "1.012.7"
+  },
+  "Quests": {
+    "date": "2026-11-15",
+    "files": {
+      "GK2Hud/Names.cs": "bf205c97a94198c1",
+      "GK2Hud/Quests/QuestContent.cs": "5eb0fa2fc07c5373",
+      "GK2Hud/Quests/QuestL10n.cs": "6a64edee9a8dd8af",
+      "GK2Hud/Quests/QuestModel.cs": "56b4cae6290c9590",
+      "GK2Hud/Quests/QuestTreeFeature.cs": "0c00e38e24d01b69",
+      "clips.txt": "c689d00b6b1d4db0",
+      "docs/cenarios/demo-quests.cs": "acc1d8f616f7aa95",
+      "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
+      "docs/cenarios/hud-exterior-dia.cs": "df5f04f4e9866a77",
+      "tools/snippet/DemoKit.cs": "26d68e222f910497"
+    },
+    "game": "1.012.7"
+  },
+  "Refund": {
+    "date": "2026-11-15",
+    "files": {
+      "GK2ZombieRefund/Plugin.cs": "850cc6ef7ec716ed",
+      "GK2ZombieRefund/RefundModule.cs": "d6c6915877587bb0",
+      "clips.txt": "2f5c55a17c2673ed",
+      "docs/cenarios/demo-refund.cs": "9ba0154267a4180e",
+      "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
+      "docs/cenarios/hud-exterior-dia.cs": "df5f04f4e9866a77",
+      "tools/snippet/DemoKit.cs": "26d68e222f910497"
+    },
+    "game": "1.012.7"
+  },
+  "SaveLoad": {
+    "date": "2026-11-15",
+    "files": {
+      "GK2Saves/History.cs": "4e207bb4e2459574",
+      "GK2Saves/L10n.cs": "38a40b3a607a0a08",
+      "GK2Saves/Patches.cs": "afd0c86d00d94fac",
+      "GK2Saves/PauseButtons.cs": "c1cbe9e1415e8a76",
+      "GK2Saves/Plugin.cs": "35760b56af53ec51",
+      "GK2Saves/SaveGuard.cs": "ae2d7ad82e69ed9c",
+      "GK2Saves/SavesModule.cs": "9c35f58d2e3b5fdf",
+      "clips.txt": "7901320202823e2a",
+      "docs/cenarios/demo-saves.cs": "3023bd72d772edaf",
+      "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
+      "docs/cenarios/gk2saves-salvar-varios.cs": "6ed5cd8e68f4e2a7",
+      "docs/cenarios/hud-exterior-dia.cs": "df5f04f4e9866a77",
+      "tools/snippet/DemoKit.cs": "26d68e222f910497"
+    },
+    "game": "1.012.7"
+  },
+  "Tooltips": {
+    "date": "2026-11-15",
+    "files": {
+      "GK2Hud/Names.cs": "bf205c97a94198c1",
+      "GK2Hud/Tooltips/Index.cs": "041ddae0794aa847",
+      "GK2Hud/Tooltips/L10n.cs": "bf829e4f33e7fdf3",
+      "GK2Hud/Tooltips/LeakSweeper.cs": "428160ea9cc62563",
+      "GK2Hud/Tooltips/Links.cs": "1f20e8183a34a8f9",
+      "GK2Hud/Tooltips/PinStack.cs": "b1acf2959bf1ca73",
+      "GK2Hud/Tooltips/TooltipContent.cs": "b85da1acbf6a26d4",
+      "GK2Hud/Tooltips/TooltipContext.cs": "69eda75c1e7f576a",
+      "GK2Hud/Tooltips/TooltipFeature.cs": "c10a8eaddb2a8f4f",
+      "clips.txt": "acaf61c240322b5e",
+      "docs/cenarios/demo-tooltips.cs": "3db20f895d44fb54",
+      "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
+      "docs/cenarios/hud-exterior-dia.cs": "df5f04f4e9866a77",
+      "tools/snippet/DemoKit.cs": "26d68e222f910497"
+    },
+    "game": "1.012.7"
+  },
+  "Wheel": {
+    "date": "2026-11-15",
+    "files": {
+      "GK2Hud/Calendar/CalendarModel.cs": "6a9ae8645b96b793",
+      "GK2Hud/Calendar/WheelFeature.cs": "a8dd1a213738abc0",
+      "GK2Hud/Names.cs": "bf205c97a94198c1",
+      "clips.txt": "7fbe4460cedde660",
+      "docs/cenarios/demo-calendar.cs": "2f28504cdd12a6e7",
+      "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
+      "docs/cenarios/hud-exterior-dia.cs": "df5f04f4e9866a77",
+      "tools/snippet/DemoKit.cs": "26d68e222f910497"
+    },
+    "game": "1.012.7"
+  },
+  "WheelSpin": {
+    "date": "2026-11-15",
+    "files": {
+      "GK2Hud/Hud/WheelSpinFeature.cs": "c5e7928a22153a45",
+      "clips.txt": "c946f6a4314a92ad",
+      "docs/cenarios/demo-wheelspin.cs": "408520a0bfd3c8b6",
+      "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
+      "docs/cenarios/hud-exterior-dia.cs": "df5f04f4e9866a77",
+      "tools/snippet/DemoKit.cs": "26d68e222f910497"
+    },
+    "game": "1.012.7"
+  },
+  "World": {
+    "date": "2026-11-15",
+    "files": {
+      "GK2Hud/Names.cs": "bf205c97a94198c1",
+      "GK2Hud/Tooltips/TooltipContent.cs": "b85da1acbf6a26d4",
+      "GK2Hud/World/WorldContent.cs": "0e3636a4acdd6b94",
+      "GK2Hud/World/WorldHoverFeature.cs": "83240413bbf9228f",
+      "GK2Hud/World/WorldProcesses.cs": "6d5954ff69db59f7",
+      "GK2Hud/World/WorldTargets.cs": "e312b1746842b610",
+      "clips.txt": "fd19c3f473aa1b54",
+      "docs/cenarios/demo-world.cs": "3e51b413f4fc2094",
+      "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
+      "docs/cenarios/hud-exterior-dia.cs": "df5f04f4e9866a77",
+      "tools/snippet/DemoKit.cs": "26d68e222f910497"
+    },
+    "game": "1.012.7"
+  }
+}

@@ -90,12 +90,24 @@ Pacote público (`GK2HudPlus/`, `mullervgs.gk2.hudplus`, nome `GK2 HUD+`): os mo
   Clipes em `GK2HudPlus/previews/<Id>.webm` (VP8, o Unity decodifica sozinho, inclusive no Proton), mostrados 1 px de
   textura por px de tela (`RenderTexture` sem filtro); opção sem clipe usa o da dona. O deploy copia `previews/` para
   `BepInEx/plugins/GK2HudPlus/previews` (a DLL carregada da memória no hot-reload não tem `Location`).
-- **Gravação** (`gk2 rec`, rotas `/rec/start|stop|cursor` da DevBridge 0.2.0): compila o cenário antes, captura no fim
-  do frame na resolução da tela (região alinhada em pares, para o yuv420p não borrar o pixel art), e o ffmpeg gera o
-  WebM do menu, o MP4 e o GIF (metade, em pixels de arte) das páginas. O cursor do sistema não sai na captura: o demo
-  põe o mouse virtual da funcionalidade e `GK2DevBridge.Recorder.Cursor` (origem em cima) no mesmo ponto, e o gravador
-  desenha o cursor do jogo (`CursorController.cursorConfigurations[0]`). Demos em `docs/cenarios/demo-*.cs`.
-  Descrições das funcionalidades: uma frase de jogador, sem termo técnico.
+- **Gravação** (`gk2 rec-clip`, rotas `/rec/start|stop|cursor` da DevBridge 0.2.0): compila o cenário antes, captura no
+  fim do frame na resolução da tela (região alinhada em pares, para o yuv420p não borrar o pixel art), e o ffmpeg gera o
+  WebM do menu (VP8 crf 10), o MP4 e o GIF (metade, em pixels de arte) das páginas. O cursor do sistema não sai na
+  captura: o gravador desenha o cursor do jogo (`CursorController.cursorConfigurations[0]`) onde o demo mandar.
+- **Sem defasagem** (`gk2 rec status|todos|desatualizados|<Id>`, `tools/rec/rec.py`): cada clipe tem receita em
+  `tools/rec/clips.txt` (preparo, demo, região, fontes) e o que foi gravado fica em `GK2HudPlus/previews/clips.lock.json`
+  com o hash de cada fonte, do demo, do preparo e do `DemoKit`. Mudou uma fonte, o clipe fica desatualizado e o
+  `gk2 check GK2HudPlus` (logo, o `promote`) falha até `gk2 rec desatualizados`. Funcionalidade nova sem receita também
+  falha. Todo lote começa com `gk2 save reset` + `recarregar.cs` (o relógio do green anda; calendário e diário dependem
+  do dia) e cada receita prepara a cena (`hud-exterior-dia.cs`: quintal ao meio-dia). Região: até 588×384 em tamanho
+  real no painel, até 1176×768 em meio tamanho (pixel de arte = 1 px). Mudou o comportamento de propósito? Regrave e
+  olhe a tira de quadros antes de commitar.
+- **Demos** (`docs/cenarios/demo-*.cs`) usam `tools/snippet/DemoKit.cs` (compilado com todo cenário): `Demo.Mouse(p)`
+  move o cursor desenhado e o mouse virtual de todas as funcionalidades (HUD, tooltips, mundo, medalhão, mapa) de uma
+  vez, em px de tela com origem em cima; `Glide`, `Wait`, `HoverOn`, `Enter`/`Exit`/`Click` (eventos de ponteiro na UI
+  nativa), `Center` (UI) e `World` (mundo → tela). Cada demo termina no estado em que começou (o clipe roda em loop) e
+  aceita `FIM` para parar no meio e enquadrar com um print. Spoiler: só começo de jogo; o calendário e o diário do save de
+  teste (dia 121) ainda mostram eventos de meio de jogo, regravar com um save do começo.
 - Cenários: `hudplus-funcionalidades.cs` (`listar`; `ligar`/`desligar` com `IDS`; `ciclo` desliga e religa cada uma e
   confere os patches), `hudplus-menu.cs` (`abrir` pelo botão da pausa, `trocar` ID, `hover` ID, `rolar` POS,
   `fechar`), `settings.cs`, `mods-nativo.cs`, `guard-desligar.cs` (MOD = GUID do HUD+, PARTE = id da funcionalidade).
@@ -228,7 +240,8 @@ gk2 deploy <Mod>                                 compila, instala no green e faz
 gk2 shot <nome> [--hideui] [--crop x,y,w,h]      print pelo próprio Unity → .shots/HHMMSS-nome.png
 gk2 ui <filtro> [prof]                           árvore da UI nativa: rects em px de tela, sprites, fontes, TextStyle
 gk2 run <cenario.cs>                             C# dentro do jogo (≈1,5 s): abrir janela, ler valor, preparar cena
-gk2 rec <demo.cs> <x,y,w,h> <Id> [K=V]           clipe da região enquanto o cenário roda: previews/<Id>.webm + docs/media/<Id>.gif/.mp4
+gk2 rec status|todos|desatualizados|<Id>         clipes do menu (receitas em tools/rec/clips.txt); status acusa clipe defasado
+gk2 rec-clip <demo.cs> <x,y,w,h> <Id> [K=V]      grava um clipe avulso: previews/<Id>.webm + docs/media/<Id>.gif/.mp4
 gk2 log [n] [grep] | state | windows | ping
 gk2 save snapshot|reset                          save de teste a partir do blue (reset limpa backups e histórico do GK2Saves)
 gk2 promote <Mod> [--green]                      entrega com o jogo aberto (blue, com aprovação) ou ensaio no green

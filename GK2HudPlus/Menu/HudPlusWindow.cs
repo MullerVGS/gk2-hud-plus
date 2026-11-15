@@ -31,8 +31,9 @@ namespace GK2HudPlus.Menu
         private const float BodyWidth = ListWidth + PanelGap + PreviewPanel.Width;
         private const float RowHeight = 16f;
         private const float RowSpacing = 6f;
-        /// <summary>Dez linhas inteiras (toda linha mede 16 + 6), para a lista nunca abrir cortando uma pela metade.</summary>
-        private const float ListHeight = 2f + 10 * (RowHeight + RowSpacing) - RowSpacing + 2f;
+        /// <summary>Doze linhas inteiras (toda linha mede 16 + 6), para a lista nunca abrir cortando uma pela metade; a
+        /// altura também dá ao clipe do painel 294×192 pixels de arte.</summary>
+        private const float ListHeight = 2f + 12 * (RowHeight + RowSpacing) - RowSpacing + 2f;
         private const string DisabledColor = "#E5736A";
         private const string WarningColor = "#F2C94C";
 
