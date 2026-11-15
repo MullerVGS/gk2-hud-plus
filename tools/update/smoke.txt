@@ -16,6 +16,10 @@ docs/cenarios/gk2map-zoom.cs | zoom índice | map-zoom
 docs/cenarios/gk2map-local.cs | vista ativa: True | map-local
 docs/cenarios/gk2map-local.cs ACAO=sair | vista ativa: False |
 docs/cenarios/fechar-janelas.cs | fechadas |
+docs/cenarios/hudplus-funcionalidades.cs ACAO=ligar IDS=SaveLoad,Refund | SaveLoad +ligada.*\n.*Refund +ligada |
+docs/cenarios/hudplus-menu.cs | janela aberta | hudplus-menu
+docs/cenarios/hudplus-menu.cs ACAO=fechar | janela fechada · pausa aberta |
+docs/cenarios/fechar-janelas.cs | fechadas |
 docs/cenarios/pausa.cs | pausa aberta | saves-pausa
 docs/cenarios/gk2saves-clicar.cs | clicado Load | saves-load
 docs/cenarios/fechar-janelas.cs | fechadas |

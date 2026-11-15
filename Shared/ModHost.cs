@@ -112,11 +112,14 @@ namespace GK2Shared
             return f;
         }
 
-        /// <summary>Ajuste booleano de uma funcionalidade, mostrado no menu abaixo dela; mudar reinicia a funcionalidade.</summary>
+        /// <summary>Ajuste booleano de uma funcionalidade (ou de outra opção), mostrado no menu abaixo dela só quando ela está
+        /// ligada; mudar reinicia a funcionalidade dona.</summary>
         public FeatureInfo Option(FeatureInfo parent, string id, string section, string key, bool on, Loc name, Loc description)
         {
             var f = Register(id, parent.Category, section, key, name, description, on, parent.Gameplay, parent);
-            parent.Options.Add(f.Toggle);
+            FeatureInfo owner = parent;
+            while (owner.IsOption && owner.Parent != null) owner = owner.Parent;   // opção de opção reinicia a funcionalidade dona
+            owner.Options.Add(f.Toggle);
             return f;
         }
 

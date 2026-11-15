@@ -72,8 +72,22 @@ Pacote público (`GK2HudPlus/`, `mullervgs.gk2.hudplus`, nome `GK2 HUD+`): os mo
 - No green roda o HUD+: `gk2 deploy GK2HudPlus` descarrega e tira os avulsos do green; `gk2 deploy GK2Hud` (avulso)
   recusa enquanto o HUD+ estiver lá. Cenários acessam os módulos por
   `Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance` → propriedade `Hud`/`Map`/`Saves`/`Refund`.
+- **Menu** (`GK2HudPlus/Menu/`, desde 0.2.0): botão "GK2 HUD+" no menu de pausa, logo abaixo de Controls (clone do
+  Settings), que fecha a pausa, abre a janela e volta à pausa ao fechar, como Settings e Controls. A janela
+  (`HudPlusWindow`, uma `LazyWindow` criada por código) segue a receita da janela de Mods do próprio jogo
+  (`UICodeModsWindow`): clona o `GenericWindowLayout` da janela de Settings (moldura, cabeçalho, X, botão OK), usa a
+  linha nativa `UISwitchButton` do VSync ("◀ Off/On ▶", `ui_off`/`ui_on`; em pt o jogo diz Desativar/Ativar) e seções no
+  estilo do título, como "Code mods". Lista rolável de 10 linhas inteiras (passo 16 + 6, scroll de uma linha), rótulo
+  76 px de arte mais largo que o nativo, crescendo para a esquerda. Opções aparecem só com a dona ligada (a placa do dia
+  tem as dela). Hover = `UITooltip.ShowSimpleInfo` com nome e descrição. Funcionalidade que falhou: rótulo em
+  `#E5736A` (o vermelho da janela de Mods) e linha no `redEffectTextStyle` do tooltip. O menu é uma parte do ModGuard
+  fora da lista (não se desliga). No hot-reload, `Teardown` fecha, tira da pilha e solta os eventos estáticos de
+  `LazyWindowsStackController`. O sprite de fade das bordas que a janela de Mods pede (`45a023dc...`) não existe neste
+  build (`InvalidKeyException` também na nativa): o menu não usa fade. Referências: `docs/referencia/settings.png`,
+  `mods-nativo.png`.
 - Cenários: `hudplus-funcionalidades.cs` (`listar`; `ligar`/`desligar` com `IDS`; `ciclo` desliga e religa cada uma e
-  confere os patches), `guard-desligar.cs` (MOD = GUID do HUD+, PARTE = id da funcionalidade).
+  confere os patches), `hudplus-menu.cs` (`abrir` pelo botão da pausa, `trocar` ID, `hover` ID, `rolar` POS,
+  `fechar`), `settings.cs`, `mods-nativo.cs`, `guard-desligar.cs` (MOD = GUID do HUD+, PARTE = id da funcionalidade).
 
 ## GK2 Saves
 

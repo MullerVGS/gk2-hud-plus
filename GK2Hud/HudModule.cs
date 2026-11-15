@@ -93,9 +93,9 @@ namespace GK2Hud
                 new Loc("Day plate", "Placa do dia"),
                 new Loc("A fixed plate with the day and time under happiness (the time also shows when hovering the medallion).",
                     "Uma placa fixa com o dia e a hora sob a felicidade (a hora também aparece no mouse sobre o medalhão)."));
-            clock = host.Option(hud, "HudClock", "Hud", "Clock", true,
+            clock = host.Option(plate, "HudClock", "Hud", "Clock", true,
                 new Loc("Time on the plate", "Hora na placa"), new Loc("24-hour clock on the day plate.", "Relógio de 24 h na placa do dia."));
-            weekDay = host.Option(hud, "HudWeekDay", "Hud", "WeekDay", true,
+            weekDay = host.Option(plate, "HudWeekDay", "Hud", "WeekDay", true,
                 new Loc("Week day on the plate", "Dia da semana na placa"), new Loc("Name of the week day on the day plate.", "Nome do dia da semana na placa do dia."));
 
             FeatureInfo spin = null;
