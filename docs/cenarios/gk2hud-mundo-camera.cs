@@ -12,7 +12,7 @@ public static class Snippet
 
     public static IEnumerator Run()
     {
-        object plugin = Chainloader.PluginInfos["arthur.gk2.hud"].Instance;
+        object plugin = AccessTools.Property(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance.GetType(), "Hud").GetValue(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance);
         object world = AccessTools.Property(plugin.GetType(), "WorldHover").GetValue(plugin);
         object tips = AccessTools.Property(plugin.GetType(), "Tooltips").GetValue(plugin);
         var targetField = AccessTools.Field(world.GetType(), "target");

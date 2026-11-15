@@ -107,7 +107,7 @@ namespace GK2Hud.Quests
         private static void PostSelect(QuestTreeElementWidget __instance)
         {
             try { Current?.Hover(__instance); }
-            catch (Exception ex) { Plugin.Log.LogError("quests (hover): " + ex); }
+            catch (Exception ex) { HudModule.Log.LogError("quests (hover): " + ex); }
         }
 
         private static void PostDeselect(QuestTreeElementWidget __instance)
@@ -119,7 +119,7 @@ namespace GK2Hud.Quests
         private static void PostRedraw(QuestTreeElementWidget __instance)
         {
             try { Current?.Decorate(__instance); }
-            catch (Exception ex) { Plugin.Log.LogError("quests (nó): " + ex); }
+            catch (Exception ex) { HudModule.Log.LogError("quests (nó): " + ex); }
         }
 
         /// <summary>O clique abre a página do diário no lugar da janela nativa da quest (com gamepad segue o nativo).</summary>
@@ -135,7 +135,7 @@ namespace GK2Hud.Quests
             }
             catch (Exception ex)
             {
-                Plugin.Log.LogError("quests (clique): " + ex);
+                HudModule.Log.LogError("quests (clique): " + ex);
                 f.Close(animate: false);
                 return true;
             }
@@ -151,7 +151,7 @@ namespace GK2Hud.Quests
                 f.page = __instance;
                 f.ApplyFocus();
             }
-            catch (Exception ex) { Plugin.Log.LogError("quests (árvore): " + ex); }
+            catch (Exception ex) { HudModule.Log.LogError("quests (árvore): " + ex); }
         }
 
         // ---------------- por frame ----------------
@@ -161,7 +161,7 @@ namespace GK2Hud.Quests
             try { Tick(); }
             catch (Exception ex)
             {
-                Plugin.Log.LogError("quests: " + ex);
+                HudModule.Log.LogError("quests: " + ex);
                 Close(animate: false);
             }
         }
@@ -481,7 +481,7 @@ namespace GK2Hud.Quests
                 styleSearched = true;
                 foreach (TextStyle ts in Resources.FindObjectsOfTypeAll<TextStyle>())
                     if (ts.name == LabelStyle) { labelStyle = ts; break; }
-                if (labelStyle == null) Plugin.Log.LogWarning("quests: estilo " + LabelStyle + " não encontrado; nós sem nome");
+                if (labelStyle == null) HudModule.Log.LogWarning("quests: estilo " + LabelStyle + " não encontrado; nós sem nome");
                 foreach (Sprite sp in Resources.FindObjectsOfTypeAll<Sprite>())
                     if (sp.name.Replace("(Clone)", "").Trim() == PlateSprite) { plateSprite = sp; break; }
             }

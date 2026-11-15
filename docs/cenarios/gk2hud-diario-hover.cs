@@ -16,7 +16,7 @@ public static class Snippet
 
     static IEnumerator Go()
     {
-        object p = Chainloader.PluginInfos["arthur.gk2.hud"].Instance;
+        object p = AccessTools.Property(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance.GetType(), "Hud").GetValue(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance);
         object tab = AccessTools.Property(p.GetType(), "CalendarTab").GetValue(p);
         AccessTools.Method(tab.GetType(), "TestOffset").Invoke(tab, new object[] { DIA });
         yield return null;

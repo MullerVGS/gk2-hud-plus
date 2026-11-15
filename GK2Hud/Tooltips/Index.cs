@@ -43,7 +43,7 @@ namespace GK2Hud.Tooltips
 
             usedIn = used;
             perkSources = sources;
-            Plugin.Log.LogInfo($"índices: {usedIn.Count} itens usados em crafts, {perkSources.Count} perks com origem em item");
+            HudModule.Log.LogInfo($"índices: {usedIn.Count} itens usados em crafts, {perkSources.Count} perks com origem em item");
             return true;
         }
 

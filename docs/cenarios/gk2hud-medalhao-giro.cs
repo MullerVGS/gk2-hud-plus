@@ -11,7 +11,7 @@ public static class Snippet
     static readonly float[] HORAS = { 0.0f, 0.125f, 0.25f, 0.375f, 0.5f, 0.625f, 0.75f, 0.875f, 0.999f };
     const int CROP = 260;   // px de tela a partir do canto superior esquerdo
 
-    static object Plugin() => Chainloader.PluginInfos["arthur.gk2.hud"].Instance;
+    static object Plugin() => AccessTools.Property(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance.GetType(), "Hud").GetValue(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance);
     static object Prop(object o, string n) => AccessTools.Property(o.GetType(), n).GetValue(o);
     static void SetProp(object o, string n, object v) => AccessTools.Property(o.GetType(), n).SetValue(o, v);
 

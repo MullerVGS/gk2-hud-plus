@@ -13,7 +13,7 @@ public static class Snippet
     const string CASO = "numeros-in";   // numeros-in | numeros-out | placa-out (abre o inventário) | placa-in (fecha)
     const float ALVO_MEIO = 0.5f;       // alpha em que o print é tirado
 
-    static object Plugin() => Chainloader.PluginInfos["arthur.gk2.hud"].Instance;
+    static object Plugin() => AccessTools.Property(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance.GetType(), "Hud").GetValue(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance);
     static object Prop(object o, string n) => AccessTools.Property(o.GetType(), n).GetValue(o);
     static void SetProp(object o, string n, object v) => AccessTools.Property(o.GetType(), n).SetValue(o, v);
     static object Field(object o, string n) => AccessTools.Field(o.GetType(), n).GetValue(o);

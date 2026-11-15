@@ -22,7 +22,7 @@ public static class Snippet
             w.Open(new CharacterWindowData(MainGame.Instance.GameSave, CharacterWindowData.CharPage.Map));
             yield return null; yield return null;
         }
-        var zoomType = Chainloader.PluginInfos["arthur.gk2.map"].Instance.GetType().Assembly.GetType("GK2Map.MapZoom");
+        var zoomType = AccessTools.Property(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance.GetType(), "Map").GetValue(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance).GetType().Assembly.GetType("GK2Map.MapZoom");
         AccessTools.Property(zoomType, "VirtualMouse").SetValue(null, (Vector2?)MOUSE);
         int n = Mathf.Abs(PASSOS);
         for (int i = 0; i < n; i++)
@@ -31,7 +31,7 @@ public static class Snippet
             float t0 = Time.realtimeSinceStartup;
             while (Time.realtimeSinceStartup - t0 < 0.4f) yield return null;
         }
-        var plugin = Chainloader.PluginInfos["arthur.gk2.map"].Instance;
+        var plugin = AccessTools.Property(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance.GetType(), "Map").GetValue(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance);
         yield return "zoom índice " + AccessTools.Field(plugin.GetType(), "ZoomIndex").GetValue(plugin);
     }
 }

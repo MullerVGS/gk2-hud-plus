@@ -87,7 +87,7 @@ namespace GK2Hud.Calendar
             try { Tick(); }
             catch (Exception ex)
             {
-                if (!loggedError) Plugin.Log.LogError("medalhão: " + ex);
+                if (!loggedError) HudModule.Log.LogError("medalhão: " + ex);
                 loggedError = true;
                 HideOwn();
                 target = null;
@@ -206,7 +206,7 @@ namespace GK2Hud.Calendar
             TextStyle style = Resources.FindObjectsOfTypeAll<TextStyle>().FirstOrDefault(s => s.name == ClockStyle);
             if (w == null || style == null)
             {
-                if (!loggedError) Plugin.Log.LogWarning("medalhão: estrutura nativa não encontrada.");
+                if (!loggedError) HudModule.Log.LogWarning("medalhão: estrutura nativa não encontrada.");
                 loggedError = true;
                 return false;
             }

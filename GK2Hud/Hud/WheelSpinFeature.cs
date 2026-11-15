@@ -110,7 +110,7 @@ namespace GK2Hud.Hud
                 UIHUDWheelElement[] els = Traverse.Create(w).Field("elements").GetValue<UIHUDWheelElement[]>();
                 if (bg == null || bg.sprite == null || els == null || els.Length != 6 || els.Any(e => e == null || e.icon == null))
                 {
-                    if (!loggedError) Plugin.Log.LogWarning("medalhão giratório: estrutura nativa não encontrada.");
+                    if (!loggedError) HudModule.Log.LogWarning("medalhão giratório: estrutura nativa não encontrada.");
                     loggedError = true;
                     return;
                 }
@@ -172,7 +172,7 @@ namespace GK2Hud.Hud
             }
             catch (Exception ex)
             {
-                if (!loggedError) Plugin.Log.LogError("medalhão giratório: " + ex);
+                if (!loggedError) HudModule.Log.LogError("medalhão giratório: " + ex);
                 loggedError = true;
                 Detach(true);
             }
@@ -194,7 +194,7 @@ namespace GK2Hud.Hud
                     // Volta as posições e cores nativas (o mesmo que o jogo faz ao carregar).
                     if (CalendarModel.Ready && EnvironmentEngine.Instance != null) wheel.OnNewDayStarted(CalendarModel.Env.Day, false);
                 }
-                catch (Exception ex) { Plugin.Log.LogWarning("medalhão giratório: restaurar: " + ex.Message); }
+                catch (Exception ex) { HudModule.Log.LogWarning("medalhão giratório: restaurar: " + ex.Message); }
             }
             if (ringGo != null) Object.Destroy(ringGo);
             ringGo = null;
@@ -232,7 +232,7 @@ namespace GK2Hud.Hud
             try { Apply(); }
             catch (Exception ex)
             {
-                if (!loggedError) Plugin.Log.LogError("medalhão giratório: " + ex);
+                if (!loggedError) HudModule.Log.LogError("medalhão giratório: " + ex);
                 loggedError = true;
                 Detach(true);
             }

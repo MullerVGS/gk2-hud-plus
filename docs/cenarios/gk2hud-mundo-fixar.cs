@@ -12,7 +12,7 @@ public static class Snippet
     const string LINK = "craft:";        // prefixo do link a abrir na bolha fixada ("craft:", "item:", "wgo:"); vazio = só fixa
     const bool FIXAR_ANINHADO = false;
 
-    static object Plugin() => Chainloader.PluginInfos["arthur.gk2.hud"].Instance;
+    static object Plugin() => AccessTools.Property(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance.GetType(), "Hud").GetValue(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance);
     static object Prop(object o, string n) => AccessTools.Property(o.GetType(), n).GetValue(o);
     static void SetProp(object o, string n, object v) => AccessTools.Property(o.GetType(), n).SetValue(o, v);
     static void Flag(object f, string name) => AccessTools.Field(f.GetType(), name).SetValue(f, true);

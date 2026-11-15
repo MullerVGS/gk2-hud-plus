@@ -52,7 +52,7 @@ namespace GK2Hud.Tooltips
             this.maxDepth = maxDepth;
             Current = this;
             int orphans = PinStack.DestroyOrphans();
-            if (orphans > 0) Plugin.Log.LogInfo($"bolhas órfãs destruídas: {orphans}");
+            if (orphans > 0) HudModule.Log.LogInfo($"bolhas órfãs destruídas: {orphans}");
             Patch();
             LazyWindowsStackController.OnWindowOpened += OnWindowChanged;
             LazyWindowsStackController.OnWindowClosed += OnWindowChanged;
@@ -172,7 +172,7 @@ namespace GK2Hud.Tooltips
             if (e != null && e.Target == target && e.Frame == Time.frameCount)
             {
                 try { f.Content.Enrich(dataList, e); }
-                catch (Exception ex) { Plugin.Log.LogError($"enriquecer {e.Kind} {e.Id}: {ex}"); }
+                catch (Exception ex) { HudModule.Log.LogError($"enriquecer {e.Kind} {e.Id}: {ex}"); }
             }
             f.lastData = dataList;   // lista nova a cada Show* do jogo: guardar a referência basta
             f.lastTarget = target;
@@ -206,7 +206,7 @@ namespace GK2Hud.Tooltips
         public void Update()
         {
             try { Tick(); }
-            catch (Exception ex) { Plugin.Log.LogError("tooltips: " + ex); Stack.CloseAll(); }
+            catch (Exception ex) { HudModule.Log.LogError("tooltips: " + ex); Stack.CloseAll(); }
         }
 
         private void Tick()
@@ -387,7 +387,7 @@ namespace GK2Hud.Tooltips
             if (e == null) return;
             List<LazyWidgetDataBase> data;
             try { data = Content.Build(e); }
-            catch (Exception ex) { Plugin.Log.LogError($"montar {link}: {ex}"); return; }
+            catch (Exception ex) { HudModule.Log.LogError($"montar {link}: {ex}"); return; }
             if (data.Count == 0) return;
             Bubble b = Stack.Create(parent.Depth + 1);
             if (b == null) return;

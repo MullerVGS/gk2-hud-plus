@@ -49,7 +49,7 @@ namespace GK2Hud.World
             this.delay = delay;
             Current = this;
             int orphans = DestroyOrphans();
-            if (orphans > 0) Plugin.Log.LogInfo($"proxies de mundo órfãos destruídos: {orphans}");
+            if (orphans > 0) HudModule.Log.LogInfo($"proxies de mundo órfãos destruídos: {orphans}");
         }
 
         public void Dispose()
@@ -81,7 +81,7 @@ namespace GK2Hud.World
             try { Tick(); }
             catch (Exception ex)
             {
-                if (!loggedError) Plugin.Log.LogError("hover no mundo: " + ex);
+                if (!loggedError) HudModule.Log.LogError("hover no mundo: " + ex);
                 loggedError = true;
                 HideOwn();
                 target = null;

@@ -82,7 +82,7 @@ namespace GK2Saves
             }
             catch (Exception e)
             {
-                Plugin.Log.LogWarning("info ilegível " + path + ": " + e.Message);
+                SavesModule.Log.LogWarning("info ilegível " + path + ": " + e.Message);
                 return null;
             }
         }
@@ -125,6 +125,5 @@ namespace GK2Saves
             File.Delete(folder + stem + ".info");
         }
 
-        public static string DefaultRoot => Path.Combine(Paths.ConfigPath, Plugin.Guid, "history");
     }
 }

@@ -12,7 +12,7 @@ public static class Snippet
 
     public static IEnumerator Run()
     {
-        var asm = Chainloader.PluginInfos["arthur.gk2.map"].Instance.GetType().Assembly;
+        var asm = AccessTools.Property(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance.GetType(), "Map").GetValue(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance).GetType().Assembly;
         var zoomType = asm.GetType("GK2Map.MapZoom");
         var viewType = asm.GetType("GK2Map.PlaceView");
         var inspect = asm.GetType("GK2Map.PlaceInspect");

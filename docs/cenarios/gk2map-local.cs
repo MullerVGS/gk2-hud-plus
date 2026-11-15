@@ -13,7 +13,7 @@ public static class Snippet
 
     public static IEnumerator Run()
     {
-        var asm = Chainloader.PluginInfos["arthur.gk2.map"].Instance.GetType().Assembly;
+        var asm = AccessTools.Property(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance.GetType(), "Map").GetValue(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance).GetType().Assembly;
         var zoomType = asm.GetType("GK2Map.MapZoom");
         var viewType = asm.GetType("GK2Map.PlaceView");
         if (ACAO == "sair")
@@ -44,7 +44,7 @@ public static class Snippet
         object place = places.FirstOrDefault(p => Zone(p) == ZONA);
         if (place == null) { yield return "sem setinha para " + ZONA + " (" + string.Join(",", places.Select(Zone)) + ")"; yield break; }
         var map = (RectTransform)AccessTools.Property(zoomType, "Map").GetValue(zoom);
-        var plugin = Chainloader.PluginInfos["arthur.gk2.map"].Instance;
+        var plugin = AccessTools.Property(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance.GetType(), "Map").GetValue(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance);
         // A setinha precisa estar na área visível: centraliza o mapa nela.
         var scroll = (UnityEngine.UI.ScrollRect)AccessTools.Property(zoomType, "Scroll").GetValue(zoom);
         Vector2 arrow = (Vector2)AccessTools.Field(place.GetType(), "MapPos").GetValue(place);

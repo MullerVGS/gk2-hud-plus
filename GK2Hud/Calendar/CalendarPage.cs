@@ -156,7 +156,7 @@ namespace GK2Hud.Calendar
             List<string> miss = RequiredSprites.Where(n => !sprites.ContainsKey(n)).Concat(RequiredStyles.Where(n => !styles.ContainsKey(n))).ToList();
             if (miss.Count > 0)
             {
-                Plugin.Log.LogWarning("calendário: recursos nativos não encontrados: " + string.Join(", ", miss));
+                HudModule.Log.LogWarning("calendário: recursos nativos não encontrados: " + string.Join(", ", miss));
                 return false;
             }
             return true;

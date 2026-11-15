@@ -17,7 +17,7 @@ namespace GK2Saves
         /// <summary>A janela de saves foi aberta pelo botão Load do menu de pausa.</summary>
         internal static bool InGameWindow;
 
-        private static Plugin P => Plugin.Instance;
+        private static SavesModule P => SavesModule.Instance;
 
         private static bool InGameMode => InGameWindow && P != null && MainGame.Instance != null && MainGame.Instance.gameState == MainGame.GameState.InGame;
 
@@ -68,7 +68,7 @@ namespace GK2Saves
             }
             catch (Exception e)
             {
-                Plugin.Log.LogError("lista de saves: " + e);
+                SavesModule.Log.LogError("lista de saves: " + e);
                 return true;
             }
         }
@@ -108,7 +108,7 @@ namespace GK2Saves
         {
             if (!History.IsEntry(slotData) || P == null) return true;
             try { __result = P.History.Remove(slotData); }
-            catch (Exception e) { Plugin.Log.LogError("apagar do histórico: " + e); __result = false; }
+            catch (Exception e) { SavesModule.Log.LogError("apagar do histórico: " + e); __result = false; }
             return false;
         }
 
@@ -119,7 +119,7 @@ namespace GK2Saves
             string baseSlot = BaseSlot(slotData.slotName);
             if (baseSlot == slotData.slotName) return;
             try { P.History.RemoveSameMoment(baseSlot, slotData.saveDateTime); }
-            catch (Exception e) { Plugin.Log.LogError("apagar cópia no histórico: " + e); }
+            catch (Exception e) { SavesModule.Log.LogError("apagar cópia no histórico: " + e); }
         }
 
         private static void SavePrefix(SaveSlotData slotData, out DateTime __state)
@@ -128,7 +128,7 @@ namespace GK2Saves
             if (P == null || !P.FixBackupSlot || slotData?.slotName == null || History.IsEntry(slotData)) return;
             string baseSlot = BaseSlot(slotData.slotName);
             if (baseSlot == slotData.slotName || !File.Exists(SaveSystem.SaveFolder + baseSlot + ".info")) return;
-            Plugin.Log.LogInfo("save do backup " + slotData.slotName + " vai para o slot principal " + baseSlot);
+            SavesModule.Log.LogInfo("save do backup " + slotData.slotName + " vai para o slot principal " + baseSlot);
             slotData.slotName = baseSlot;
         }
 
@@ -152,7 +152,7 @@ namespace GK2Saves
             }
             catch (Exception e)
             {
-                Plugin.Log.LogError("histórico: " + e);
+                SavesModule.Log.LogError("histórico: " + e);
             }
         }
 

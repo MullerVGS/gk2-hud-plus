@@ -12,7 +12,7 @@ using LazyBearTechnology;
 using Newtonsoft.Json;
 using UnityEngine;
 
-// `gk2 check GK2Hud` (só leitura, green): passa todos os ids do balanço pelas funções de nome e pelos tooltips do GK2Hud
+// `gk2 check GK2HudPlus` (só leitura, green): passa todos os ids do balanço pelas funções de nome e pelos tooltips do GK2Hud
 // carregado (textos com cara de id), e exporta as regras de revelação do calendário (EventDef) com o que o save carregado
 // sabe (ícones, tutoriais, respostas, quests, recursos). Grava BepInEx/gk2check/gk2hud.json; quem julga é check.py.
 public static class Snippet
@@ -29,7 +29,7 @@ public static class Snippet
 
     static IEnumerator Go()
     {
-        object plugin = Chainloader.PluginInfos["arthur.gk2.hud"].Instance;
+        object plugin = Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance;   // GK2 HUD+ (traz o GK2Hud)
         Assembly asm = plugin.GetType().Assembly;
         Func<string, Type> T = n => asm.GetTypes().First(t => t.FullName == n);
         Type jv = T("GK2Hud.Journal.JournalView"), jl = T("GK2Hud.Journal.JournalLine"), ent = T("GK2Hud.Tooltips.Entity");

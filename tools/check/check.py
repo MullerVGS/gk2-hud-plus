@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Barreira de `gk2 check GK2Hud`: falha (código 1) se algo do mod pode mostrar id de dev ou errar a revelação do calendário.
+"""Barreira de `gk2 check GK2HudPlus` (o código checado é o do GK2Hud, que vem no pacote): falha (código 1) se algo do mod pode mostrar id de dev ou errar a revelação do calendário.
 
 1. Código: no GK2Hud, LLBase.L só com chave literal fora do Names.cs, e toda chave literal existe nos textos do jogo.
 2. Nomes: nenhum texto com cara de id nos nomes e tooltips do mod (varredura do cenário gk2hud-estado.cs no green), salvo
@@ -35,6 +35,9 @@ def main(repo, state_path, index_path):
     # ---------- 1. código
     src_dir = os.path.join(repo, "GK2Hud")
     version = None
+    m = re.search(r'public const string Version = "([^"]+)"', open(os.path.join(repo, "GK2HudPlus", "Plugin.cs"), encoding="utf-8").read())
+    if m:
+        version = m.group(1)
     for root, _, files in os.walk(src_dir):
         if "/obj" in root or "/bin" in root:
             continue
@@ -44,9 +47,6 @@ def main(repo, state_path, index_path):
             path = os.path.join(root, f)
             rel = os.path.relpath(path, repo)
             for no, line in enumerate(open(path, encoding="utf-8"), 1):
-                m = re.search(r'public const string Version = "([^"]+)"', line)
-                if m and f == "Plugin.cs":
-                    version = m.group(1)
                 if f == "Names.cs" or line.strip().startswith("//"):
                     continue
                 for m in re.finditer(r"LLBase\.L\(", line):
@@ -61,7 +61,7 @@ def main(repo, state_path, index_path):
                         if k not in lang:
                             fails.append(f"{rel}:{no}: chave \"{k}\" não existe nos textos do jogo")
     if version and st.get("version") != version:
-        fails.append(f"o green roda GK2Hud {st.get('version')}, o código está em {version}: rode `gk2 deploy GK2Hud` antes do check")
+        fails.append(f"o green roda GK2 HUD+ {st.get('version')}, o código está em {version}: rode `gk2 deploy GK2HudPlus` antes do check")
 
     # ---------- 2. nomes
     allowed = {}
@@ -190,7 +190,7 @@ def main(repo, state_path, index_path):
             notes.append(f"{eid}: visível ({'; '.join(evidence[:2])})" + (f", desde o dia {ev['since']}" if ev["since"] else ""))
     notes.append(f"{hidden_ok} evento(s) ainda não revelado(s) neste save, sem evidência (ok; não listados)")
 
-    print(f"gk2 check GK2Hud {st.get('version')} · save no dia {st.get('day')} · {len(st['names'])} textos suspeitos "
+    print(f"gk2 check GK2HudPlus {st.get('version')} · save no dia {st.get('day')} · {len(st['names'])} textos suspeitos "
           f"({len(st['names']) - len(bad)} permitidos)")
     for n in notes:
         print("  ·", n)

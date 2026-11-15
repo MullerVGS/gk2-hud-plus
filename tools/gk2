@@ -150,7 +150,20 @@ EOF
   deploy)
     # build + instala no green (persistente) + hot-reload se a ponte estiver no ar
     proj=${1:?projeto}
+    case "$proj" in
+      GK2Hud|GK2Map|GK2Saves|GK2ZombieRefund)
+        [ -d "$GREEN/BepInEx/plugins/GK2HudPlus" ] && die "o GK2 HUD+ está no green e já traz $proj; para testar o avulso, tire BepInEx/plugins/GK2HudPlus do green" ;;
+    esac
     dll=$(build "$proj")
+    if [ "$proj" = GK2HudPlus ]; then
+      # O pacote substitui os avulsos: descarrega os que estiverem rodando e tira as pastas deles do green.
+      for m in GK2Hud:arthur.gk2.hud GK2Map:arthur.gk2.map GK2Saves:arthur.gk2.saves GK2ZombieRefund:arthur.gk2.zombierefund; do
+        dir="$GREEN/BepInEx/plugins/${m%%:*}"; [ -d "$dir" ] || continue
+        bridge_up && api "/unload?guid=${m#*:}" >/dev/null
+        rm -rf "$dir" 2>/dev/null || { mv "$dir" "$GREEN/BepInEx/plugins/~${m%%:*}.removido" 2>/dev/null; }
+        echo "avulso ${m%%:*} retirado do green (vem no GK2 HUD+)"
+      done
+    fi
     install_green "$dll" "$proj"
     if bridge_up; then
       path=$(stage "$dll" "$proj")
@@ -209,7 +222,8 @@ im.save(sys.argv[1])" "$out" "$crop"
     ;;
   check)
     # Barreira antes de promover: ids na tela, chaves do calendário contra o índice e auditoria do save carregado.
-    proj=${1:?projeto}; [ "$proj" = GK2Hud ] || die "check só existe para GK2Hud por enquanto"
+    proj=${1:?projeto}; [ "$proj" = GK2Hud ] && proj=GK2HudPlus
+    [ "$proj" = GK2HudPlus ] || die "check só existe para GK2HudPlus (o GK2Hud vem nele) por enquanto"
     idx="$HERE/decomp/gatilhos.json"
     if [ ! -f "$idx" ] || [ "$HERE/refs/Managed/Assembly-CSharp.dll" -nt "$idx" ]; then "$0" gatilhos; fi
     out=$(GK2_RUN_TIMEOUT=300 "$0" run "$HERE/tools/check/gk2hud-estado.cs")
@@ -221,7 +235,7 @@ im.save(sys.argv[1])" "$out" "$crop"
     # Entrega um mod aprovado. Blue: pacote Mods/Code (vale ao reabrir) + BepInEx/hot (o GK2 HotLoader aplica com o
     # jogo aberto e avisa na tela). --green: só a pasta hot do green, para ensaiar a entrega antes do blue.
     proj=${1:?projeto}; target=${2:-blue}
-    if [ "$proj" = GK2Hud ] && [ "$target" != "--green" ]; then "$0" check GK2Hud || die "gk2 check GK2Hud falhou: nada promovido"; fi
+    case "$proj" in GK2Hud|GK2HudPlus) if [ "$target" != "--green" ]; then "$0" check GK2HudPlus || die "gk2 check GK2HudPlus falhou: nada promovido"; fi ;; esac
     dll=$(build "$proj")
     if [ "$target" = "--green" ]; then game="$GREEN"; else game="$BLUE"
       pack="$BLUE_DATA/Mods/Code/$proj"; mkdir -p "$pack/BepInEx/plugins/$proj"
@@ -284,11 +298,13 @@ EOF
     else echo "- sem decomp anterior para comparar" >> "$R"; fi
 
     section "Build contra o jogo novo"
-    projetos="GK2DevBridge GK2HotLoader GK2Insight GK2Hud GK2Map GK2Saves GK2ZombieRefund"
+    projetos="GK2DevBridge GK2HotLoader GK2Insight GK2Hud GK2Map GK2Saves GK2ZombieRefund GK2HudPlus"
     for p in $projetos; do
       if dll=$(build "$p" 2>"$U/build-$p.log"); then
         avisos=$(grep -c -i "warning" "$U/build-$p.log" || true)
-        install_green "$dll" "$p" >/dev/null; echo "- $p ok ($avisos aviso(s))" | tee -a "$R"
+        # Os avulsos só compilam: no green quem roda é o GK2 HUD+, que já os traz.
+        case "$p" in GK2Hud|GK2Map|GK2Saves|GK2ZombieRefund) ;; *) install_green "$dll" "$p" >/dev/null ;; esac
+        echo "- $p ok ($avisos aviso(s))" | tee -a "$R"
       else echo "- $p FALHOU (ver .update/build-$p.log)" | tee -a "$R"; falhas+=("build de $p"); fi
     done
 
@@ -298,11 +314,12 @@ EOF
     versao=$("$0" run "$HERE/tools/update/versao.cs" | sed -n 's/.*"result": "\(.*\)".*/\1/p')
     echo "- versão do jogo: $versao" | tee -a "$R"
     if "$0" gatilhos > "$U/gatilhos.log" 2>&1; then tail -1 "$U/gatilhos.log" | sed 's/^/- /' >> "$R"; else echo "- gatilhos FALHOU" | tee -a "$R"; falhas+=("gatilhos"); fi
-    if "$0" check GK2Hud > "$U/check.log" 2>&1; then echo "- gk2 check GK2Hud ok" | tee -a "$R"
-    else echo "- gk2 check GK2Hud FALHOU (ver .update/check.log)" | tee -a "$R"; falhas+=("check GK2Hud"); fi
+    if "$0" check GK2HudPlus > "$U/check.log" 2>&1; then echo "- gk2 check GK2HudPlus ok" | tee -a "$R"
+    else echo "- gk2 check GK2HudPlus FALHOU (ver .update/check.log)" | tee -a "$R"; falhas+=("check GK2HudPlus"); fi
 
     section "Mods do blue (Mods/Code) no green"
     "$0" green stop >/dev/null 2>&1
+    for d in GK2Hud GK2Map GK2Saves GK2ZombieRefund GK2HudPlus; do rm -rf "$GREEN/BepInEx/plugins/$d"; done   # só o que vem do blue
     for pack in "$BLUE_DATA"/Mods/Code/*/; do
       for dll in "$pack"BepInEx/plugins/*/*.dll; do
         [ -f "$dll" ] || continue; p=$(basename "$(dirname "$dll")")
@@ -320,7 +337,11 @@ EOF
 
     section "Green de volta aos builds do repo"
     "$0" green stop >/dev/null 2>&1
-    for p in $projetos; do [ -f "$HERE/$p/bin/Release/$p.dll" ] && install_green "$HERE/$p/bin/Release/$p.dll" "$p" >/dev/null; done
+    for d in GK2Hud GK2Map GK2Saves GK2ZombieRefund; do rm -rf "$GREEN/BepInEx/plugins/$d"; done
+    for p in $projetos; do
+      case "$p" in GK2Hud|GK2Map|GK2Saves|GK2ZombieRefund) continue ;; esac
+      [ -f "$HERE/$p/bin/Release/$p.dll" ] && install_green "$HERE/$p/bin/Release/$p.dll" "$p" >/dev/null
+    done
     "$0" save reset >/dev/null; echo "- builds do repo reinstalados, save de teste restaurado, green parado" | tee -a "$R"
 
     veredito=ok; [ ${#falhas[@]} -eq 0 ] || veredito="falhou: ${falhas[*]}"
@@ -354,7 +375,7 @@ log [n] [grep] | state | ping | windows | ui [filtro] [prof] [inativos 0|1] | wa
 promote <Proj> [--green|--sem-hot]   entrega o mod aprovado (blue: Mods/Code + hot-reload pelo HotLoader; --green: ensaio)
 decomp                     regenera decomp/ (após update do jogo; depois rode `gk2 gatilhos`)
 gatilhos [onde <termo>]    índice decomp/gatilhos.json (balanço + grafos de diálogo + código); `onde` diz quem libera/usa o termo
-check GK2Hud               barreira do promote: ids na tela, calendário × índice, auditoria do save carregado (sem spoiler)
+check GK2HudPlus           barreira do promote: ids na tela, calendário × índice, auditoria do save carregado (sem spoiler)
 EOF
     ;;
 esac

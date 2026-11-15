@@ -45,7 +45,7 @@ namespace GK2Saves
             window = win;
             var settings = Traverse.Create(win).Field("settingsBtn").GetValue<LazyButton>();
             var spacing = Traverse.Create(win).Field("goToMenuSpacing").GetValue<GameObject>();
-            if (settings == null) { Plugin.Log.LogWarning("settingsBtn não encontrado no menu de pausa"); return; }
+            if (settings == null) { SavesModule.Log.LogWarning("settingsBtn não encontrado no menu de pausa"); return; }
             saveGo = Clone(settings, "GK2Saves_Save", "ui_save", () => onSave());
             loadGo = Clone(settings, "GK2Saves_Load", "ui_load_save_btn", () => onLoad());
             saveButton = saveGo.GetComponent<LazyButton>();

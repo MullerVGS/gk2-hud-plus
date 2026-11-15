@@ -12,7 +12,7 @@ public static class Snippet
 {
     const CharacterWindowData.CharPage ABA_NATIVA = CharacterWindowData.CharPage.Main;
 
-    static object Tab() => AccessTools.Property(Chainloader.PluginInfos["arthur.gk2.hud"].Instance.GetType(), "CalendarTab").GetValue(Chainloader.PluginInfos["arthur.gk2.hud"].Instance);
+    static object Tab() => AccessTools.Property(AccessTools.Property(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance.GetType(), "Hud").GetValue(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance).GetType(), "CalendarTab").GetValue(AccessTools.Property(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance.GetType(), "Hud").GetValue(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance));
 
     public static object Run() { return Go(); }
 

@@ -40,9 +40,9 @@ namespace GK2Hud.Tooltips
             }
             catch (Exception ex)
             {
-                Plugin.Log.LogError("limpeza de handlers de inventário: " + ex);
+                HudModule.Log.LogError("limpeza de handlers de inventário: " + ex);
             }
-            if (removed > 0) Plugin.Log.LogWarning($"removidos {removed} handlers de inventário de objetos destruídos (UITooltipCraftItemCell em bolhas antigas)");
+            if (removed > 0) HudModule.Log.LogWarning($"removidos {removed} handlers de inventário de objetos destruídos (UITooltipCraftItemCell em bolhas antigas)");
             return removed;
         }
 

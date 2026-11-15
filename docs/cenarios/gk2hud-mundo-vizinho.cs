@@ -11,7 +11,7 @@ public static class Snippet
     const string A = "kitchen_oven";
     const string B = "millstone";
 
-    static object Plugin() => Chainloader.PluginInfos["arthur.gk2.hud"].Instance;
+    static object Plugin() => AccessTools.Property(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance.GetType(), "Hud").GetValue(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance);
     static object Prop(object o, string n) => AccessTools.Property(o.GetType(), n).GetValue(o);
     static void Mouse(object world, object tips, Vector2 m) { AccessTools.Property(world.GetType(), "VirtualMouse").SetValue(world, (Vector2?)m); AccessTools.Property(tips.GetType(), "VirtualMouse").SetValue(tips, (Vector2?)m); }
     static string D(object o) => (string)AccessTools.Method(o.GetType(), "Describe").Invoke(o, null);

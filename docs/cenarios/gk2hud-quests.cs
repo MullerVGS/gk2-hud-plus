@@ -17,7 +17,7 @@ public static class Snippet
 
     static IEnumerator Go()
     {
-        var plugin = Chainloader.PluginInfos["arthur.gk2.hud"].Instance;
+        var plugin = AccessTools.Property(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance.GetType(), "Hud").GetValue(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance);
         object tips = AccessTools.Property(plugin.GetType(), "Tooltips").GetValue(plugin);
         object quests = AccessTools.Property(plugin.GetType(), "Quests").GetValue(plugin);
         var stack = AccessTools.Field(tips.GetType(), "Stack").GetValue(tips);

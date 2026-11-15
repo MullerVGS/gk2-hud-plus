@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Prova da barreira: reintroduz os bugs já vistos no estado exportado e exige que check.py os pegue.
 
-Uso: teste.py <repo> <gk2hud.json> <gatilhos.json>  (rode depois de um `gk2 check GK2Hud` verde)
+Uso: teste.py <repo> <gk2hud.json> <gatilhos.json>  (rode depois de um `gk2 check GK2HudPlus` verde)
 """
 import copy
 import io

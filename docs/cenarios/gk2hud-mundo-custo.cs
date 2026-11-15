@@ -12,7 +12,7 @@ public static class Snippet
 {
     const int N = 20;
 
-    static object World() { var p = Chainloader.PluginInfos["arthur.gk2.hud"].Instance; return AccessTools.Property(p.GetType(), "WorldHover").GetValue(p); }
+    static object World() { var p = AccessTools.Property(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance.GetType(), "Hud").GetValue(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance); return AccessTools.Property(p.GetType(), "WorldHover").GetValue(p); }
 
     public static object Run()
     {

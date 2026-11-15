@@ -115,7 +115,7 @@ namespace GK2Hud.Hud
             }
             catch (Exception e)
             {
-                if (!loggedError) Plugin.Log.LogError("HUD: " + e);
+                if (!loggedError) HudModule.Log.LogError("HUD: " + e);
                 loggedError = true;
             }
         }
@@ -166,7 +166,7 @@ namespace GK2Hud.Hud
             TextStyle barStyle = Resources.FindObjectsOfTypeAll<TextStyle>().FirstOrDefault(s => s.name == BarTextStyle);
             if (leftUp == null || panel == null || smallRight == null || bar == null || energySlider == null || insanitySlider == null || barStyle == null)
             {
-                if (!loggedError) Plugin.Log.LogWarning("HUD: estrutura nativa não encontrada; feature desligada até o próximo HUD.");
+                if (!loggedError) HudModule.Log.LogWarning("HUD: estrutura nativa não encontrada; feature desligada até o próximo HUD.");
                 loggedError = true;
                 return;
             }

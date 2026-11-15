@@ -45,6 +45,36 @@ custo do próprio Insight por parte (`gk2_insight_seconds{part}`), recursos do j
 GC/save/painel). Envio em thread própria; nada de rede na thread do jogo. `dormir.cs` gera sono + save no green.
 Para comparar custo, ligue as camadas com `insight-camadas.cs` e leia `gk2_insight_seconds` por janela.
 
+## GK2 HUD+
+
+Pacote público (`GK2HudPlus/`, `mullervgs.gk2.hudplus`, nome `GK2 HUD+`): os mods de jogador num plugin só, com um
+`.cfg` e uma lista de funcionalidades que ligam e desligam sem reabrir o jogo. Insight, DevBridge e HotLoader ficam de fora.
+
+- **Módulos**: cada mod de jogador virou um módulo que não é plugin (`HudModule`, `MapModule`, `SavesModule`,
+  `RefundModule`) e registra as funcionalidades num `ModHost` (`Shared/ModHost.cs`). O `Plugin.cs` de cada pasta é só o
+  ponto de entrada do mod avulso (`[BepInIncompatibility(HudPlusId.Guid)]`: com o HUD+ instalado, o BepInEx ignora o
+  avulso). O `GK2HudPlus.csproj` compila as quatro pastas inteiras menos esses `Plugin.cs`.
+- **Funcionalidade** = `host.Feature(id, categoria, seção, chave, nome, descrição, create, update, dispose, gameplay,
+  options)`: toggle em `[seção] chave`, nome e descrição em en/pt (`Loc`) para o menu, e a parte do ModGuard que roda
+  quando ligada. **Opção** = `host.Option(pai, ...)`: booleano mostrado abaixo da funcionalidade; mudar uma opção (ou
+  qualquer ajuste em `options`) reinicia a funcionalidade. Ids únicos no pacote inteiro.
+- **Em tempo de execução**: mudar o toggle (menu, cenário ou o `.cfg` salvo no disco, relido a cada 1 s) liga ou
+  desliga no frame seguinte; desligar solta os patches, religar refaz. Parte que desligou por erro volta quando o
+  jogador desliga e liga de novo. As features conversam por `X.Current` com checagem de nulo, então cada uma liga
+  sozinha.
+- **Gameplay começa desligado** no pacote (Save/Load e Zombie Refund); no avulso, ligado.
+- **Migração**: na primeira vez que o `.cfg` do HUD+ é criado, os valores de mesma seção/chave vêm dos `.cfg` dos mods
+  antigos (`ImportLegacy`), e gameplay de um módulo com `.cfg` antigo fica ligado. `[Calendar] Enabled` e `[Hud]
+  Enabled` antigos, que agrupavam funcionalidades, são traduzidos. Diário e histórico de saves continuam nas pastas
+  antigas (`arthur.gk2.hud/`, `arthur.gk2.saves/history`) se existirem; senão, em `BepInEx/config/<guid do host>/`.
+- **Categorias**: `hud` (números, giro do medalhão), `tooltips` (tooltips, mundo, árvore de quests), `calendar` (diário,
+  medalhão, aba), `map`, `gameplay`. Os textos de `.cfg` estão em inglês (o pacote é público).
+- No green roda o HUD+: `gk2 deploy GK2HudPlus` descarrega e tira os avulsos do green; `gk2 deploy GK2Hud` (avulso)
+  recusa enquanto o HUD+ estiver lá. Cenários acessam os módulos por
+  `Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance` → propriedade `Hud`/`Map`/`Saves`/`Refund`.
+- Cenários: `hudplus-funcionalidades.cs` (`listar`; `ligar`/`desligar` com `IDS`; `ciclo` desliga e religa cada uma e
+  confere os patches), `guard-desligar.cs` (MOD = GUID do HUD+, PARTE = id da funcionalidade).
+
 ## GK2 Saves
 
 Mod de jogador (`GK2Saves/`, `arthur.gk2.saves`): **Save** e **Load** no topo do menu de pausa, clonados do botão Settings.
@@ -177,7 +207,7 @@ gk2 log [n] [grep] | state | windows | ping
 gk2 save snapshot|reset                          save de teste a partir do blue (reset limpa backups e histórico do GK2Saves)
 gk2 promote <Mod> [--green]                      entrega com o jogo aberto (blue, com aprovação) ou ensaio no green
 gk2 gatilhos [onde <termo>]                      índice do jogo: quem libera ícone/tutorial/resposta/recurso, onde está cada fala
-gk2 check GK2Hud                                 barreira do promote (ids na tela, calendário × índice, auditoria do save)
+gk2 check GK2HudPlus                             barreira do promote (ids na tela, calendário × índice, auditoria do save)
 gk2 update [--forcar] | gk2 update conferir     depois de update do jogo (ver "Update do jogo")
 gk2 bridge | green-sync | decomp                 manutenção (ver abaixo)
 ```
@@ -210,7 +240,7 @@ Peças:
 4. Editar → `gk2 deploy <Mod>` → cenário que leva à tela → `gk2 shot` → **olhar o print** (Read) → julgar → repetir.
 5. `gk2 log 40 <Mod>` sem exceções.
 6. Mostrar o print final, de preferência ao lado da referência, e pedir aprovação.
-7. Subir a `Version` (plugin e `modinfo.json`), `gk2 deploy`, `gk2 check GK2Hud` verde, `gk2 promote <Mod> --green`
+7. Subir a `Version` (plugin e `modinfo.json`), `gk2 deploy`, `gk2 check GK2HudPlus` verde, `gk2 promote <Mod> --green`
    (print do aviso) e então `gk2 promote <Mod>` (que roda o check de novo e não promove se falhar).
 
 ## Barreira: índice de gatilhos e `gk2 check`
@@ -226,14 +256,14 @@ que o jogo faz, conferido no índice.
   resposta que leva a ela. `gk2 gatilhos onde <termo>` responde "o que libera isso / onde está essa fala".
 - **Evidência mais precisa do save**: `KnowledgeSystem.blackListPhrases` = respostas/opções de diálogo que o jogador já
   ouviu. A resposta P abre as falas `P_n`; a opção de menu `X_1` abre as irmãs `X_n`.
-- **`gk2 check GK2Hud`** (`tools/check/gk2hud-estado.cs` no green + `check.py`) falha se: `LLBase.L` com chave variável
+- **`gk2 check GK2HudPlus`** (código do `GK2Hud/`, estado do HUD+ no green: `tools/check/gk2hud-estado.cs` + `check.py`) falha se: `LLBase.L` com chave variável
   fora do `Names.cs` (para reproduzir texto nativo, `Names.NativeAsIs`) ou chave literal inexistente; algum nome ou
   tooltip do mod, para qualquer id do balanço, tem texto com cara de id; alguma chave de revelação do calendário não é
   liberada por nada no jogo (chave morta); a descrição é fala atrás de uma resposta e a revelação não passa por ela;
   no save carregado, um evento está escondido com evidência de que o jogador o conhece. Exceções só em
   `tools/check/permitidos.txt`, com o motivo. `tools/check/teste.py` reintroduz os bugs já vistos e exige que a barreira
   os pegue (roda dentro do check).
-- **Auditoria do save do blue**: `gk2 save snapshot && gk2 save reset && gk2 run docs/cenarios/recarregar.cs && gk2 check GK2Hud`.
+- **Auditoria do save do blue**: `gk2 save snapshot && gk2 save reset && gk2 run docs/cenarios/recarregar.cs && gk2 check GK2HudPlus`.
 - **Spoiler**: o índice mostra o jogo inteiro aos agentes; relatório, print e mensagem só citam o que o save
   do blue já revelou. O check segue isso: evento sem evidência entra só na contagem.
 
@@ -266,18 +296,21 @@ alinhamento com o HUD existente; não cobre informação nativa; legível com fu
 ## Convenções de plugin
 
 - Um projeto por mod: `<Mod>/<Mod>.csproj` (só `AssemblyName`), `<Mod>/modinfo.json` (contrato do jogo,
-  `README_MODDING.txt`), `[BepInPlugin("arthur.gk2.<mod>", ...)]`.
-- **Recarregável**: `Harmony` com id = GUID, aplicado no `Awake`; no `OnDestroy`, `UnpatchSelf()`, destruir todo
-  GameObject/UI criado e desinscrever eventos estáticos (`EnvironmentEngine.OnNewDayStarted` etc.). Nada de estado
+  `README_MODDING.txt`), `[BepInPlugin("<autor>.gk2.<mod>", ...)]`. Mod de jogador novo nasce como módulo (ver GK2 HUD+)
+  com um `Plugin.cs` fino de avulso, e entra no `GK2HudPlus.csproj`.
+- **Recarregável**: no `OnDestroy`, `Host.Dispose()` (ou `Guard.Dispose()`) solta os patches; cada parte destrói todo
+  GameObject/UI criado e desinscreve eventos estáticos (`EnvironmentEngine.OnNewDayStarted` etc.). Nada de estado
   estático que sobreviva ao reload.
-- Configuração por `Config.Bind` (vai para `BepInEx/config/<guid>.cfg`). Nunca escrever em `BepInEx/plugins`.
-- **ModGuard** (`Shared/ModGuard.cs`, linkado no csproj): toda feature nasce por `Guard.Feature(id, en, pt, h => new
-  X(h, ...), update, dispose)` com o Harmony `h` da própria parte, e o `Update` do plugin chama só `Guard.Update()`.
-  Parte que não inicia, ou erra 5 vezes em 60 s (Update, patch, ou `Guard.Report` de MonoBehaviour/callback próprio),
-  desliga sozinha: sai do Update, solta os patches, é descartada e mostra o aviso nativo "<Mod> · <parte>: turned off
-  after an error (see log)". Exceção que nasce num patch da parte é engolida por um finalizer (a do jogo passa intacta).
-  O `Awake` só cria partes; chamada ao jogo fora delas derruba o plugin inteiro se a API mudar. Teste:
-  `docs/cenarios/guard-desligar.cs` (estado, finalizer, desligar).
+- Configuração por `Config.Bind` (vai para `BepInEx/config/<guid>.cfg`), descrição em inglês. Nunca escrever em
+  `BepInEx/plugins`.
+- **ModGuard** (`Shared/ModGuard.cs`, linkado no csproj): toda feature é uma parte com o Harmony `h` dela
+  (`Guard.Define` + `Start`/`Stop`, ou `host.Feature` nos módulos; `Guard.Feature` define e inicia, usado pelo Insight),
+  e o `Update` do plugin chama só `Host.Update()`/`Guard.Update()`. Parte que não inicia, ou erra 5 vezes em 60 s
+  (Update, patch, ou `Guard.Report` de MonoBehaviour/callback próprio), desliga sozinha: sai do Update, solta os
+  patches, é descartada e mostra o aviso nativo "<Mod> · <parte>: turned off after an error (see log)". Exceção que
+  nasce num patch da parte é engolida por um finalizer (a do jogo passa intacta). O construtor do módulo só registra
+  partes; chamada ao jogo fora delas derruba o plugin inteiro se a API mudar. Teste: `docs/cenarios/guard-desligar.cs`
+  (estado, finalizer, desligar).
 - Só leitura do estado do jogo, salvo pedido de gameplay.
 
 ## Armadilhas conhecidas
@@ -309,7 +342,7 @@ alinhamento com o HUD existente; não cobre informação nativa; legível com fu
    resto do `BepInEx` do green nunca é tocado.
 2. `decomp` com o anterior guardado em `decomp.anterior/` e `tools/update/relatorio.py`: tipos usados pelos mods que
    mudaram ou sumiram e membros acessados por reflexão (string) que não existem mais.
-3. Build de todos os projetos contra o jogo novo, instalados no green; `gk2 gatilhos` e `gk2 check GK2Hud`.
+3. Build de todos os projetos contra o jogo novo, instalados no green; `gk2 gatilhos` e `gk2 check GK2HudPlus`. Os avulsos só compilam; no green quem roda é o HUD+.
 4. Os DLLs de `Mods/Code` do blue (o que vai rodar de verdade) no green: bateria `tools/update/smoke.txt` (cenários com
    constantes trocadas, regex esperada, prints `.shots/*upd-<data>*`) e `tools/update/excecoes.py` no `Player.log`
    (erros do próprio jogo, conferidos sem mods, ficam em `tools/update/excecoes-do-jogo.txt`).
@@ -333,6 +366,6 @@ mesma zona (`WgoData.GetCraftableMultiInventory`). Dados completos: `Ctrl+F7` do
 - [ ] Compila sem aviso; `gk2 deploy` e um segundo `gk2 deploy` funcionam (recarregável de verdade).
 - [ ] Print do green na tela relevante, julgado contra a referência, com os itens acima.
 - [ ] `gk2 log` sem exceção do mod.
-- [ ] GK2Hud: `gk2 check GK2Hud` verde (sem ele o `gk2 promote` para o blue recusa).
+- [ ] GK2 HUD+: `gk2 check GK2HudPlus` verde (sem ele o `gk2 promote` para o blue recusa).
 - [ ] Nada mudou no blue nem no save do blue além do que foi promovido com aprovação.
 - [ ] Commit no repo local (mensagem sem trailers) e memória atualizada se algo novo foi aprendido.

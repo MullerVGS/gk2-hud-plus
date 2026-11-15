@@ -71,7 +71,7 @@ namespace GK2Hud.Calendar
             {
                 t.nextAttach = 0f;
                 try { t.EnsureAttached(); }   // abre já com a aba (sem esperar o próximo Update)
-                catch (Exception ex) { Plugin.Log.LogWarning("calendário: montar no Redraw: " + ex.Message); }
+                catch (Exception ex) { HudModule.Log.LogWarning("calendário: montar no Redraw: " + ex.Message); }
             }
         }
 
@@ -88,7 +88,7 @@ namespace GK2Hud.Calendar
                     AccessTools.Method(typeof(CharacterWindow), "SwitchPage").Invoke(window, new object[] { window.LastOpenedPage, false });
                 }
             }
-            catch (Exception ex) { Plugin.Log.LogWarning("calendário: restaurar a página nativa: " + ex.Message); }
+            catch (Exception ex) { HudModule.Log.LogWarning("calendário: restaurar a página nativa: " + ex.Message); }
             Detach();
             if (Current == this) Current = null;
         }
@@ -113,7 +113,7 @@ namespace GK2Hud.Calendar
             }
             catch (Exception ex)
             {
-                if (!loggedError) Plugin.Log.LogError("calendário: " + ex);
+                if (!loggedError) HudModule.Log.LogError("calendário: " + ex);
                 loggedError = true;
             }
         }
@@ -153,7 +153,7 @@ namespace GK2Hud.Calendar
             Transform pages = w.transform.Find("Content/Pages");
             if (prefab == null || parent == null || buttons == null || buttons.Count == 0 || pages == null)
             {
-                if (!loggedError) Plugin.Log.LogWarning("calendário: estrutura do CharacterWindow não encontrada.");
+                if (!loggedError) HudModule.Log.LogWarning("calendário: estrutura do CharacterWindow não encontrada.");
                 loggedError = true;
                 return false;
             }

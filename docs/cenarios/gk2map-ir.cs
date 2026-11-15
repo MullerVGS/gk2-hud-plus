@@ -8,7 +8,7 @@ using UnityEngine;
 public static class Snippet {
   static string WGO = "repair_sign_1102"; const int NIVEL = 1;
   public static IEnumerator Run() {
-    var asm = Chainloader.PluginInfos["arthur.gk2.map"].Instance.GetType().Assembly;
+    var asm = AccessTools.Property(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance.GetType(), "Map").GetValue(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance).GetType().Assembly;
     var zoomType = asm.GetType("GK2Map.MapZoom"); var viewType = asm.GetType("GK2Map.PlaceView");
     var cur = AccessTools.Property(viewType, "Current").GetValue(null);
     if (cur != null) { AccessTools.Method(viewType, "Exit").Invoke(cur, null); yield return null; yield return null; }

@@ -41,7 +41,7 @@ public static class Snippet
         var quest = gs.questSystemData.questCollection.quests.FirstOrDefault(q => q.status == QuestStatus.InProgress && q.Definition != null && q.Definition.hasPosInBalance);
         if (quest != null) { gs.questSystemData.CompleteQuest(quest.id); sb.AppendLine("quest " + quest.id); }
         yield return new WaitForSecondsRealtime(2.5f);   // o diário varre a cada 2 s
-        object j = AccessTools.Property(Chainloader.PluginInfos["arthur.gk2.hud"].Instance.GetType(), "Journal").GetValue(Chainloader.PluginInfos["arthur.gk2.hud"].Instance);
+        object j = AccessTools.Property(AccessTools.Property(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance.GetType(), "Hud").GetValue(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance).GetType(), "Journal").GetValue(AccessTools.Property(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance.GetType(), "Hud").GetValue(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance));
         sb.AppendLine(AccessTools.Method(j.GetType(), "Describe").Invoke(j, null).ToString());
         yield return sb.ToString();
     }

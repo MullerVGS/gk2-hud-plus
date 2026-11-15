@@ -9,7 +9,7 @@ public static class Snippet
 
     public static object Run()
     {
-        ConfigFile cfg = Chainloader.PluginInfos["arthur.gk2.hud"].Instance.Config;
+        ConfigFile cfg = Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance.Config;
         ConfigEntryBase e = cfg[new ConfigDefinition("Hud", CHAVE)];
         e.SetSerializedValue(VALOR);
         return CHAVE + " = " + e.GetSerializedValue();

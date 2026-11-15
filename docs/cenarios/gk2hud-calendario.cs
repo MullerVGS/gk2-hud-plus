@@ -15,7 +15,7 @@ public static class Snippet
     const int DIA = 0;
     const bool REVELAR = false;
 
-    static object Plugin() => Chainloader.PluginInfos["arthur.gk2.hud"].Instance;
+    static object Plugin() => AccessTools.Property(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance.GetType(), "Hud").GetValue(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance);
     static object Prop(object o, string n) => AccessTools.Property(o.GetType(), n).GetValue(o);
     static void SetProp(object o, string n, object v) => AccessTools.Property(o.GetType(), n).SetValue(o, v);
     static object Call(object o, string n, params object[] a) => AccessTools.Method(o.GetType(), n).Invoke(o, a);

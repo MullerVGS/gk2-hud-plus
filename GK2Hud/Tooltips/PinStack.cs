@@ -284,12 +284,12 @@ namespace GK2Hud.Tooltips
             foreach (UITooltipCraftItemCell cell in go.GetComponentsInChildren<UITooltipCraftItemCell>(true))
             {
                 try { cell.Flush(); }
-                catch (System.Exception ex) { Plugin.Log.LogWarning("Flush de célula de ingrediente: " + ex.Message); }
+                catch (System.Exception ex) { HudModule.Log.LogWarning("Flush de célula de ingrediente: " + ex.Message); }
             }
             foreach (UITooltipNeedsItemWidget w in go.GetComponentsInChildren<UITooltipNeedsItemWidget>(true))
             {
                 try { w.Hide(); }
-                catch (System.Exception ex) { Plugin.Log.LogWarning("Hide de widget de ingredientes: " + ex.Message); }
+                catch (System.Exception ex) { HudModule.Log.LogWarning("Hide de widget de ingredientes: " + ex.Message); }
             }
         }
 

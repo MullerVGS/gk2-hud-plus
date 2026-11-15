@@ -14,7 +14,7 @@ public static class Snippet
     static string ALVO = "energia";   // barra | energia | insanidade | fora | limpar
     const bool TOOLTIP = true;       // só para energia/insanidade: dispara o UIMouseTooltip nativo do ícone
 
-    static object Plugin() => Chainloader.PluginInfos["arthur.gk2.hud"].Instance;
+    static object Plugin() => AccessTools.Property(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance.GetType(), "Hud").GetValue(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance);
     static object Prop(object o, string n) => AccessTools.Property(o.GetType(), n).GetValue(o);
     static void SetProp(object o, string n, object v) => AccessTools.Property(o.GetType(), n).SetValue(o, v);
 

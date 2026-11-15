@@ -13,7 +13,7 @@ public static class Snippet
 
     public static object Run() { return Go(); }
 
-    static object F() { var p = Chainloader.PluginInfos["arthur.gk2.hud"].Instance; return AccessTools.Property(p.GetType(), "Tooltips").GetValue(p); }
+    static object F() { var p = AccessTools.Property(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance.GetType(), "Hud").GetValue(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance); return AccessTools.Property(p.GetType(), "Tooltips").GetValue(p); }
     static string D(object f) => ((string)AccessTools.Method(f.GetType(), "Describe").Invoke(f, null)).Split(new[] { " rect=" }, System.StringSplitOptions.None)[0] + " ..." + Tail((string)AccessTools.Method(f.GetType(), "Describe").Invoke(f, null));
     static string Tail(string s) { int i = s.IndexOf(" native="); return i < 0 ? "" : s.Substring(i); }
     static void Mouse(object f, Vector2? v) => AccessTools.Property(f.GetType(), "VirtualMouse").SetValue(f, v);

@@ -13,7 +13,7 @@ using UnityEngine;
 // "desligar" deixa a parte desligada até recarregar o mod (gk2 deploy) ou reabrir o green.
 public static class Snippet
 {
-    static string MOD = "arthur.gk2.zombierefund";
+    static string MOD = "mullervgs.gk2.hudplus";
     static string PARTE = "Refund";
     static string ACAO = "finalizer";
 

@@ -1,116 +1,30 @@
-using System;
 using BepInEx;
-using BepInEx.Configuration;
 using GK2Shared;
-using HarmonyLib;
-using System.Collections.Generic;
-using UnityEngine;
-using UnityEngine.UI;
 
 namespace GK2Map
 {
-    /// <summary>
-    /// Mapa do jogo com zoom pelo scroll do mouse e, nas setinhas amarelas (portas), a vista do interior: a câmera do
-    /// mundo olha o local de longe, só para ver e inspecionar, sem interagir.
-    /// </summary>
+    /// <summary>GK2 Map avulso: só o módulo de mapa (<see cref="MapModule"/>). No GK2 HUD+ ele vem junto com os outros.</summary>
     [BepInPlugin(Guid, Name, Version)]
+    [BepInIncompatibility(HudPlusId.Guid)]
     public class Plugin : BaseUnityPlugin
     {
-        public const string Guid = "arthur.gk2.map";
+        public const string Guid = MapModule.LegacyGuid;
         public const string Name = "GK2 Map";
-        public const string Version = "0.2.2";
+        public const string Version = "0.3.0";
 
-        internal static Plugin Instance;
-        internal static BepInEx.Logging.ManualLogSource Log;
-
-        internal ConfigEntry<bool> ZoomEnabled;
-        internal ConfigEntry<bool> PlacesEnabled;
-
-        /// <summary>Nível de zoom atual do mapa (índice em <see cref="MapZoom.Levels"/>), comum às duas janelas de mapa.</summary>
-        internal int ZoomIndex = MapZoom.DefaultLevel;
-
-        private TerrainMap terrain;
-
-        /// <summary>Mapa de onde há chão, montado na primeira vez que a vista precisa e refeito se o mundo for recarregado.</summary>
-        internal TerrainMap Terrain
-        {
-            get
-            {
-                ChunkManager cm = LazyBearTechnology.LazySingleton<ChunkManager>.Instance;
-                if (cm == null) return null;
-                if (terrain == null || !terrain.IsFor(cm) || terrain.Empty) terrain = new TerrainMap(cm);
-                return terrain;
-            }
-        }
-
-        /// <summary>O mod inteiro é uma parte: se quebrar, a vista sai, o zoom volta ao nativo e os patches saem.</summary>
-        internal ModGuard Guard { get; private set; }
-
-        private Texture arrowsTexture;
-        private List<Vector2> arrows;
-
-        /// <summary>Setinhas da arte do mapa, lidas uma vez por textura; <c>null</c> enquanto a textura não carregou.</summary>
-        internal List<Vector2> Arrows(Image mapImage, Vector2 mapSize)
-        {
-            Texture tex = mapImage != null && mapImage.sprite != null ? mapImage.sprite.texture : null;
-            if (tex == null) return null;
-            if (arrows == null || arrowsTexture != tex)
-            {
-                arrows = Places.FindArrows(mapImage, mapSize);
-                arrowsTexture = tex;
-            }
-            return arrows;
-        }
+        internal ModHost Host { get; private set; }
+        internal MapModule Module { get; private set; }
 
         private void Awake()
         {
-            Instance = this;
-            Log = Logger;
-            ZoomEnabled = Config.Bind("Map", "Zoom", true, "Scroll do mouse aproxima e afasta o mapa.");
-            PlacesEnabled = Config.Bind("Map", "Places", true, "Nas setinhas amarelas do mapa, aproximar ou clicar mostra o interior do local.");
-            Guard = new ModGuard(Logger, Guid, Name);
-            Guard.Feature("Map", "map", "mapa", h =>
-            {
-                h.Patch(AccessTools.Method(typeof(MapPageWidget), nameof(MapPageWidget.Redraw)),
-                    postfix: new HarmonyMethod(typeof(Plugin), nameof(RedrawPostfix)));
-                foreach (MapPageWidget w in FindObjectsByType<MapPageWidget>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
-                    Attach(w);
-                return this;
-            }, dispose: p => p.RestoreAll());
-            Log.LogInfo($"{Name} {Version} carregado");
+            Host = new ModHost(this, Logger, Guid, Name, bundle: false);
+            Module = new MapModule(Host);
+            Host.Start();
+            Logger.LogInfo($"{Name} {Version} carregado");
         }
 
-        private void Update() => Guard.Update();
+        private void Update() => Host.Update();
 
-        private void OnDestroy()
-        {
-            Guard?.Dispose();
-            if (Instance == this) Instance = null;
-        }
-
-        private void RestoreAll()
-        {
-            foreach (MapZoom z in FindObjectsByType<MapZoom>(FindObjectsInactive.Include, FindObjectsSortMode.None))
-            {
-                z.Restore();
-                Destroy(z);
-            }
-        }
-
-        /// <summary>Erro num componente do mod (MapZoom, PlaceView): conta para a parte e, repetido, desliga o mod.</summary>
-        internal static void Fail(Exception e, string where) => Instance?.Guard.Report("Map", e, where);
-
-        private static void RedrawPostfix(MapPageWidget __instance)
-        {
-            try { Instance?.Attach(__instance); }
-            catch (Exception e) { Fail(e, "MapPageWidget.Redraw"); }
-        }
-
-        private void Attach(MapPageWidget w)
-        {
-            MapZoom z = w.GetComponent<MapZoom>();
-            if (z == null) z = w.gameObject.AddComponent<MapZoom>();
-            z.OnRedraw(w);
-        }
+        private void OnDestroy() => Host?.Dispose();
     }
 }

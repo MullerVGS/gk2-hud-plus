@@ -31,13 +31,13 @@ namespace GK2Hud.Hud
             bool hadOld = orphans != null && orphans.TryGetValue(OldNumbers, out old);
 
             ConfigEntry<HudNumbersMode> entry = cfg.Bind(NumbersMode, HudNumbersMode.Hover, new ConfigDescription(
-                "Números de energia e insanidade dentro da barra. Hover: aparecem com o mouse sobre a barra ou os ícones; Always: sempre; Off: nunca."));
+                "Energy and insanity numbers inside the bars. Hover: with the mouse on the bar or its icon; Always; Off."));
             if (hadOld)
             {
                 if (!hadMode && string.Equals(old?.Trim(), "false", StringComparison.OrdinalIgnoreCase)) entry.Value = HudNumbersMode.Off;
                 orphans.Remove(OldNumbers);
                 cfg.Save();
-                Plugin.Log.LogInfo($"config: EnergyInsanityNumbers={old} migrado para EnergyInsanityNumbersMode={entry.Value}");
+                HudModule.Log.LogInfo($"config: EnergyInsanityNumbers={old} migrado para EnergyInsanityNumbersMode={entry.Value}");
             }
             return entry;
         }

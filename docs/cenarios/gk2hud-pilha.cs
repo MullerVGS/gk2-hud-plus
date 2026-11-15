@@ -19,7 +19,7 @@ public static class Snippet
 
     static object Feature()
     {
-        var plugin = Chainloader.PluginInfos["arthur.gk2.hud"].Instance;
+        var plugin = AccessTools.Property(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance.GetType(), "Hud").GetValue(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance);
         return AccessTools.Property(plugin.GetType(), "Tooltips").GetValue(plugin);
     }
 

@@ -77,7 +77,7 @@ namespace GK2Map
         /// <summary>As setinhas saem da textura do mapa, que o jogo carrega de forma assíncrona: tenta até ela existir.</summary>
         private void BuildPlaces()
         {
-            Plugin p = Plugin.Instance;
+            MapModule p = MapModule.Instance;
             places.Clear();
             atlas = null;
             if (!p.PlacesEnabled.Value) { placesPending = false; return; }
@@ -132,7 +132,7 @@ namespace GK2Map
                 click |= pressOnPlace && hovered != null;
                 pressOnPlace = false;
             }
-            Plugin p = Plugin.Instance;
+            MapModule p = MapModule.Instance;
             Place enter = click ? hovered : null;
             // No zoom máximo, mais um passo de scroll desce ao mundo naquele ponto do mapa (só em região conhecida).
             if (enter == null && steps > 0 && atlas != null && p.PlacesEnabled.Value && p.ZoomIndex == Levels.Length - 1
@@ -154,7 +154,7 @@ namespace GK2Map
         {
             get
             {
-                Plugin p = Plugin.Instance;
+                MapModule p = MapModule.Instance;
                 if (p == null || !p.ZoomEnabled.Value) return 1f;
                 return Levels[Mathf.Clamp(p.ZoomIndex, 0, Levels.Length - 1)];
             }
@@ -163,12 +163,12 @@ namespace GK2Map
         private void Update()
         {
             try { UpdateBody(); }
-            catch (System.Exception e) { Plugin.Fail(e, "MapZoom.Update"); }
+            catch (System.Exception e) { MapModule.Fail(e, "MapZoom.Update"); }
         }
 
         private void UpdateBody()
         {
-            Plugin p = Plugin.Instance;
+            MapModule p = MapModule.Instance;
             if (p == null || scroll == null || map == null) return;
             if (PlaceView.Active) return;
             if (placesPending) BuildPlaces();
@@ -314,7 +314,7 @@ namespace GK2Map
         private void LateUpdate()
         {
             try { LateUpdateBody(); }
-            catch (System.Exception e) { Plugin.Fail(e, "MapZoom.LateUpdate"); }
+            catch (System.Exception e) { MapModule.Fail(e, "MapZoom.LateUpdate"); }
         }
 
         private void LateUpdateBody()

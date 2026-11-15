@@ -137,7 +137,7 @@ namespace GK2Hud.Journal
             }
             catch (Exception ex)
             {
-                if (!loggedError) Plugin.Log.LogError("diário: " + ex);
+                if (!loggedError) HudModule.Log.LogError("diário: " + ex);
                 loggedError = true;
             }
         }
@@ -152,7 +152,7 @@ namespace GK2Hud.Journal
             lastSermon = MainGame.PlayerData.currentSermon;   // o último sermão do save carregado: sem data, não entra
             string slot = System.Text.RegularExpressions.Regex.Replace(SaveSystem.RelevantSlot?.slotName ?? "", "_backup_[0-9]+$", "");
             if (string.IsNullOrEmpty(slot)) slot = "default";
-            path = Path.Combine(Path.Combine(Paths.ConfigPath, Plugin.Guid), "journal-" + Safe(slot) + ".json");
+            path = Path.Combine(HudModule.Instance.DataDir, "journal-" + Safe(slot) + ".json");
             file = Read(path);
             HashSet<string> current = Snapshot();
             double now = Now();
@@ -203,7 +203,7 @@ namespace GK2Hud.Journal
             if (dropped > 0) Dirty();
             int added = AddNew(current, approx: true);
             counts.Clear();
-            Plugin.Log.LogInfo($"diário: {slot} desde o dia {file.startDay}, {file.entries.Count} anotações ({dropped} descartadas após o ponto carregado, {added} notadas ao carregar)");
+            HudModule.Log.LogInfo($"diário: {slot} desde o dia {file.startDay}, {file.entries.Count} anotações ({dropped} descartadas após o ponto carregado, {added} notadas ao carregar)");
             version++;
         }
 
@@ -216,7 +216,7 @@ namespace GK2Hud.Journal
             counts.Clear();
             Dirty();
             version++;
-            Plugin.Log.LogInfo($"diário: {slot} começa no dia {env.Day} com {current.Count} coisas já conhecidas ({why})");
+            HudModule.Log.LogInfo($"diário: {slot} começa no dia {env.Day} com {current.Count} coisas já conhecidas ({why})");
         }
 
         /// <summary>Contagens baratas primeiro: as listas só crescem, então só se monta o conjunto quando alguma mudou.</summary>
@@ -252,7 +252,7 @@ namespace GK2Hud.Journal
             file.entries.Add(new JournalEntry { d = env.Day, t = env.TimeOfDay, k = JournalKinds.Sermon, id = cur.id, s = note });
             Dirty();
             version++;
-            Plugin.Log.LogInfo($"diário: sermão {cur.id} no dia {env.Day}: {note.n} paroquianos, {(note.ok ? "sucesso" : "falha")}, {note.Money} b, fé {note.Faith}");
+            HudModule.Log.LogInfo($"diário: sermão {cur.id} no dia {env.Day}: {note.n} paroquianos, {(note.ok ? "sucesso" : "falha")}, {note.Money} b, fé {note.Faith}");
         }
 
         private bool Count(string kind, int n)
@@ -352,7 +352,7 @@ namespace GK2Hud.Journal
                 if (File.Exists(path)) File.Delete(path);
                 File.Move(tmp, path);
             }
-            catch (Exception ex) { Plugin.Log.LogWarning("diário: não gravou " + path + ": " + ex.Message); }
+            catch (Exception ex) { HudModule.Log.LogWarning("diário: não gravou " + path + ": " + ex.Message); }
         }
 
         private static JournalFile Read(string p)
@@ -368,7 +368,7 @@ namespace GK2Hud.Journal
             }
             catch (Exception ex)
             {
-                Plugin.Log.LogWarning("diário: arquivo ilegível, recomeçando: " + ex.Message);
+                HudModule.Log.LogWarning("diário: arquivo ilegível, recomeçando: " + ex.Message);
                 return null;
             }
         }

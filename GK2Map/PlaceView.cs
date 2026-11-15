@@ -188,7 +188,7 @@ namespace GK2Map
         private void Update()
         {
             try { UpdateBody(); }
-            catch (System.Exception e) { Plugin.Fail(e, "PlaceView.Update"); }
+            catch (System.Exception e) { MapModule.Fail(e, "PlaceView.Update"); }
         }
 
         private void UpdateBody()
@@ -328,7 +328,7 @@ namespace GK2Map
                 }
                 return p;
             }
-            TerrainMap terrain = Plugin.Instance != null ? Plugin.Instance.Terrain : null;
+            TerrainMap terrain = MapModule.Instance != null ? MapModule.Instance.Terrain : null;
             if (terrain == null || terrain.Empty) return p;
             if (terrain.TryGround(p.x, p.z, out _)) { lastGround = p; hasLastGround = true; return p; }
             return hasLastGround ? lastGround : p;
@@ -481,7 +481,7 @@ namespace GK2Map
                 cameraEventArgs = new object[] { brain };
                 if (cameraEventInvoke == null)
                 {
-                    Plugin.Log.LogWarning("CameraUpdatedEvent não encontrado: bolhas não vão acompanhar a vista");
+                    MapModule.Log.LogWarning("CameraUpdatedEvent não encontrado: bolhas não vão acompanhar a vista");
                     brainEventMissing = true;
                 }
             }

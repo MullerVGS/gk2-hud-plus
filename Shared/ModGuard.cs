@@ -21,14 +21,20 @@ namespace GK2Shared
         private const int MaxErrors = 5;
         private const float WindowSeconds = 60f;
 
-        private sealed class Part
+        /// <summary>Uma parte: definida uma vez, ligada e desligada quantas vezes for preciso (menu, cfg, erro).</summary>
+        internal sealed class Part
         {
             public ModGuard Owner;
             public string Id, En, Pt;
             public Harmony Harmony;
-            public Action Tick;
-            public Action Dispose;
-            public bool Off;
+            public Func<Harmony, object> Create;
+            public Action<object> Tick;
+            public Action<object> Release;
+            public object Instance;
+            /// <summary>Iniciada e rodando o Update.</summary>
+            public bool Running;
+            /// <summary>Desligada por erro (não iniciou ou errou demais) desde o último <see cref="Start"/>.</summary>
+            public bool Failed;
             public readonly Queue<float> Errors = new Queue<float>();
         }
 
@@ -50,37 +56,69 @@ namespace GK2Shared
         }
 
         /// <summary>
-        /// Cria uma parte. <paramref name="create"/> recebe o Harmony da parte (patches feitos nele saem juntos se ela
-        /// desligar). Devolve a instância, ou <c>null</c> se ela não iniciou.
+        /// Define uma parte sem iniciá-la. <paramref name="create"/> recebe o Harmony da parte (patches feitos nele saem
+        /// juntos quando ela desliga) e é chamado a cada <see cref="Start"/>.
         /// </summary>
+        public Part Define<T>(string id, string en, string pt, Func<Harmony, T> create, Action<T> update = null, Action<T> dispose = null) where T : class
+        {
+            if (parts.Any(p => p.Id == id)) throw new ArgumentException("parte repetida: " + id);
+            var part = new Part
+            {
+                Owner = this, Id = id, En = en, Pt = pt,
+                Harmony = new Harmony(guid + "." + id.ToLowerInvariant()),
+                Create = h => create(h),
+                Tick = update == null ? (Action<object>)null : o => update((T)o),
+                Release = dispose == null ? (Action<object>)null : o => dispose((T)o),
+            };
+            parts.Add(part);
+            return part;
+        }
+
+        /// <summary>Define e inicia uma parte. Devolve a instância, ou <c>null</c> se ela não iniciou.</summary>
         public T Feature<T>(string id, string en, string pt, Func<Harmony, T> create, Action<T> update = null, Action<T> dispose = null) where T : class
         {
-            var part = new Part { Owner = this, Id = id, En = en, Pt = pt, Harmony = new Harmony(guid + "." + id.ToLowerInvariant()) };
-            parts.Add(part);
-            T instance;
+            Part part = Define(id, en, pt, create, update, dispose);
+            return Start(part) ? (T)part.Instance : null;
+        }
+
+        /// <summary>Inicia a parte (de novo, se ela desligou por erro). Falhar ao iniciar desliga só ela, com aviso.</summary>
+        public bool Start(Part p)
+        {
+            if (p.Running) return true;
+            if (pendingOff.Remove(p)) Release(p);
+            p.Errors.Clear();
+            p.Failed = false;
             try
             {
-                instance = create(part.Harmony);
-                if (instance == null) throw new InvalidOperationException("a parte não devolveu instância");
+                p.Instance = p.Create(p.Harmony);
+                if (p.Instance == null) throw new InvalidOperationException("a parte não devolveu instância");
             }
             catch (Exception e)
             {
-                log.LogError($"[guard] {id}: não iniciou: {e}");
-                part.Off = true;
-                Unpatch(part);
-                Announce(part);
-                return null;
+                log.LogError($"[guard] {p.Id}: não iniciou: {e}");
+                p.Instance = null;
+                p.Failed = true;
+                Unpatch(p);
+                Announce(p);
+                return false;
             }
-            if (update != null) part.Tick = () => update(instance);
-            if (dispose != null) part.Dispose = () => dispose(instance);
-            InstallFinalizers(part);
-            return instance;
+            p.Running = true;
+            InstallFinalizers(p);
+            return true;
         }
 
-        public bool IsOn(string id) => parts.Any(p => p.Id == id && !p.Off);
+        /// <summary>Desliga a parte: sai do Update, é descartada e solta os patches.</summary>
+        public void Stop(Part p)
+        {
+            pendingOff.Remove(p);
+            p.Running = false;
+            Release(p);
+        }
 
-        /// <summary>Partes desligadas nesta sessão (lido pelos cenários de teste).</summary>
-        public string[] OffParts => parts.Where(p => p.Off).Select(p => p.Id).ToArray();
+        public bool IsOn(string id) => parts.Any(p => p.Id == id && p.Running);
+
+        /// <summary>Partes desligadas por erro nesta sessão (lido pelos cenários de teste).</summary>
+        public string[] OffParts => parts.Where(p => p.Failed).Select(p => p.Id).ToArray();
 
         /// <summary>Erro visto fora do Update e dos patches (MonoBehaviour próprio, callback de UI...).</summary>
         public void Report(string id, Exception e, string where)
@@ -95,14 +133,14 @@ namespace GK2Shared
         {
             if (pendingOff.Count > 0)
             {
-                foreach (Part p in pendingOff) Shutdown(p);
+                foreach (Part p in pendingOff.ToArray()) Release(p);
                 pendingOff.Clear();
             }
             FlushNotices();
-            foreach (Part p in parts)
+            foreach (Part p in parts.ToArray())
             {
-                if (p.Off || p.Tick == null) continue;
-                try { p.Tick(); }
+                if (!p.Running || p.Tick == null) continue;
+                try { p.Tick(p.Instance); }
                 catch (Exception e) { Count(p, e, "Update"); }
             }
         }
@@ -112,13 +150,8 @@ namespace GK2Shared
         {
             for (int i = parts.Count - 1; i >= 0; i--)
             {
-                Part p = parts[i];
-                if (!p.Off)
-                {
-                    try { p.Dispose?.Invoke(); }
-                    catch (Exception e) { log.LogError($"[guard] {p.Id}: erro ao descartar: {e}"); }
-                }
-                Unpatch(p);
+                parts[i].Running = false;
+                Release(parts[i]);
             }
             parts.Clear();
             pendingOff.Clear();
@@ -127,7 +160,7 @@ namespace GK2Shared
 
         private void Count(Part p, Exception e, string where)
         {
-            if (p.Off) return;
+            if (!p.Running) return;
             float now = Time.realtimeSinceStartup;
             p.Errors.Enqueue(now);
             while (p.Errors.Count > 0 && now - p.Errors.Peek() > WindowSeconds) p.Errors.Dequeue();
@@ -135,15 +168,22 @@ namespace GK2Shared
             else log.LogError($"[guard] {p.Id}: erro em {where} ({p.Errors.Count}/{MaxErrors}): {e.GetType().Name}: {e.Message}");
             if (p.Errors.Count < MaxErrors) return;
             log.LogError($"[guard] {p.Id}: desligada após {MaxErrors} erros em {WindowSeconds:0} s");
-            p.Off = true;
+            p.Running = false;
+            p.Failed = true;
             pendingOff.Add(p);   // soltar patches fora da pilha do patch que falhou
             Announce(p);
         }
 
-        private void Shutdown(Part p)
+        /// <summary>Descarta a instância (uma vez) e solta os patches da parte.</summary>
+        private void Release(Part p)
         {
-            try { p.Dispose?.Invoke(); }
-            catch (Exception e) { log.LogError($"[guard] {p.Id}: erro ao descartar: {e}"); }
+            object instance = p.Instance;
+            p.Instance = null;
+            if (instance != null && p.Release != null)
+            {
+                try { p.Release(instance); }
+                catch (Exception e) { log.LogError($"[guard] {p.Id}: erro ao descartar: {e}"); }
+            }
             Unpatch(p);
         }
 

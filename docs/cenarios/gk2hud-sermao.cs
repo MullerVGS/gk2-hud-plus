@@ -18,7 +18,7 @@ public static class Snippet
     {
         MainGame.PlayerData.currentSermon = new SermonResultData(SERMAO, "donation_box", PAROQUIANOS, SUCESSO, IGREJA, CEMITERIO);
         yield return new WaitForSecondsRealtime(2.5f);   // o diário varre a cada 2 s
-        object p = Chainloader.PluginInfos["arthur.gk2.hud"].Instance;
+        object p = AccessTools.Property(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance.GetType(), "Hud").GetValue(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance);
         object j = AccessTools.Property(p.GetType(), "Journal").GetValue(p);
         yield return MainGame.PlayerData.currentSermon + " | " + AccessTools.Method(j.GetType(), "Describe").Invoke(j, null);
     }

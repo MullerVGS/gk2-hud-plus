@@ -4,5 +4,7 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="../Shared/ModGuard.cs" Link="Shared/ModGuard.cs" />
+    <Compile Include="../Shared/ModHost.cs" Link="Shared/ModHost.cs" />
+    <Compile Include="../Shared/HudPlusId.cs" Link="Shared/HudPlusId.cs" />
   </ItemGroup>
 </Project>

@@ -9,7 +9,7 @@ import re
 import sys
 from pathlib import Path
 
-MODS = ["GK2Hud", "GK2Insight", "GK2Map", "GK2Saves", "GK2ZombieRefund", "GK2HotLoader", "GK2DevBridge", "Shared"]
+MODS = ["GK2HudPlus", "GK2Hud", "GK2Insight", "GK2Map", "GK2Saves", "GK2ZombieRefund", "GK2HotLoader", "GK2DevBridge", "Shared"]
 DECL = re.compile(r"\b(?:class|struct|interface|enum)\s+([A-Za-z_]\w*)")
 TYPEOF_MEMBER = re.compile(r'typeof\(([A-Za-z_][\w.]*)\),\s*"([A-Za-z_]\w*)"')
 REFLECT_NAME = re.compile(r'(?:AccessTools\.[A-Za-z<>]+|\.GetField|\.GetMethod|\.GetProperty|\.Field|\.Property|\.Method)\s*\([^;"]*"([A-Za-z_]\w*)"')

@@ -6,7 +6,7 @@ using UnityEngine;
 public static class Snippet {
   const float DX = -0.1f, DZ = 0.05f; const int FRAMES = 30;
   public static IEnumerator Run() {
-    var viewType = Chainloader.PluginInfos["arthur.gk2.map"].Instance.GetType().Assembly.GetType("GK2Map.PlaceView");
+    var viewType = AccessTools.Property(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance.GetType(), "Map").GetValue(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance).GetType().Assembly.GetType("GK2Map.PlaceView");
     var cur = AccessTools.Property(viewType, "Current").GetValue(null);
     if (cur == null) { yield return "vista fechada"; yield break; }
     var f = AccessTools.Field(viewType, "focus");
