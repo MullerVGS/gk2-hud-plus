@@ -22,7 +22,7 @@ namespace GK2DevBridge
     {
         public const string Guid = "arthur.gk2.devbridge";
         public const string Name = "GK2 DevBridge";
-        public const string Version = "0.1.0";
+        public const string Version = "0.2.0";
 
         internal static Bridge Instance;
         internal static BepInEx.Logging.ManualLogSource Log;
@@ -51,6 +51,9 @@ namespace GK2DevBridge
             routes["/unload"] = HotLoader.Unload;
             routes["/run"] = HotLoader.Run;
             routes["/quit"] = Routes.Quit;
+            routes["/rec/start"] = Recorder.Start;
+            routes["/rec/stop"] = Recorder.Stop;
+            routes["/rec/cursor"] = Recorder.CursorAt;
 
             running = true;
             listener = new HttpListener();

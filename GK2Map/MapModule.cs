@@ -67,8 +67,7 @@ namespace GK2Map
             host.Module("map", null, () => { if (Instance == this) Instance = null; });
             FeatureInfo map = host.Feature("Map", "map", "Map", "Enabled",
                 new Loc("Better map", "Mapa melhorado"),
-                new Loc("Extra tools on both map windows, always limited to the area you have explored.",
-                    "Ferramentas a mais nas duas janelas de mapa, sempre presas à área que você já explorou."),
+                new Loc("Better map windows, showing only what you have explored.", "Mapas melhores, mostrando só o que você já explorou."),
                 h =>
                 {
                     h.Patch(AccessTools.Method(typeof(MapPageWidget), nameof(MapPageWidget.Redraw)),
@@ -79,11 +78,10 @@ namespace GK2Map
                 }, dispose: m => m.RestoreAll());
             ZoomEnabled = host.Option(map, "MapZoom", "Map", "Zoom", true,
                 new Loc("Zoom", "Zoom"),
-                new Loc("The mouse wheel zooms the map in and out, anchored at the cursor.", "O scroll do mouse aproxima e afasta o mapa, ancorado no cursor.")).Toggle;
+                new Loc("Zoom the map with the mouse wheel.", "Zoom no mapa com o scroll do mouse.")).Toggle;
             PlacesEnabled = host.Option(map, "MapPlaces", "Map", "Places", true,
                 new Loc("Look inside places", "Ver os locais por dentro"),
-                new Loc("Zooming in on a yellow arrow (or clicking it) shows that place; one more scroll at full zoom goes down to the open world. Hover and click to inspect.",
-                    "Aproximar numa setinha amarela (ou clicar nela) mostra o local; mais um scroll no zoom máximo desce ao mundo aberto. Passe o mouse e clique para inspecionar.")).Toggle;
+                new Loc("Zoom into a yellow arrow to peek inside that place.", "Aproxime numa setinha amarela para espiar o local por dentro.")).Toggle;
             host.ImportLegacy(LegacyGuid);
         }
 

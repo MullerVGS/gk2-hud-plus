@@ -29,6 +29,9 @@ namespace GK2HudPlus.Menu
         public MenuPart(Harmony h, ModHost host)
         {
             this.host = host;
+            // Janela órfã de uma carga anterior (hot-reload no meio de uma falha): sai antes de tudo.
+            foreach (Transform t in Object.FindObjectsByType<Transform>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                if (t != null && t.name == "GK2HudPlus_Window") Object.DestroyImmediate(t.gameObject);
             h.Patch(AccessTools.DeclaredMethod(typeof(UIGamePauseWindow), nameof(UIGamePauseWindow.Open), new[] { typeof(LazyWidgetDataBase) }),
                 postfix: new HarmonyMethod(typeof(MenuPart), nameof(PauseOpenPostfix)));
             Current = this;

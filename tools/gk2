@@ -165,6 +165,9 @@ EOF
       done
     fi
     install_green "$dll" "$proj"
+    if [ -d "$HERE/$proj/previews" ]; then   # clipes do menu (gk2 rec), lidos de BepInEx/plugins/<proj>/previews
+      mkdir -p "$GREEN/BepInEx/plugins/$proj/previews"; cp -u "$HERE/$proj/previews/"*.webm "$GREEN/BepInEx/plugins/$proj/previews/" 2>/dev/null || true
+    fi
     if bridge_up; then
       path=$(stage "$dll" "$proj")
       api "/reload?path=$(python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))' "$path")" | print_logs
@@ -173,6 +176,42 @@ EOF
     fi
     ;;
   unload) api "/unload?guid=${1:?guid}" | pretty ;;
+  rec)
+    # gk2 rec <cenario.cs> <x,y,w,h> <nome> [--fps n] [--antes s] [--depois s] [K=V ...]
+    # Grava um clipe da região (px de tela, alinhada em pares) enquanto o cenário roda. Saídas: GK2HudPlus/previews/<nome>.webm
+    # (preview do menu, VP8) e docs/media/<nome>.gif e .mp4 (páginas). K=V troca constantes do cenário, como no smoke.
+    src=${1:?cenário}; reg=${2:?x,y,w,h}; nome=${3:?nome}; shift 3
+    fps=20; antes=0.4; depois=0.6; subs=()
+    while [ $# -gt 0 ]; do case "$1" in
+      --fps) fps=$2; shift ;; --antes) antes=$2; shift ;; --depois) depois=$2; shift ;; *=*) subs+=("$1") ;; *) die "opção desconhecida: $1" ;;
+    esac; shift; done
+    IFS=, read -r rx ry rw rh <<<"$reg"; rx=$((rx/2*2)); ry=$((ry/2*2)); rw=$((rw/2*2)); rh=$((rh/2*2))
+    tmp="$HERE/.shots/rec-cenario.cs"; mkdir -p "$(dirname "$tmp")"   # fora de tools/snippet/work (o host compila a pasta inteira)
+    python3 "$HERE/tools/update/smoke.py" --subst "$src" "$tmp" "${subs[@]}" || die "não troquei as constantes"
+    out="$GREEN/BepInEx/rec/$nome"; mkdir -p "$GREEN/BepInEx/rec"
+    # Compila antes de gravar: o clipe só tem o que o cenário faz.
+    cp "$tmp" "$HERE/tools/snippet/work/Snippet.cs"; refs >&2; builder
+    docker exec -w /src/tools/snippet "$BUILDER" dotnet build -c Release -nologo -v q -clp:NoSummary >&2 || die "cenário não compilou"
+    dll=$(stage "$HERE/tools/snippet/bin/Release/Snippet.dll" snippet)
+    api "/rec/start?x=$rx&y=$ry&w=$rw&h=$rh&fps=$fps&scale=1" >/dev/null || die "gravador não iniciou (DevBridge 0.2.0? rode gk2 bridge)"
+    sleep "$antes"
+    if ! res=$(GK2_TIMEOUT=180 api "/run?path=$(urlenc "$dll")&timeout=120"); then
+      api "/rec/stop?out=$(urlenc "$(winpath "$out")")" >/dev/null; rm -f "$out.rgb"; echo "$res" | tail -5; die "cenário falhou; gravação descartada"
+    fi
+    echo "$res" | grep -q '"ok": *true' || { api "/rec/stop?out=$(urlenc "$(winpath "$out")")" >/dev/null; rm -f "$out.rgb"; echo "$res" | tail -c 600; die "cenário falhou; gravação descartada"; }
+    echo "$res" | python3 -c 'import json,sys; print("cenário:", json.load(sys.stdin).get("result"))' 2>/dev/null || true
+    sleep "$depois"
+    api "/rec/stop?out=$(urlenc "$(winpath "$out")")" | pretty | grep -E '"frames"|"w"|"h"' | tr -d ' \n'; echo
+    read -r W H F < <(python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print(d["w"], d["h"], d["fps"])' "$out.json")
+    mkdir -p "$HERE/GK2HudPlus/previews" "$HERE/docs/media"
+    raw=(-loglevel error -y -f rawvideo -pix_fmt rgb24 -s "${W}x${H}" -r "$F" -i "$out.rgb")
+    ffmpeg "${raw[@]}" -c:v libvpx -crf 6 -b:v 2M -auto-alt-ref 0 -pix_fmt yuv420p "$HERE/GK2HudPlus/previews/$nome.webm" || die "ffmpeg webm falhou"
+    ffmpeg "${raw[@]}" -c:v libx264 -crf 16 -preset slow -pix_fmt yuv420p -movflags +faststart "$HERE/docs/media/$nome.mp4" || die "ffmpeg mp4 falhou"
+    ffmpeg "${raw[@]}" -vf "scale=iw/2:ih/2:flags=neighbor,split[a][b];[a]palettegen=stats_mode=diff[p];[b][p]paletteuse=dither=none" "$HERE/docs/media/$nome.gif" || die "ffmpeg gif falhou"
+    ffmpeg "${raw[@]}" -vf "select=eq(n\,$(( F * 3 / 2 )))" -frames:v 1 "$HERE/.shots/rec-$nome.png" 2>/dev/null || true
+    rm -f "$out.rgb"
+    ls -la "$HERE/GK2HudPlus/previews/$nome.webm" "$HERE/docs/media/$nome.mp4" "$HERE/docs/media/$nome.gif" | awk '{print $5, $9}'
+    ;;
   run)
     # Compila um cenário (static class Snippet { static object Run() }) e executa dentro do jogo.
     src=${1:?arquivo .cs}; [ -f "$src" ] || die "não achei $src"

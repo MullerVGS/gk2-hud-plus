@@ -27,6 +27,8 @@ namespace GK2HudPlus.Menu
         private const float ExtraLabel = 76f;
         private const float RowWidth = 330f;
         private const float ListWidth = RowWidth + ExtraLabel;
+        private const float PanelGap = 12f;
+        private const float BodyWidth = ListWidth + PanelGap + PreviewPanel.Width;
         private const float RowHeight = 16f;
         private const float RowSpacing = 6f;
         /// <summary>Dez linhas inteiras (toda linha mede 16 + 6), para a lista nunca abrir cortando uma pela metade.</summary>
@@ -45,10 +47,12 @@ namespace GK2HudPlus.Menu
         private TextMeshProUGUI windowTitle, liveHint;
         private UIDialogWindowButton okButton;
         private ScrollRect listScroll;
+        private PreviewPanel preview;
+        private FeatureInfo shown;
         private RectTransform listContent;
         private AutoScroll listAutoScroll;
         private readonly Dictionary<string, UISwitchButton> rows = new Dictionary<string, UISwitchButton>();
-        private bool dirty;
+        private bool dirty, ready;
 
         /// <summary>Linha por id (lida pelos cenários).</summary>
         internal IReadOnlyDictionary<string, UISwitchButton> Rows => rows;
@@ -66,8 +70,18 @@ namespace GK2HudPlus.Menu
             GamepadNavigationController nav = go.AddComponent<GamepadNavigationController>();
             if (nav.navigationGroupSources == null) nav.navigationGroupSources = new List<GamepadNavigationController.NavigationGroupSource>();
             HudPlusWindow w = go.AddComponent<HudPlusWindow>();
-            w.Build(host);
-            w.Init();
+            try
+            {
+                w.Build(host);
+                w.Init();
+                w.ready = true;
+            }
+            catch
+            {
+                if (w.host != null) w.host.Changed -= w.OnHostChanged;
+                DestroyImmediate(go);   // janela pela metade não pode ficar viva (o Update da LazyWindow exige Init)
+                throw;
+            }
             return w;
         }
 
@@ -115,9 +129,20 @@ namespace GK2HudPlus.Menu
             }
 
             liveHint = Label(content, "Live", "", TextAlignmentOptions.Midline, bodyTemplate);
-            Size(liveHint.gameObject, ListWidth, RowHeight);
-            listScroll = CreateScroll(content);
+            Size(liveHint.gameObject, BodyWidth, RowHeight);
+            // Lista à esquerda, pré-visualização à direita (como as telas de opções que mostram o efeito ao lado).
+            var body = new GameObject("Body", typeof(RectTransform));
+            body.transform.SetParent(content, worldPositionStays: false);
+            HorizontalLayoutGroup row = body.AddComponent<HorizontalLayoutGroup>();
+            row.spacing = PanelGap;
+            row.childAlignment = TextAnchor.UpperLeft;
+            row.childControlWidth = row.childControlHeight = true;
+            row.childForceExpandWidth = row.childForceExpandHeight = false;
+            Size(body, BodyWidth, ListHeight);
+            listScroll = CreateScroll(body.transform);
             Size(listScroll.gameObject, ListWidth, ListHeight);
+            Sprite cell = switchTemplate.transform.Find("Back")?.GetComponent<Image>()?.sprite;
+            preview = new PreviewPanel(body.transform, ListHeight, cell, sectionTemplate, bodyTemplate);
             listContent = listScroll.content;
             okButton = Instantiate(buttonTemplate, content, worldPositionStays: false);
             okButton.name = "OkButton";
@@ -127,7 +152,7 @@ namespace GK2HudPlus.Menu
 
         private static void SetupContent(RectTransform content)
         {
-            content.sizeDelta = new Vector2(ListWidth, content.sizeDelta.y);
+            content.sizeDelta = new Vector2(BodyWidth, content.sizeDelta.y);
             ContentSizeFitter fitter = content.GetComponent<ContentSizeFitter>();
             if (fitter != null)
             {
@@ -160,7 +185,6 @@ namespace GK2HudPlus.Menu
         public override void Close()
         {
             if (!IsShown) return;
-            HideHint();
             base.Close();
         }
 
@@ -188,6 +212,7 @@ namespace GK2HudPlus.Menu
 
         protected override void Update()
         {
+            if (!ready) return;
             base.Update();
             if (dirty && IsShown)
             {
@@ -200,7 +225,6 @@ namespace GK2HudPlus.Menu
         internal void Refresh(bool keepScroll)
         {
             Vector2 pos = listContent.anchoredPosition;
-            HideHint();
             rows.Clear();
             for (int i = listContent.childCount - 1; i >= 0; i--)
             {
@@ -225,6 +249,23 @@ namespace GK2HudPlus.Menu
             if (keepScroll) listContent.anchoredPosition = pos;
             else listScroll.verticalNormalizedPosition = 1f;
             if (LazyInput.IsGamepadActive) GamepadNavigationController.ReinitItems(focusOnFirstActive: false);
+            ShowPreview(shown != null && host.Features.Contains(shown) ? shown : top.FirstOrDefault());
+        }
+
+        /// <summary>Linha sob o mouse (ou focada no controle) vira o assunto do painel.</summary>
+        internal void ShowPreview(FeatureInfo f)
+        {
+            if (f == null) return;
+            shown = f;
+            preview.Show(f, f.Failed ? Colorize(MenuText.Failed.Current, DisabledColor) : null);
+        }
+
+        protected override void OnFocusedItemChanged(GamepadNavigationItem item)
+        {
+            base.OnFocusedItemChanged(item);
+            if (item == null) return;
+            foreach (KeyValuePair<string, UISwitchButton> r in rows)
+                if (r.Value != null && r.Value.GetComponent<GamepadNavigationItem>() == item) { ShowPreview(host.Find(r.Key)); break; }
         }
 
         /// <summary>A linha e, se ela estiver ligada, as opções dela (que podem ter opções também).</summary>
@@ -273,7 +314,10 @@ namespace GK2HudPlus.Menu
             sw.Initialize(i => OnSwitch(feature, i == 1), new[] { LLBase.L("ui_off"), LLBase.L("ui_on") }, f.Toggle.Value ? 1 : 0,
                 label, DecreaseKeys, IncreaseKeys);
             sw.gameObject.SetActive(true);
-            AddHint(sw.gameObject, f);
+            EventTrigger trigger = sw.gameObject.AddComponent<EventTrigger>();
+            var enter = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
+            enter.callback.AddListener(_ => ShowPreview(feature));
+            trigger.triggers.Add(enter);
             rows[f.Id] = sw;
         }
 
@@ -282,28 +326,6 @@ namespace GK2HudPlus.Menu
             if (f.Toggle.Value == on) return;
             f.Toggle.Value = on;   // o ModHost aplica no próximo frame e avisa (Changed) para a lista se refazer
             dirty = true;
-        }
-
-        private void AddHint(GameObject go, FeatureInfo f)
-        {
-            EventTrigger trigger = go.AddComponent<EventTrigger>();
-            var enter = new EventTrigger.Entry { eventID = EventTriggerType.PointerEnter };
-            enter.callback.AddListener(_ =>
-            {
-                string text = f.Description.Current;
-                if (f.Failed) text += "\n" + TooltipRed(MenuText.Failed.Current);
-                UITooltip.ShowSimpleInfo(go.transform, text, default, f.Name.Current);
-            });
-            var exit = new EventTrigger.Entry { eventID = EventTriggerType.PointerExit };
-            exit.callback.AddListener(_ => UITooltip.Hide());
-            trigger.triggers.Add(enter);
-            trigger.triggers.Add(exit);
-        }
-
-        private void HideHint()
-        {
-            foreach (UISwitchButton sw in rows.Values)
-                if (sw != null && UITooltip.IsTooltipShowingAtTarget((RectTransform)sw.transform)) UITooltip.HideImmediately();
         }
 
         private ScrollRect CreateScroll(Transform parent)
@@ -345,7 +367,7 @@ namespace GK2HudPlus.Menu
             return scroll;
         }
 
-        private static TextMeshProUGUI Label(Transform parent, string name, string text, TextAlignmentOptions align, TextMeshProUGUI template)
+        internal static TextMeshProUGUI Label(Transform parent, string name, string text, TextAlignmentOptions align, TextMeshProUGUI template)
         {
             var go = new GameObject(name, typeof(RectTransform), typeof(CanvasRenderer), typeof(TextMeshProUGUI));
             go.transform.SetParent(parent, worldPositionStays: false);
@@ -367,14 +389,6 @@ namespace GK2HudPlus.Menu
             TextStyleComponent style = template.GetComponent<TextStyleComponent>();
             if (style != null && style.CurrentTextStyle != null) go.AddComponent<TextStyleComponent>().SetTextStyle(style.CurrentTextStyle);
             return t;
-        }
-
-        /// <summary>Texto no vermelho dos efeitos negativos do tooltip nativo (legível no pergaminho).</summary>
-        private static string TooltipRed(string text)
-        {
-            object tooltip = AccessTools.Field(typeof(UITooltip), "instance")?.GetValue(null);
-            var style = tooltip != null ? AccessTools.Field(typeof(UITooltip), "redEffectTextStyle")?.GetValue(tooltip) as TextStyle : null;
-            return style != null ? style.ApplyStyleToString(text) : text;
         }
 
         private static string Colorize(string text, string color) => "<color=" + color + ">" + text + "</color>";
@@ -407,6 +421,7 @@ namespace GK2HudPlus.Menu
         {
             if (IsShown) CloseWithoutCallback();
             if (host != null) host.Changed -= OnHostChanged;
+            preview?.Dispose();
             foreach (string ev in new[] { "OnWindowBecameVisibleInStack", "OnWindowBecameHiddenInStack" })
             {
                 FieldInfo field = typeof(LazyWindowsStackController).GetField(ev, BindingFlags.Static | BindingFlags.NonPublic | BindingFlags.Public);

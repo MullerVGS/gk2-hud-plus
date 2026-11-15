@@ -10,8 +10,8 @@ namespace GK2HudPlus.Menu
         public static readonly Loc Title = new Loc("GK2 HUD+", "GK2 HUD+");
         public static readonly Loc Live = new Loc("Changes apply right away.", "As mudanças valem na hora.");
         public static readonly Loc GameplayHint = new Loc("These change your save.", "Estas mudam o seu save.");
-        public static readonly Loc Failed = new Loc("Turned off after an error (see the log). Switch it off and on to try again.",
-            "Desligado após um erro (veja o log). Desligue e ligue para tentar de novo.");
+        public static readonly Loc Failed = new Loc("Stopped after an error. Turn it off and on to retry.",
+            "Parou após um erro. Desligue e ligue para tentar de novo.");
 
         private static readonly Dictionary<string, Loc> Categories = new Dictionary<string, Loc>
         {

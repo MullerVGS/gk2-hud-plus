@@ -9,6 +9,34 @@ import subprocess
 import sys
 from pathlib import Path
 
+
+
+def subst(src, consts):
+    """Troca constantes `const`/`static` do cenário (K=V). Devolve (fonte, chave que não existe ou None)."""
+    for c in consts:
+        key, val = c.split("=", 1)
+        rx = re.compile(r"((?:const|static)\s+(string|bool|int|float)\s+" + re.escape(key) + r"\s*=\s*)[^;]*;")
+        m = rx.search(src)
+        if not m:
+            return src, key
+        if m.group(2) == "string":
+            lit = json.dumps(val, ensure_ascii=False)
+        elif m.group(2) == "float" and not val.endswith("f"):
+            lit = val + "f"
+        else:
+            lit = val
+        src = rx.sub(lambda mm: mm.group(1) + lit + ";", src, count=1)
+    return src, None
+
+
+if len(sys.argv) > 1 and sys.argv[1] == "--subst":
+    # smoke.py --subst <cenário> <saída> [K=V ...]: usado pelo `gk2 rec`.
+    out, missing = subst(Path(sys.argv[2]).read_text(encoding="utf-8"), sys.argv[4:])
+    if missing:
+        sys.exit(f"constante {missing} não existe no cenário")
+    Path(sys.argv[3]).write_text(out, encoding="utf-8")
+    sys.exit(0)
+
 gk2, listing, work, prefix = sys.argv[1:5]
 work = Path(work)
 work.mkdir(parents=True, exist_ok=True)
@@ -18,17 +46,10 @@ for n, raw in enumerate(Path(listing).read_text(encoding="utf-8").splitlines()):
         continue
     spec, expect, shot = [p.strip() for p in (raw.split("|") + ["", ""])[:3]]
     path, *consts = spec.split()
-    src = Path(path).read_text(encoding="utf-8")
-    for c in consts:
-        key, val = c.split("=", 1)
-        rx = re.compile(r"((?:const|static)\s+(string|bool|int|float)\s+" + re.escape(key) + r"\s*=\s*)[^;]*;")
-        m = rx.search(src)
-        if not m:
-            print(f"- FALHOU `{spec}`: constante {key} não existe no cenário")
-            fails += 1
-            break
-        lit = json.dumps(val, ensure_ascii=False) if m.group(2) == "string" else val
-        src = rx.sub(lambda mm: mm.group(1) + lit + ";", src, count=1)
+    src, missing = subst(Path(path).read_text(encoding="utf-8"), consts)
+    if missing:
+        print(f"- FALHOU `{spec}`: constante {missing} não existe no cenário")
+        fails += 1
     else:
         f = work / f"{n:03d}-{Path(path).stem}.cs"
         f.write_text(src, encoding="utf-8")

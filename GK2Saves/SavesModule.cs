@@ -52,8 +52,7 @@ namespace GK2Saves
                 "When playing a game backup (e.g. loaded from the main menu list), the next save goes to the main slot instead of creating Steam_1_backup_1_backup_1.");
             host.Feature("SaveLoad", "gameplay", "Saves", "Enabled",
                 new Loc("Save and Load in the pause menu", "Save e Load no menu de pausa"),
-                new Loc("Save whenever the game is free (no dialogue, cutscene, fight, sleep or carried load) and load the current save, the game's backups or the mod's history. Changes how the game saves.",
-                    "Salve quando o jogo estiver livre (sem diálogo, cena, luta, sono ou carga na cabeça) e carregue o save atual, os backups do jogo ou o histórico do mod. Muda como o jogo salva."),
+                new Loc("Save and Load buttons in the pause menu.", "Botões de Save e Load no menu de pausa."),
                 h =>
                 {
                     History = new History(host.DataDir(LegacyGuid, "history"), keep.Value);

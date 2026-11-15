@@ -37,8 +37,7 @@ namespace GK2ZombieRefund
             host.Module("zombierefund", null, () => { if (Instance == this) Instance = null; });
             host.Feature("Refund", "gameplay", "ZombieRefund", "Enabled",
                 new Loc("Zombie perk refund", "Devolver perk de zumbi"),
-                new Loc("Right-click a bought zombie perk to undo it and get the points and the skull back, one node at a time. Changes the game state.",
-                    "Clique direito num perk de zumbi comprado desfaz a compra e devolve os pontos e a caveira, um nó por vez. Muda o estado do jogo."),
+                new Loc("Right-click a bought zombie perk to get its points back.", "Clique direito num perk de zumbi comprado para ter os pontos de volta."),
                 h =>
                 {
                     h.Patch(AccessTools.Method(typeof(TalentLevelUpWidget), nameof(TalentLevelUpWidget.Redraw)),

@@ -79,12 +79,23 @@ Pacote público (`GK2HudPlus/`, `mullervgs.gk2.hudplus`, nome `GK2 HUD+`): os mo
   linha nativa `UISwitchButton` do VSync ("◀ Off/On ▶", `ui_off`/`ui_on`; em pt o jogo diz Desativar/Ativar) e seções no
   estilo do título, como "Code mods". Lista rolável de 10 linhas inteiras (passo 16 + 6, scroll de uma linha), rótulo
   76 px de arte mais largo que o nativo, crescendo para a esquerda. Opções aparecem só com a dona ligada (a placa do dia
-  tem as dela). Hover = `UITooltip.ShowSimpleInfo` com nome e descrição. Funcionalidade que falhou: rótulo em
-  `#E5736A` (o vermelho da janela de Mods) e linha no `redEffectTextStyle` do tooltip. O menu é uma parte do ModGuard
+  tem as dela). Funcionalidade que falhou: rótulo e aviso em `#E5736A` (o vermelho da janela de Mods). Janela órfã de
+  uma carga anterior é destruída quando o menu inicia. O menu é uma parte do ModGuard
   fora da lista (não se desliga). No hot-reload, `Teardown` fecha, tira da pilha e solta os eventos estáticos de
   `LazyWindowsStackController`. O sprite de fade das bordas que a janela de Mods pede (`45a023dc...`) não existe neste
   build (`InvalidKeyException` também na nativa): o menu não usa fade. Referências: `docs/referencia/settings.png`,
   `mods-nativo.png`.
+- **Pré-visualização** (desde 0.3.0): o tooltip saiu; à direita da lista, um painel com o nome, um clipe do jogo com a
+  funcionalidade em ação (moldura `comm-cell_dark_2`) e uma frase curta. Hover ou foco do controle trocam o assunto.
+  Clipes em `GK2HudPlus/previews/<Id>.webm` (VP8, o Unity decodifica sozinho, inclusive no Proton), mostrados 1 px de
+  textura por px de tela (`RenderTexture` sem filtro); opção sem clipe usa o da dona. O deploy copia `previews/` para
+  `BepInEx/plugins/GK2HudPlus/previews` (a DLL carregada da memória no hot-reload não tem `Location`).
+- **Gravação** (`gk2 rec`, rotas `/rec/start|stop|cursor` da DevBridge 0.2.0): compila o cenário antes, captura no fim
+  do frame na resolução da tela (região alinhada em pares, para o yuv420p não borrar o pixel art), e o ffmpeg gera o
+  WebM do menu, o MP4 e o GIF (metade, em pixels de arte) das páginas. O cursor do sistema não sai na captura: o demo
+  põe o mouse virtual da funcionalidade e `GK2DevBridge.Recorder.Cursor` (origem em cima) no mesmo ponto, e o gravador
+  desenha o cursor do jogo (`CursorController.cursorConfigurations[0]`). Demos em `docs/cenarios/demo-*.cs`.
+  Descrições das funcionalidades: uma frase de jogador, sem termo técnico.
 - Cenários: `hudplus-funcionalidades.cs` (`listar`; `ligar`/`desligar` com `IDS`; `ciclo` desliga e religa cada uma e
   confere os patches), `hudplus-menu.cs` (`abrir` pelo botão da pausa, `trocar` ID, `hover` ID, `rolar` POS,
   `fechar`), `settings.cs`, `mods-nativo.cs`, `guard-desligar.cs` (MOD = GUID do HUD+, PARTE = id da funcionalidade).
@@ -217,6 +228,7 @@ gk2 deploy <Mod>                                 compila, instala no green e faz
 gk2 shot <nome> [--hideui] [--crop x,y,w,h]      print pelo próprio Unity → .shots/HHMMSS-nome.png
 gk2 ui <filtro> [prof]                           árvore da UI nativa: rects em px de tela, sprites, fontes, TextStyle
 gk2 run <cenario.cs>                             C# dentro do jogo (≈1,5 s): abrir janela, ler valor, preparar cena
+gk2 rec <demo.cs> <x,y,w,h> <Id> [K=V]           clipe da região enquanto o cenário roda: previews/<Id>.webm + docs/media/<Id>.gif/.mp4
 gk2 log [n] [grep] | state | windows | ping
 gk2 save snapshot|reset                          save de teste a partir do blue (reset limpa backups e histórico do GK2Saves)
 gk2 promote <Mod> [--green]                      entrega com o jogo aberto (blue, com aprovação) ou ensaio no green

@@ -14,5 +14,7 @@
     <Compile Include="../GK2ZombieRefund/**/*.cs" Exclude="../GK2ZombieRefund/Plugin.cs;../GK2ZombieRefund/bin/**;../GK2ZombieRefund/obj/**" Link="GK2ZombieRefund/%(RecursiveDir)%(Filename)%(Extension)" />
     <!-- BurstableBounds (limites dos ladrilhos de terreno, GK2Map) usa float3. -->
     <Reference Include="$(Refs)/Managed/Unity.Mathematics.dll" Private="false" />
+    <!-- Menu: clipes de pré-visualização (VideoPlayer). -->
+    <Reference Include="$(Refs)/Managed/UnityEngine.VideoModule.dll" Private="false" />
   </ItemGroup>
 </Project>
