@@ -1,8 +1,12 @@
 # AGENTS.md — `graveyard-keeper`
 
-Mods pessoais de qualidade de vida para **Graveyard Keeper 2** (Unity 6000.3 Mono, BepInEx 5.4.23.5 que vem com o jogo).
-`CLAUDE.md` é symlink para este arquivo. Regras de `pessoal/AGENTS.md` valem; memória do projeto em
-`pessoal/.agents/memory/graveyard-keeper-2-mods.md`.
+Mods de qualidade de vida para **Graveyard Keeper 2** (Unity 6000.3 Mono, BepInEx 5.4.23.5 que vem com o jogo).
+`CLAUDE.md` é symlink para este arquivo. Memória de agentes e regras do workspace ficam fora do repo.
+
+**Repo público.** Tudo que é versionado (código, docs, mensagens de commit) usa voz genérica ("vamos fazer...", "foi
+recusado o X", "o jogador", "o blue"), sem nome de pessoa. Infra privada fica fora: domínios e hosts aparecem como
+`example.com` e `vps`, token e URL reais só no `.cfg` local, nada de caminho com usuário do Windows. Lógica de design,
+decisões e o uso de infra e dados no desenvolvimento ficam, porque são o que interessa mostrar.
 
 ## O que vamos fazer
 
