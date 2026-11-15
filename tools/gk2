@@ -284,6 +284,12 @@ im.save(sys.argv[1])" "$out" "$crop"
       pack="$BLUE_DATA/Mods/Code/$proj"; mkdir -p "$pack/BepInEx/plugins/$proj"
       [ -f "$HERE/$proj/modinfo.json" ] && cp "$HERE/$proj/modinfo.json" "$pack/modinfo.json"
       cp "$dll" "$pack/BepInEx/plugins/$proj/$proj.dll"; echo "pacote: $pack (vale ao reabrir)"
+      if [ -d "$HERE/$proj/previews" ]; then   # clipes do menu: no pacote e na cópia que o jogo já fez (vale para o hot-reload)
+        for d in "$pack/BepInEx/plugins/$proj/previews" "$BLUE/BepInEx/plugins/$proj/previews"; do
+          mkdir -p "$d"; rm -f "$d"/*.webm; cp "$HERE/$proj/previews/"*.webm "$d/"
+        done
+        echo "previews: $(ls "$HERE/$proj/previews/"*.webm | wc -l) clipes"
+      fi
     fi
     case "$proj" in GK2HotLoader|GK2DevBridge) echo "$proj não se recarrega a quente: vale ao reabrir" ;;
       *) [ "$target" = "--sem-hot" ] && { echo "sem hot-reload (mod de gameplay): vale ao reabrir"; sha256sum "$dll"; exit 0; } ;;&
