@@ -27,6 +27,8 @@ namespace GK2Insight.Telemetry
 
         private readonly Shipper shipper;
         private readonly MetricBatch batch = new MetricBatch();
+        private readonly RenderStats render = new RenderStats();
+        private readonly ModCost mods = new ModCost();
         private readonly string commonLabels, commonJson;
         private readonly List<float> frames = new List<float>(512);
         private float[] sortBuffer = new float[512];
@@ -92,6 +94,7 @@ namespace GK2Insight.Telemetry
             EnvironmentEngine.OnNewDayStarted -= NewDay;
             Event("session_end", "plugin descarregado (reload ou saída)").Num("game_uptime_s", Time.realtimeSinceStartup).Emit(this);
             shipper?.Dispose();
+            render.Dispose();
         }
 
         /// <summary>Uma vez por frame, no começo do Update do plugin.</summary>
@@ -100,6 +103,7 @@ namespace GK2Insight.Telemetry
             long t0 = SelfCost.Now();
             float dt = Time.unscaledDeltaTime;
             frames.Add(dt);
+            render.OnFrame();
             if (dt >= HitchSeconds)
             {
                 hitches++;
@@ -184,6 +188,7 @@ namespace GK2Insight.Telemetry
             batch.Add("memory_bytes", Profiler.GetMonoHeapSizeLong(), "kind", "mono_heap");
             batch.Add("memory_bytes", Profiler.GetTotalAllocatedMemoryLong(), "kind", "unity_allocated");
             if (workingSet > 0) batch.Add("memory_bytes", workingSet, "kind", "working_set");
+            render.Sample(batch);
             batch.Add("time_scale", Time.timeScale);
             batch.Add("vsync", QualitySettings.vSyncCount);
             batch.Add("target_fps", Application.targetFrameRate);
@@ -211,6 +216,7 @@ namespace GK2Insight.Telemetry
                 batch.Add("insight_calls", Cost.Calls(i), "part", SelfCost.Names[i]);
             }
             Cost.Reset();
+            mods.Sample(batch, Time.unscaledTime);
         }
 
         private void SamplePlayer(MainGame game, PlayerData player, float now)

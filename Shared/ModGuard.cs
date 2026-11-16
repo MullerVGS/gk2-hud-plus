@@ -36,6 +36,9 @@ namespace GK2Shared
             /// <summary>Desligada por erro (não iniciou ou errou demais) desde o último <see cref="Start"/>.</summary>
             public bool Failed;
             public readonly Queue<float> Errors = new Queue<float>();
+            /// <summary>Custo do Update desde a última <see cref="TakeCost"/>: ticks do Stopwatch, maior chamada e chamadas.</summary>
+            public long CostTicks, CostMax;
+            public int CostCalls;
         }
 
         /// <summary>Partes por método original patchado, para o finalizer saber de quem é a exceção.</summary>
@@ -137,11 +140,33 @@ namespace GK2Shared
                 pendingOff.Clear();
             }
             FlushNotices();
-            foreach (Part p in parts.ToArray())
+            for (int i = 0; i < parts.Count; i++)   // a lista só muda em Define/Dispose, nunca dentro de um Update
             {
+                Part p = parts[i];
                 if (!p.Running || p.Tick == null) continue;
+                long t0 = Stopwatch.GetTimestamp();
                 try { p.Tick(p.Instance); }
                 catch (Exception e) { Count(p, e, "Update"); }
+                long d = Stopwatch.GetTimestamp() - t0;
+                p.CostTicks += d;
+                p.CostCalls++;
+                if (d > p.CostMax) p.CostMax = d;
+            }
+        }
+
+        /// <summary>
+        /// Entrega o custo do Update de cada parte desde a chamada anterior (id, segundos somados, maior chamada em
+        /// segundos, chamadas) e zera. Só mede: quem lê é o GK2 Insight, por reflexão, uma vez por segundo.
+        /// </summary>
+        public void TakeCost(Action<string, double, double, int> sink)
+        {
+            double f = Stopwatch.Frequency;
+            foreach (Part p in parts)
+            {
+                if (p.CostCalls == 0 && !p.Running) continue;
+                sink(p.Id, p.CostTicks / f, p.CostMax / f, p.CostCalls);
+                p.CostTicks = p.CostMax = 0;
+                p.CostCalls = 0;
             }
         }
 

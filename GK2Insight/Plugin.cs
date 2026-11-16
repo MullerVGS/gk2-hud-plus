@@ -17,7 +17,7 @@ namespace GK2Insight
     {
         public const string Guid = "arthur.gk2.insight";
         public const string Name = "GK2 Insight";
-        public const string Version = "0.3.1";
+        public const string Version = "0.4.0";
 
         internal static BepInEx.Logging.ManualLogSource Log;
 

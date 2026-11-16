@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using BepInEx;
@@ -239,14 +240,39 @@ namespace GK2Shared
                 dirty = false;
                 Apply();
             }
-            int failedBefore = features.Count(f => f.Failed);
+            int failedBefore = FailedCount();
             Guard.Update();
-            foreach (Action u in updates)
+            for (int i = 0; i < updates.Count; i++)
             {
-                try { u(); }
+                long t0 = Stopwatch.GetTimestamp();
+                try { updates[i](); }
                 catch (Exception e) { Log.LogError("update do módulo: " + e); }
+                moduleTicks += Stopwatch.GetTimestamp() - t0;
             }
-            if (features.Count(f => f.Failed) != failedBefore) Changed?.Invoke();
+            moduleCalls++;
+            if (FailedCount() != failedBefore) Changed?.Invoke();
+        }
+
+        private int FailedCount()
+        {
+            int n = 0;
+            for (int i = 0; i < features.Count; i++) if (features[i].Failed) n++;
+            return n;
+        }
+
+        private long moduleTicks;
+        private int moduleCalls;
+
+        /// <summary>
+        /// Custo do Update desde a chamada anterior, por funcionalidade (ver <see cref="ModGuard.TakeCost"/>) e "module"
+        /// para o que os módulos rodam fora delas. Lido pelo GK2 Insight por reflexão; o pacote em si não envia nada.
+        /// </summary>
+        public void TakeCost(Action<string, double, double, int> sink)
+        {
+            Guard.TakeCost(sink);
+            if (moduleCalls > 0) sink("module", moduleTicks / (double)Stopwatch.Frequency, 0, moduleCalls);
+            moduleTicks = 0;
+            moduleCalls = 0;
         }
 
         /// <summary>O .cfg salvo no disco (editado à mão ou por fora) vale sem reabrir: relê a cada 1 s se mudou.</summary>

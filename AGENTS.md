@@ -44,6 +44,14 @@ custo do próprio Insight por parte (`gk2_insight_seconds{part}`), recursos do j
 (`app:gk2`): session, game_state, save_load, save_write, new_day, sleep_start/end, scene, zone, hitch (≥250 ms, com
 GC/save/painel). Envio em thread própria; nada de rede na thread do jogo. `dormir.cs` gera sono + save no green.
 Para comparar custo, ligue as camadas com `insight-camadas.cs` e leia `gk2_insight_seconds` por janela.
+Desde 0.4.0: `gk2_thread_seconds{thread=main|render|gpu|present}` (p50 do segundo), `gk2_render_count{what=draws|setpass|
+batches|shadow_casters|triangles|render_textures}` e `gk2_memory_bytes{kind=render_textures|gfx_buffers|unity_used|committed}`
+vêm dos contadores do profiler que a build de release expõe (`ProfilerRecorder`; `FrameTimingManager` está desligado no
+jogo). E `gk2_mod_seconds{mod,part}`/`gk2_mod_max_seconds`: custo do Update de cada funcionalidade do HUD+ (o `ModHost`
+só mede, em `TakeCost`; o Insight lê por reflexão). Coleta de lixo que cai no Update de uma parte conta para ela: julgue
+pela mediana, não pela média. No frame típico o gargalo é render thread/GPU (~3400 draw calls e ~3000 SetPass num
+interior), não a main thread. Cenários: `perf-render.cs` (os mesmos contadores na hora), `perf-amostra.cs` (objetos da
+Unity por tipo e raiz, para achar acúmulo), `perf-alocacao.cs` (KB/s alocados).
 
 ## GK2 HUD+
 
