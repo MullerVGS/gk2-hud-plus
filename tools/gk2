@@ -9,6 +9,7 @@ GREEN=${GK2_GREEN_DIR:-/mnt/d/GK2-green}
 GREEN_WIN='D:\GK2-green'
 SNAPSHOTS=/mnt/d/GK2-green-saves
 WINHOME=${GK2_WINHOME:-$(wslpath "$(cmd.exe /c 'echo %USERPROFILE%' 2>/dev/null | tr -d '\r')")}
+[ -d "$WINHOME/AppData" ] || { echo "gk2: pasta do usuário do Windows não encontrada (cmd.exe falhou?); nada feito" >&2; exit 1; }
 BLUE_DATA="$WINHOME/AppData/LocalLow/Lazy Bear Games/Graveyard Keeper 2"
 GREEN_DATA="$WINHOME/AppData/LocalLow/Lazy Bear Games/GK2 Green Instance"
 # Porta da DevBridge: a do .cfg do green (fonte única). Fora da faixa efêmera do Linux: no WSL mirrored ela fica
