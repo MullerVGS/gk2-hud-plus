@@ -72,7 +72,7 @@ namespace GK2Hud.Calendar
                 list.Add(Text(o.Def.Title, past ? s.Small : s.Description, TextAlignmentOptions.Center));
                 list.Add(Text(When(o, now), past ? s.Small : s.SmallSelected, TextAlignmentOptions.Center));
                 if (!full && BasicOnHover(o)) continue;
-                string desc = o.Def.Description;
+                string desc = Flow(o.Def.Description);
                 if (desc != null && !past) list.Add(Text(desc, s.Small, TextAlignmentOptions.Center));
                 string extra = Extra(o);
                 if (extra != null) list.Add(Text(extra, s.Small, TextAlignmentOptions.Center));
@@ -98,7 +98,7 @@ namespace GK2Hud.Calendar
                 Text(Window(o) + (off >= 0 ? " · " + Remaining(o, now) : ""), past ? s.Small : s.SmallSelected, TextAlignmentOptions.Center),
             };
             if (!full && BasicOnHover(o)) return list;
-            string desc = o.Def.Description;
+            string desc = Flow(o.Def.Description);
             if (desc != null) list.Add(Text(desc, s.Description, TextAlignmentOptions.Center));
             string extra = off >= 0 ? Extra(o) : null;
             if (extra != null) list.Add(Text(extra, s.Small, TextAlignmentOptions.Center));
@@ -241,6 +241,27 @@ namespace GK2Hud.Calendar
 
         private static string Num(Styles s, string v) => s.Description.ApplyStyleToString(v);
 
-        private static UITooltipTextWidgetData Text(string text, TextStyle style, TextAlignmentOptions align) => new UITooltipTextWidgetData(text, align, style);
+        /// <summary>
+        /// Texto centrado leva também a marca <c>&lt;align&gt;</c>: ela vale por linha e não depende do alinhamento do
+        /// componente (que saiu à esquerda num jogo com mods de idioma, cujo gancho roda ao aplicar o estilo).
+        /// </summary>
+        private static UITooltipTextWidgetData Text(string text, TextStyle style, TextAlignmentOptions align)
+        {
+            if (align == TextAlignmentOptions.Center && !string.IsNullOrEmpty(text)) text = "<align=\"center\">" + text + "</align>";
+            return new UITooltipTextWidgetData(text, align, style);
+        }
+
+        private static readonly System.Text.RegularExpressions.Regex IconWord = new System.Text.RegularExpressions.Regex(@"(\S+) (<sprite[^>]*>[^\s<]*)");
+
+        /// <summary>
+        /// Descrição do jogo num popup estreito: as quebras de linha do texto original viram espaço (o parágrafo flui) e o
+        /// ícone fica preso à palavra anterior, para não sobrar sozinho numa linha ("... every" / ícone / "Prepare ...").
+        /// </summary>
+        private static string Flow(string desc)
+        {
+            if (string.IsNullOrEmpty(desc)) return desc;
+            desc = desc.Replace("\r", "").Replace("\n", " ");
+            return IconWord.Replace(desc, "<nobr>$1 $2</nobr>");
+        }
     }
 }

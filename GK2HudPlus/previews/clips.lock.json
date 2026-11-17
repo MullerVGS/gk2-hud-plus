@@ -6,7 +6,7 @@
       "GK2Hud/Calendar/CalendarModel.cs": "27a34978f4954dda",
       "GK2Hud/Calendar/CalendarPage.cs": "ba9b5542312e5777",
       "GK2Hud/Calendar/CalendarTab.cs": "064631b1fb3f3572",
-      "GK2Hud/Calendar/CalendarTooltip.cs": "0be370f6362c65ac",
+      "GK2Hud/Calendar/CalendarTooltip.cs": "804f3d2fe2db66f7",
       "GK2Hud/Calendar/WeekStrip.cs": "e1a6d5f1ac7e3b83",
       "GK2Hud/Calendar/WheelFeature.cs": "5f6689bd216008d8",
       "GK2Hud/Names.cs": "bf205c97a94198c1",
@@ -181,7 +181,7 @@
     "date": "2026-11-17",
     "files": {
       "GK2Hud/Calendar/CalendarModel.cs": "27a34978f4954dda",
-      "GK2Hud/Calendar/CalendarTooltip.cs": "0be370f6362c65ac",
+      "GK2Hud/Calendar/CalendarTooltip.cs": "804f3d2fe2db66f7",
       "GK2Hud/Calendar/WeekStrip.cs": "e1a6d5f1ac7e3b83",
       "GK2Hud/Calendar/WheelFeature.cs": "5f6689bd216008d8",
       "GK2Hud/Names.cs": "bf205c97a94198c1",
