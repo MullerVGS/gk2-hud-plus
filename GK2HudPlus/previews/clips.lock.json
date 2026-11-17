@@ -1,17 +1,18 @@
 {
   "CalendarTab": {
-    "date": "2026-11-15",
+    "date": "2026-11-17",
     "files": {
       "GK2Hud/Calendar/CalendarL10n.cs": "e6c6ad96ae87d358",
-      "GK2Hud/Calendar/CalendarModel.cs": "6a9ae8645b96b793",
-      "GK2Hud/Calendar/CalendarPage.cs": "92a1ca336c24a08c",
-      "GK2Hud/Calendar/CalendarTab.cs": "f4641de4143fd831",
-      "GK2Hud/Calendar/CalendarTooltip.cs": "9a7aa4182a5f3044",
-      "GK2Hud/Calendar/WheelFeature.cs": "a8dd1a213738abc0",
+      "GK2Hud/Calendar/CalendarModel.cs": "27a34978f4954dda",
+      "GK2Hud/Calendar/CalendarPage.cs": "ba9b5542312e5777",
+      "GK2Hud/Calendar/CalendarTab.cs": "064631b1fb3f3572",
+      "GK2Hud/Calendar/CalendarTooltip.cs": "0be370f6362c65ac",
+      "GK2Hud/Calendar/WeekStrip.cs": "e1a6d5f1ac7e3b83",
+      "GK2Hud/Calendar/WheelFeature.cs": "5f6689bd216008d8",
       "GK2Hud/Names.cs": "bf205c97a94198c1",
       "clips.txt": "2bc109b4d547d2f6",
       "docs/cenarios/carregar-slot.cs": "0a7f164ef97a753d",
-      "docs/cenarios/demo-calendar.cs": "9246edf4e21ae113",
+      "docs/cenarios/demo-calendar.cs": "0cc9f52afb12d0a1",
       "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
       "tools/snippet/DemoKit.cs": "26d68e222f910497",
       "tools/snippet/Slots.cs": "60719f4e37c234dd"
@@ -50,15 +51,15 @@
     "game": "1.012.7"
   },
   "Journal": {
-    "date": "2026-11-15",
+    "date": "2026-11-17",
     "files": {
-      "GK2Hud/Calendar/CalendarPage.cs": "92a1ca336c24a08c",
+      "GK2Hud/Calendar/CalendarPage.cs": "ba9b5542312e5777",
       "GK2Hud/Journal/JournalTracker.cs": "87a4342b476ec7e8",
-      "GK2Hud/Journal/JournalView.cs": "bb7e6b0ce737604f",
+      "GK2Hud/Journal/JournalView.cs": "f2a3c6a26a566fa6",
       "GK2Hud/Names.cs": "bf205c97a94198c1",
-      "clips.txt": "6cf1924f99ffa994",
+      "clips.txt": "e0814dd8204e15ae",
       "docs/cenarios/carregar-slot.cs": "0a7f164ef97a753d",
-      "docs/cenarios/demo-calendar.cs": "9246edf4e21ae113",
+      "docs/cenarios/demo-calendar.cs": "0cc9f52afb12d0a1",
       "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
       "tools/snippet/DemoKit.cs": "26d68e222f910497",
       "tools/snippet/Slots.cs": "60719f4e37c234dd"
@@ -105,12 +106,12 @@
     "game": "1.012.7"
   },
   "Quests": {
-    "date": "2026-11-15",
+    "date": "2026-11-17",
     "files": {
       "GK2Hud/Names.cs": "bf205c97a94198c1",
       "GK2Hud/Quests/QuestContent.cs": "5eb0fa2fc07c5373",
       "GK2Hud/Quests/QuestL10n.cs": "6a64edee9a8dd8af",
-      "GK2Hud/Quests/QuestModel.cs": "56b4cae6290c9590",
+      "GK2Hud/Quests/QuestModel.cs": "5740df22a9aa2e44",
       "GK2Hud/Quests/QuestTreeFeature.cs": "0c00e38e24d01b69",
       "clips.txt": "1acce923c2e82d82",
       "docs/cenarios/carregar-slot.cs": "0a7f164ef97a753d",
@@ -156,17 +157,17 @@
     "game": "1.012.7"
   },
   "Tooltips": {
-    "date": "2026-11-15",
+    "date": "2026-11-17",
     "files": {
       "GK2Hud/Names.cs": "bf205c97a94198c1",
       "GK2Hud/Tooltips/Index.cs": "041ddae0794aa847",
       "GK2Hud/Tooltips/L10n.cs": "bf829e4f33e7fdf3",
       "GK2Hud/Tooltips/LeakSweeper.cs": "428160ea9cc62563",
       "GK2Hud/Tooltips/Links.cs": "1f20e8183a34a8f9",
-      "GK2Hud/Tooltips/PinStack.cs": "b1acf2959bf1ca73",
+      "GK2Hud/Tooltips/PinStack.cs": "b9ddb9ffb98c1d74",
       "GK2Hud/Tooltips/TooltipContent.cs": "b85da1acbf6a26d4",
       "GK2Hud/Tooltips/TooltipContext.cs": "69eda75c1e7f576a",
-      "GK2Hud/Tooltips/TooltipFeature.cs": "c10a8eaddb2a8f4f",
+      "GK2Hud/Tooltips/TooltipFeature.cs": "c3db366447ca9021",
       "clips.txt": "acaf61c240322b5e",
       "docs/cenarios/demo-tooltips.cs": "3db20f895d44fb54",
       "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
@@ -177,14 +178,16 @@
     "game": "1.012.7"
   },
   "Wheel": {
-    "date": "2026-11-15",
+    "date": "2026-11-17",
     "files": {
-      "GK2Hud/Calendar/CalendarModel.cs": "6a9ae8645b96b793",
-      "GK2Hud/Calendar/WheelFeature.cs": "a8dd1a213738abc0",
+      "GK2Hud/Calendar/CalendarModel.cs": "27a34978f4954dda",
+      "GK2Hud/Calendar/CalendarTooltip.cs": "0be370f6362c65ac",
+      "GK2Hud/Calendar/WeekStrip.cs": "e1a6d5f1ac7e3b83",
+      "GK2Hud/Calendar/WheelFeature.cs": "5f6689bd216008d8",
       "GK2Hud/Names.cs": "bf205c97a94198c1",
-      "clips.txt": "9b7f7248824b689c",
+      "clips.txt": "cf446ed8dce2b319",
       "docs/cenarios/carregar-slot.cs": "0a7f164ef97a753d",
-      "docs/cenarios/demo-calendar.cs": "9246edf4e21ae113",
+      "docs/cenarios/demo-calendar.cs": "0cc9f52afb12d0a1",
       "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
       "docs/cenarios/hud-exterior-dia.cs": "df5f04f4e9866a77",
       "tools/snippet/DemoKit.cs": "26d68e222f910497",

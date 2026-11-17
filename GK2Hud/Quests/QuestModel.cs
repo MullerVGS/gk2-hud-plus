@@ -86,7 +86,7 @@ namespace GK2Hud.Quests
             if (m != null) img.material = m;
         }
 
-        private static Material PortraitMaterial()
+        internal static Material PortraitMaterial()
         {
             if (portraitMaterial != null) return portraitMaterial;
             UINpcWidget npc = GUIElements.Instance != null ? GUIElements.Instance.NpcWidget : null;

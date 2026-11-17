@@ -4,13 +4,13 @@ using BepInEx.Bootstrap;
 using HarmonyLib;
 using UnityEngine;
 
-// GK2Hud (só leitura): linha do tempo do calendário (precisa da aba aberta: gk2hud-calendario.cs com ALVO = "aba").
+// GK2Hud (só leitura): faixa de cenas do calendário (precisa da aba aberta: gk2hud-calendario.cs com ALVO = "aba").
 // ACAO = "rolar:<px>" (anda pelos dias; negativo = passado), "dia:<deslocamento>" (escolhe a coluna a partir de hoje),
-// "marca:<nome>[#n]" (passa o mouse na n-ésima marca com esse nome de objeto, ex.: Window_sermon, At_nun_body, Journal,
-// Day_ship; só as visíveis) ou "sair" (tira o mouse da marca).
+// "marca:<nome>[#n]" (passa o mouse na n-ésima marca com esse nome de objeto, ex.: Event_donkey, Event_sermon (ícone de
+// evento), Journal (selo do diário), Col_before (coluna antes do diário); só as visíveis) ou "sair" (tira o mouse da marca).
 public static class Snippet
 {
-    static string ACAO = "marca:Window_sermon";
+    static string ACAO = "marca:Journal";
 
     public static object Run() { return Go(); }
 
@@ -38,7 +38,7 @@ public static class Snippet
             {
                 string[] n = a[1].Split('#');
                 int idx = n.Length > 1 ? int.Parse(n[1]) : 0;
-                var grid = (RectTransform)root.transform.Find("Grid");
+                var grid = (RectTransform)root.transform.Find("Days");
                 var gc = new Vector3[4];
                 grid.GetWorldCorners(gc);
                 var hits = root.GetComponentsInChildren<Transform>(true).Where(t => t.name == n[0] && t.GetComponents<MonoBehaviour>().Any(m => m.GetType().Name == "Hover"))

@@ -28,6 +28,7 @@ namespace GK2Hud.Calendar
         public string NativeDesc;     // descrição com texto do próprio jogo (LLBase.L)
         public bool PowerStatus;      // mostra se a ressurreição tem energia
         public bool NoClock;          // a hora não interessa (renovação logo após a meia-noite)
+        public string Art;            // sprite do evento nos cartões da semana (EasySpritesCollection)
 
         public string Title => CalendarL10n.T("ev_" + Id);
 
@@ -87,33 +88,33 @@ namespace GK2Hud.Calendar
         // Ordem dentro do dia: a do horário; empate pela ordem desta lista.
         internal static readonly EventDef[] Defs =
         {
-            new EventDef { Id = "orders", DayId = "day_pride", Start = 0.01f, End = 0.99f, MapIcons = new[] { "day_pride" },
+            new EventDef { Id = "orders", Art = "quest_icon_trademaster_start", DayId = "day_pride", Start = 0.01f, End = 0.99f, MapIcons = new[] { "day_pride" },
                 Tutorials = new[] { "tut_commerce_hdr" }, Icon = "day_pride_expanded", NativeDesc = "tut_commerce_day" },
-            new EventDef { Id = "shops", DayId = "day_pride", Start = 0.01f, NoClock = true, Tutorials = new[] { "tut_trading_hdr", "tut_commerce_hdr" },
+            new EventDef { Id = "shops", Art = "i_b-shop-bakery", DayId = "day_pride", Start = 0.01f, NoClock = true, Tutorials = new[] { "tut_trading_hdr", "tut_commerce_hdr" },
                 Icon = "day_pride_expanded", NativeDesc = "tt_trade_hap_likes" },
-            new EventDef { Id = "ship", DayId = "day_lust", MapIcons = new[] { "day_lust" }, Icon = "day_lust_expanded",
+            new EventDef { Id = "ship", Art = "portrait_icon_universal_merchant", DayId = "day_lust", MapIcons = new[] { "day_lust" }, Icon = "day_lust_expanded",
                 NativeDesc = "35_port_pop_new_people_4" },
-            new EventDef { Id = "linda", DayId = "day_lust", Tutorials = new[] { "tut_town_hdr" }, Icon = "day_lust_expanded",
+            new EventDef { Id = "linda", Art = "i_green_scroll", DayId = "day_lust", Tutorials = new[] { "tut_town_hdr" }, Icon = "day_lust_expanded",
                 NativeDesc = "tut_town_houses" },
-            new EventDef { Id = "pr_machine", DayId = "day_gluttony", MapIcons = new[] { "day_gluttony" }, Tutorials = new[] { "tut_pr_machine_hdr" },
+            new EventDef { Id = "pr_machine", Art = "i_b_pr_machine", DayId = "day_gluttony", MapIcons = new[] { "day_gluttony" }, Tutorials = new[] { "tut_pr_machine_hdr" },
                 Icon = "day_gluttony_expanded", NativeDesc = "tut_pr_machine_charge" },
-            new EventDef { Id = "resurrection", DayId = "day_envy", Start = 0.01f, End = 0.99f, MapIcons = new[] { "day_envy_morgue" },
+            new EventDef { Id = "resurrection", Art = "i_b_resurrection_table_1", DayId = "day_envy", Start = 0.01f, End = 0.99f, MapIcons = new[] { "day_envy_morgue" },
                 Tutorials = new[] { "tut_resurrection_hdr" }, Icon = "day_envy_expanded", NativeDesc = "tut_resurrection_day", PowerStatus = true },
             // Nenhum ícone do mapa marca a Deusa: quem revela é ouvir a resposta 63_swamp_goddess_32_c da estátua, a conversa
             // que tem a fala das lágrimas (63_swamp_goddess_32_c_3).
-            new EventDef { Id = "goddess", DayId = "day_envy", Phrases = new[] { "63_swamp_goddess_32_c" },
+            new EventDef { Id = "goddess", Art = "i_crystal_goddess", DayId = "day_envy", Phrases = new[] { "63_swamp_goddess_32_c" },
                 Icon = "day_envy_expanded", NativeDesc = "63_swamp_goddess_32_c_3" },
-            new EventDef { Id = "sermon", DayId = "day_wrath", Start = 0.01f, End = 0.99f, MapIcons = new[] { "day_wrath_church" },
+            new EventDef { Id = "sermon", Art = "i_z_church", DayId = "day_wrath", Start = 0.01f, End = 0.99f, MapIcons = new[] { "day_wrath_church" },
                 Tutorials = new[] { "tutorial_hdr_seremons" }, Icon = "day_wrath_expanded", NativeDesc = "tut_sermons_day" },
             // Nenhum ícone do mapa marca a freira (day_wrath nunca é liberado): revela a conversa "Corpse Delivery"
             // (opção 51_crossroad_fixed_delivery_1, marcada como ouvida ao concluir 51_crossroad_fixed_corpse_delivery).
-            new EventDef { Id = "nun", DayId = "day_wrath", Phrases = new[] { "51_crossroad_fixed_delivery_1" },
+            new EventDef { Id = "nun", Art = "portrait_icon_nun", DayId = "day_wrath", Phrases = new[] { "51_crossroad_fixed_delivery_1" },
                 Quests = new[] { "51_crossroad_fixed_corpse_delivery" }, Icon = "day_wrath_expanded",
                 NativeDesc = "51_crossroad_fixed_delivery_6" },
-            new EventDef { Id = "battle", DayId = "day_sloth", Start = 0.01f, End = 0.99f,
+            new EventDef { Id = "battle", Art = "i_b_battle", DayId = "day_sloth", Start = 0.01f, End = 0.99f,
                 Tutorials = new[] { "tut_battle_1_hdr", "tut_battle_2_hdr" }, Icon = "day_sloth_expanded", NativeDesc = "battle_planer_other_day" },
-            new EventDef { Id = "donkey", LogicId = "donkey", ResFlag = "donkey_ready", Icon = null },
-            new EventDef { Id = "nun_body", LogicId = "nun_body_drop", ResFlag = "nun_body_drop_ready", Icon = null },
+            new EventDef { Id = "donkey", Art = "portrait_icon_donkey", LogicId = "donkey", ResFlag = "donkey_ready", Icon = null },
+            new EventDef { Id = "nun_body", Art = "i_body", LogicId = "nun_body_drop", ResFlag = "nun_body_drop_ready", Icon = null },
         };
 
         private static readonly Dictionary<int, string> dayIdByNumber = new Dictionary<int, string>();

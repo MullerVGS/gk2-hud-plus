@@ -28,6 +28,14 @@ namespace GK2Hud.Tooltips
         public bool Docked;                     // página acoplada a uma janela: clique fora, Esc e botão direito não a fecham
         public System.Func<List<LazyWidgetDataBase>> Live;   // conteúdo que muda com o tempo (tooltip de mundo): refeito enquanto fixada
         public string LiveSig;                  // assinatura do último conteúdo vivo renderizado
+        public System.Action<RectTransform> Decorate;   // conteúdo próprio posto na bolha depois dos widgets (cartões do calendário)
+        public HotFinder Hot;                   // áreas da decoração que abrem bolha ao passar o mouse: devolve o termo e o retângulo
+        public System.Func<string, List<LazyWidgetDataBase>> HotData;   // conteúdo da bolha de um termo de Hot
+
+        public System.Func<string, List<LazyWidgetDataBase>> HotDataPinned;   // o mesmo, para quando a bolha do termo é fixada (texto completo)
+        public System.Func<List<LazyWidgetDataBase>> PinData;   // bolha transitória: conteúdo que assume ao ser fixada
+
+        public delegate string HotFinder(Vector2 screen, out Rect rect);
 
         /// <summary>Margem transparente da moldura hint-frame (px de tela, ~7 px de arte em cada lado).</summary>
         public const float FrameMargin = 14f;
@@ -85,6 +93,7 @@ namespace GK2Hud.Tooltips
             bool was = native.gameObject.activeSelf;
             template = Object.Instantiate(native.gameObject, native.transform.parent);
             template.name = Prefix + "Template";
+            Calendar.WeekStrip.RestoreCap(template.transform);   // o nativo pode estar alargado pelos cartões do calendário
             template.SetActive(false);
             if (was != native.gameObject.activeSelf) native.gameObject.SetActive(was);
             var tip = template.GetComponent<UITooltip>();
@@ -139,6 +148,11 @@ namespace GK2Hud.Tooltips
             Native.ShowAt.Invoke(b.Tip, new object[] { data, target, UIBasicBubble.ForceCornerPosition.Auto, false, Vector2.zero, TooltipPlacementPriority.TopRight });
             if (g != null) { g.alpha = 1f; g.interactable = true; g.blocksRaycasts = true; }
             RectTransform image = PlaceImage(b);
+            if (b.Decorate != null)
+            {
+                b.Decorate(b.Rt);
+                LayoutRebuilder.ForceRebuildLayoutImmediate(b.Rt);
+            }
             if (b.Parent != null) PlaceBeside(b);
             else if (b.RootPos.HasValue)
             {

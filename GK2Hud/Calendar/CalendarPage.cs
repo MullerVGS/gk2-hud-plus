@@ -14,35 +14,33 @@ using Object = UnityEngine.Object;
 namespace GK2Hud.Calendar
 {
     /// <summary>
-    /// Página do calendário no TAB: linha do tempo horizontal em cima e o dia escolhido embaixo. Unidades = pixels de arte.
-    /// Linha do tempo: uma coluna por dia (do início do diário até o fim da semana, ontem na borda esquerda) com eixo de
-    /// horas e a noite do jogo (18:00–06:00, <c>EnvironmentEngine.GetTimeOfDayType</c>) mais escura; uma faixa por evento
-    /// já revelado e duas do diário (quests e desbloqueios). Janela com hora = barra na cor do sigilo do dia; dia sem hora =
-    /// trilho escuro com o sigilo; instante = marca com a hora. O que já passou fica sombreado até a linha do agora.
-    /// Peças nativas: cabeçalho <c>comm-header_2</c>, trilho <c>comm-progress_bar_bg</c>, barras
-    /// <c>inspiration-bar_cell_fill-*</c>/<c>comm-progress-yellow</c>, marcas do diário <c>craft_window-progress_cell-*</c>,
-    /// seleção <c>hint-menu_selector</c>, setas <c>btn_i_grey-arrow_horizontal_small</c>, relógio na
-    /// <c>craft_window-header_1-value_cell</c>. Passar o mouse numa marca abre o tooltip nativo; clicar escolhe o dia;
-    /// a roda e o arrasto andam pelos dias (a roda sobre os nomes das faixas rola as faixas).
-    /// Embaixo: eventos do dia (formato de Buffs/Perks) e o diário dele, cada linha com o tooltip da coisa.
+    /// Página do calendário no TAB: faixa de cenas em cima e o dia escolhido embaixo. Unidades = pixels de arte.
+    /// Faixa: uma coluna por dia (do início do diário até o fim da semana), cada uma com a cena do medalhão
+    /// (<see cref="WeekStrip.Scene"/>: céu, horizonte, arte e sigilo do dia), a legenda ("Hoje", "Dia 150"), um selo com a
+    /// contagem do diário e os ícones dos eventos conhecidos, com a hora embaixo. Hoje usa a hora atual, os outros dias o meio-dia.
+    /// O passado fica escurecido até o marcador de agora. Mouse num ícone abre o tooltip nativo do evento; clicar na coluna
+    /// escolhe o dia; roda, arrasto e setas andam pelos dias, e escolher um dia fora da janela rola até ele.
+    /// Embaixo, à esquerda, os eventos do dia (formato de Buffs/Perks) e, à direita, o diário dele: grupos por tipo, cada
+    /// anotação com o nome inteiro, tipo e hora, e a descrição que o tooltip dela mostra. Grupos grandes ficam recolhidos
+    /// e só os abertos criam linhas.
+    /// Peças nativas: cabeçalho <c>comm-header_2</c>, seleção <c>hint-menu_selector</c>, setas <c>btn_i_grey-arrow_horizontal_small</c>,
+    /// selo na <c>craft_window-header_1-value_cell</c>.
     /// </summary>
     internal sealed class CalendarPage
     {
         private const string Name = "GK2Hud.CalendarPage";
-        private const int X0 = 4, LabelW = 114, GridX = X0 + LabelW, ColW = 74, VisibleCols = 7, GridW = ColW * VisibleCols;
-        private const int HeaderH = 26, StripY = 30, StripH = 30, AxisH = 14, LanesY = StripY + StripH + AxisH + 2, LaneH = 18, MaxLanes = 9;
-        private const int Pad = 10, LineH = 22, SermonDetailH = 18, ColGap = 8, ClusterPx = 10;
+        private const int X0 = 4, ColW = 96, HeaderH = 26, RangeY = 28, RangeH = 12, StripY = 40;
+        private const int SceneH = 56, LabelY = SceneH + 2, LabelH = 12, EventsY = LabelY + LabelH + 2;
+        private const int IconCell = 24, IconPitch = 32, TimeH = 10, PerRow = 3, MaxRows = 3;
+        private const int Pad = 10, LineH = 22, ColGap = 8, KindW = 104, OpenLimit = 8;
         private const float DimAlpha = 0.4f;            // UIHUDWheelElement.iconColorInactive
-        private const float DayFrom = 0.25f, DayTo = 0.75f;
+        private const float PastIcon = 0.35f;           // o mesmo dos cartões do medalhão
         private const int Baseline = int.MinValue;
 
-        private static readonly Color Night = new Color(0f, 0f, 0f, 0.22f);
-        private static readonly Color PastShade = new Color(0.05f, 0.04f, 0.04f, 0.5f);
-        private static readonly Color Band = new Color(0f, 0f, 0f, 0.14f);
-        private static readonly Color DayLine = new Color(0f, 0f, 0f, 0.45f);
-        private static readonly Color Tick = new Color(0.62f, 0.52f, 0.40f, 0.6f);
-        private static readonly Color NowColor = new Color(1f, 0.78f, 0.25f, 0.95f);
-        private static readonly Color SelectedCol = new Color(1f, 0.9f, 0.6f, 0.08f);
+        private static readonly Color PastShade = new Color(0f, 0f, 0f, 0.35f);
+        private static readonly Color NowOutline = new Color(0.17f, 0.09f, 0.05f, 1f);
+        private static readonly Color NowColor = new Color(1f, 0.91f, 0.66f, 1f);
+        private static readonly Color BaselineBg = new Color(0.1f, 0.075f, 0.06f, 0.92f);
 
         private GameObject root;
         private readonly Dictionary<string, Sprite> sprites = new Dictionary<string, Sprite>();
@@ -50,42 +48,53 @@ namespace GK2Hud.Calendar
         private readonly List<TMP_Text> labels = new List<TMP_Text>();
         private int pageW, pageH;
 
-        // linha do tempo
-        private RectTransform stripVp, stripContent, labelsVp, labelsContent, gridVp, gridContent, detail;
+        // faixa de cenas
+        private RectTransform stripVp, stripContent, detail, selFrame, pastShade, nowLine, nowOutline, todayScene;
         private TMP_Text header, rangeText;
-        private Image arrowLeft, arrowRight, arrowUp, arrowDown;
-        private TMP_Text moreLanes;
-        private RectTransform nowLine, nowLineStrip, nowPill, pastShade, pastShadeStrip, selStrip, selGrid;
-        private TMP_Text nowText;
+        private Image arrowLeft, arrowRight;
         private readonly List<int> cols = new List<int>();
-        private readonly List<Lane> lanes = new List<Lane>();
+        private readonly List<RectTransform> colRoots = new List<RectTransform>();
+        private readonly List<List<Occurrence>> colEvents = new List<List<Occurrence>>();
+        private readonly Dictionary<int, List<JournalLine>> dayLines = new Dictionary<int, List<JournalLine>>();
+        private readonly Dictionary<int, TMP_Text> dayLabels = new Dictionary<int, TMP_Text>();
+        private readonly List<EventMark> eventMarks = new List<EventMark>();
         private readonly List<RectTransform> timelineTips = new List<RectTransform>();
-        private int lanesH, scrollX, scrollY;
+        private int stripW, stripH, scrollX;
         private string timelineSig;
+        private bool todayDaytime, revealPending;
 
         // detalhe
         private TMP_Text leftHeader, rightHeader;
         private RectTransform leftContent, rightContent;
         private ScrollRect leftScroll, rightScroll;
+        private int leftW, rightW;
         private readonly List<Entry> entries = new List<Entry>();
         private readonly List<RectTransform> tooltipTargets = new List<RectTransform>();
+        private readonly Dictionary<string, bool> groupOpen = new Dictionary<string, bool>();
+        private readonly Dictionary<string, string> descCache = new Dictionary<string, string>();
+        private readonly List<string> groupInfo = new List<string>();
         private string detailSig;
+        private int detailDay = int.MinValue + 1;
+        private int journalLinesShown;
 
         private int selected = -1;        // dia absoluto escolhido (Baseline = antes do diário)
         private int shownToday = -1;
-
-        private sealed class Lane
-        {
-            public EventDef Def;          // faixa de evento
-            public string Journal;        // faixa do diário: "quest" ou "unlock"
-            public string Key => Def != null ? Def.Id : "j_" + Journal;
-        }
 
         private sealed class Entry
         {
             public Occurrence Occ;
             public TMP_Text When;
             public string WhenText;
+        }
+
+        /// <summary>Ícone de evento na faixa: a hora (ou contagem) embaixo e o esmaecido do que já passou.</summary>
+        private sealed class EventMark
+        {
+            public int Col;
+            public Occurrence Occ;
+            public Image Icon;
+            public TMP_Text Time;
+            public OccState State;
         }
 
         /// <summary>Só pointer enter/exit/click: o scroll e o arrasto sobem para quem rola (EventTrigger os engoliria).</summary>
@@ -97,7 +106,7 @@ namespace GK2Hud.Calendar
             public void OnPointerClick(PointerEventData e) { if (!e.dragging) OnClick?.Invoke(); }
         }
 
-        /// <summary>Roda e arrasto da linha do tempo (sem ScrollRect: dias e faixas rolam em eixos e áreas diferentes).</summary>
+        /// <summary>Roda e arrasto da faixa de dias.</summary>
         internal sealed class Pan : MonoBehaviour, IScrollHandler, IBeginDragHandler, IDragHandler, IEndDragHandler
         {
             public Action<float> OnWheel;
@@ -127,10 +136,8 @@ namespace GK2Hud.Calendar
 
         private static readonly string[] RequiredSprites =
         {
-            "comm-header_2", "comm-header_2-dec_side_1", "widget_perks-separator_hor-drk_1", "comm-progress_bar_bg", "comm-progress-yellow",
-            "inspiration-bar_cell_fill-blue", "inspiration-bar_cell_fill-green", "inspiration-bar_cell_fill-orange", "inspiration-bar_cell_fill-red",
-            "inspiration-bar_cell_fill-yellow", "craft_window-progress_cell-green", "craft_window-progress_cell-red", "hint-menu_selector",
-            "btn_i_grey-arrow_horizontal_small", "btn_i_grey-arrow_horizontal_small-inactive", "btn_i_grey-arrow_vertical_small-u", "btn_i_grey-arrow_vertical_small-d", "craft_window-header_1-value_cell", "hud-world_zone-reputation_bar",
+            "comm-header_2", "comm-header_2-dec_side_1", "widget_perks-separator_hor-drk_1", "hint-menu_selector",
+            "btn_i_grey-arrow_horizontal_small", "btn_i_grey-arrow_horizontal_small-inactive", "btn_i_grey-arrow_vertical_small-d", "craft_window-header_1-value_cell",
         };
 
         private static readonly string[] RequiredStyles =
@@ -173,23 +180,6 @@ namespace GK2Hud.Calendar
 
         private Sprite SpriteOrNull(string n) => n != null && sprites.TryGetValue(n, out Sprite s) ? s : null;
 
-        /// <summary>Barra de cada dia na cor do sigilo dele (as células coloridas da janela de Inspirações).</summary>
-        private static string BarSprite(string dayId)
-        {
-            switch (dayId)
-            {
-                case "day_pride": return "inspiration-bar_cell_fill-blue";
-                case "day_lust": return "inspiration-bar_cell_fill-red";
-                case "day_gluttony": return "comm-progress-yellow";
-                case "day_envy": return "inspiration-bar_cell_fill-green";
-                case "day_wrath": return "inspiration-bar_cell_fill-orange";
-                case "day_sloth": return "inspiration-bar_cell_fill-yellow";
-                default: return "hud-world_zone-reputation_bar";
-            }
-        }
-
-        private static string JournalSprite(string lane) => lane == "quest" ? "comm-progress-yellow" : "craft_window-progress_cell-green";
-
         // ---------------- montagem fixa ----------------
 
         private void Build(Transform pages)
@@ -204,19 +194,16 @@ namespace GK2Hud.Calendar
             Rect pr = ((RectTransform)pages).rect;
             pageW = pr.width > 0 ? Mathf.RoundToInt(pr.width) : 640;
             pageH = pr.height > 0 ? Mathf.RoundToInt(pr.height) : 385;
+            stripW = pageW - 2 * X0;
 
-            header = Header(root.transform, X0, 0, pageW - 2 * X0);
+            header = Header(root.transform, X0, 0, stripW);
 
-            stripVp = Viewport(root.transform, "Days", GridX, StripY, GridW, StripH + AxisH, out stripContent);
-            labelsVp = Viewport(root.transform, "Lanes", X0, LanesY, LabelW, LaneH, out labelsContent);
-            gridVp = Viewport(root.transform, "Grid", GridX, LanesY, GridW, LaneH, out gridContent);
-            AddPan(stripVp, wheelDays: true, dragX: true, dragY: false);
-            AddPan(gridVp, wheelDays: true, dragX: true, dragY: true);
-            AddPan(labelsVp, wheelDays: false, dragX: false, dragY: true);
+            stripVp = Viewport(root.transform, "Days", X0, StripY, stripW, EventsY, out stripContent);
+            AddPan(stripVp);
 
             // A seta nativa aponta para a esquerda; a da direita é a mesma espelhada no lugar.
-            arrowLeft = Img(root.transform, "Earlier", "btn_i_grey-arrow_horizontal_small", X0 + 6, StripY + 4, 8, 12);
-            arrowRight = Img(root.transform, "Later", "btn_i_grey-arrow_horizontal_small", X0 + LabelW - 16, StripY + 4, 8, 12);
+            arrowLeft = Img(root.transform, "Earlier", "btn_i_grey-arrow_horizontal_small", X0 + 2, RangeY, 8, RangeH);
+            arrowRight = Img(root.transform, "Later", "btn_i_grey-arrow_horizontal_small", X0 + stripW - 2, RangeY, 8, RangeH);
             arrowRight.rectTransform.localScale = new Vector3(-1f, 1f, 1f);
             arrowRight.rectTransform.pivot = new Vector2(1f, 1f);
             foreach (Image a in new[] { arrowLeft, arrowRight })
@@ -226,35 +213,24 @@ namespace GK2Hud.Calendar
                 Hover h = arrow.gameObject.AddComponent<Hover>();
                 h.OnClick = () => StepDays(arrow == arrowLeft ? -1 : 1);
             }
-            rangeText = Label(root.transform, "Range", "tiny_font-effects_timer", X0 + 16, StripY + 4, LabelW - 32, TextAlignmentOptions.Center, false);
-
-            // Faixas que não cabem: setas na linha do eixo, ao lado dos nomes (a roda sobre os nomes também rola).
-            arrowUp = Img(root.transform, "LanesUp", "btn_i_grey-arrow_vertical_small-u", X0 + 4, StripY + StripH + 3, 14, 8);
-            arrowDown = Img(root.transform, "LanesDown", "btn_i_grey-arrow_vertical_small-d", X0 + 20, StripY + StripH + 3, 14, 8);
-            foreach (Image a in new[] { arrowUp, arrowDown })
-            {
-                Image arrow = a;
-                arrow.raycastTarget = true;
-                Hover h = arrow.gameObject.AddComponent<Hover>();
-                h.OnClick = () => ScrollBy(0, arrow == arrowUp ? -LaneH : LaneH);
-            }
-            moreLanes = Label(root.transform, "MoreLanes", "tiny_font-effects_timer", X0 + 38, StripY + StripH - 1, LabelW - 40, TextAlignmentOptions.Left, false);
+            rangeText = Label(root.transform, "Range", "tiny_font-effects_timer", X0 + 16, RangeY, stripW - 32, TextAlignmentOptions.Center, false);
 
             var d = new GameObject("Day", typeof(RectTransform));
             d.transform.SetParent(root.transform, false);
             detail = (RectTransform)d.transform;
-            int detW = (pageW - 2 * X0 - ColGap) / 2;
-            TopLeft(detail, 0, LanesY + LaneH + 6, pageW, 100);
-            leftHeader = Header(detail, X0, 0, detW);
-            rightHeader = Header(detail, X0 + detW + ColGap, 0, detW);
-            leftScroll = Scroll(detail, "Events", X0, HeaderH + 2, detW, 60, out leftContent);
-            rightScroll = Scroll(detail, "Journal", X0 + detW + ColGap, HeaderH + 2, detW, 60, out rightContent);
+            leftW = (stripW - ColGap) / 3;
+            rightW = stripW - ColGap - leftW;
+            TopLeft(detail, 0, StripY + EventsY + 4, pageW, 100);
+            leftHeader = Header(detail, X0, 0, leftW);
+            rightHeader = Header(detail, X0 + leftW + ColGap, 0, rightW);
+            leftScroll = Scroll(detail, "Events", X0, HeaderH + 2, leftW, 60, out leftContent);
+            rightScroll = Scroll(detail, "Journal", X0 + leftW + ColGap, HeaderH + 2, rightW, 60, out rightContent);
             leftScroll.scrollSensitivity = rightScroll.scrollSensitivity = LineH;
             Restyle();
         }
 
-        /// <summary>Roda: dias inteiros (ou faixas, sobre os nomes). Arrasto: "pega" a linha do tempo e encaixa no dia ao soltar.</summary>
-        private void AddPan(RectTransform vp, bool wheelDays, bool dragX, bool dragY)
+        /// <summary>Roda: dias inteiros. Arrasto: "pega" a faixa e encaixa no dia ao soltar.</summary>
+        private void AddPan(RectTransform vp)
         {
             Pan p = vp.gameObject.AddComponent<Pan>();
             p.OnWheel = delta =>
@@ -262,15 +238,10 @@ namespace GK2Hud.Calendar
                 if (Mathf.Abs(delta) < 0.01f) return;
                 int steps = -Mathf.Clamp(Mathf.RoundToInt(delta), -3, 3);
                 if (steps == 0) steps = delta > 0 ? -1 : 1;
-                if (wheelDays) StepDays(steps);
-                else ScrollBy(0, steps * LaneH);
+                StepDays(steps);
             };
-            p.OnDragEnd = () => { if (dragX) StepDays(0); };
-            p.OnDragBy = delta =>
-            {
-                float scale = Mathf.Max(1f, LazyUI.ScaleFactor);
-                ScrollBy(dragX ? -Mathf.RoundToInt(delta.x / scale) : 0, dragY ? Mathf.RoundToInt(delta.y / scale) : 0);
-            };
+            p.OnDragEnd = () => StepDays(0);
+            p.OnDragBy = delta => ScrollBy(-Mathf.RoundToInt(delta.x / Mathf.Max(1f, LazyUI.ScaleFactor)), 0);
         }
 
         /// <summary>Área recortada que recebe roda/arrasto; o conteúdo anda por <see cref="ApplyScroll"/>.</summary>
@@ -392,7 +363,14 @@ namespace GK2Hud.Calendar
             }
         }
 
-        // ---------------- linha do tempo ----------------
+        /// <summary>Altura de um texto com quebra na largura dada, arredondada para cima e par (grade de 2 px de tela).</summary>
+        private static int TextHeight(TMP_Text t, int width)
+        {
+            int h = Mathf.CeilToInt(t.GetPreferredValues(t.text, width, 0f).y);
+            return h % 2 != 0 ? h + 1 : h;
+        }
+
+        // ---------------- faixa de cenas ----------------
 
         /// <summary>Colunas: "antes do diário", do início do diário (ou ontem) até o fim da semana que começa hoje.</summary>
         private static List<int> Columns(int today)
@@ -411,24 +389,16 @@ namespace GK2Hud.Calendar
             return days;
         }
 
-        private static List<Lane> Lanes()
-        {
-            var list = new List<Lane>();
-            foreach (EventDef e in CalendarModel.Defs) if (CalendarModel.Known(e)) list.Add(new Lane { Def = e });
-            JournalTracker j = JournalTracker.Current;
-            if (j != null && j.Active)
-            {
-                list.Add(new Lane { Journal = "quest" });
-                list.Add(new Lane { Journal = "unlock" });
-            }
-            return list;
-        }
-
-        /// <summary>Muda quando o conjunto de colunas, faixas ou marcas muda (não a cada quadro).</summary>
+        /// <summary>Muda quando o conjunto de colunas, eventos ou marcas muda (não a cada quadro).</summary>
         private static string TimelineSig(int today)
         {
             JournalTracker j = JournalTracker.Current;
-            var parts = new List<string> { today.ToString(), LLBase.CurrentLang, (j != null && j.Active ? j.Version : -1).ToString(), CalendarModel.RevealAll.ToString() };
+            KnowledgeSystem ks = MainGame.Instance.GameSave.knowledgeSystem;
+            var parts = new List<string>
+            {
+                today.ToString(), LLBase.CurrentLang, (j != null && j.Active ? j.Version : -1).ToString(), CalendarModel.RevealAll.ToString(),
+                (ks?.unlockedCustomHudDaySprites?.Count ?? 0).ToString(),
+            };
             List<GameLogicData> logics = MainGame.Instance.GameSave.gameLogicSystemData?.gameLogics;
             foreach (EventDef e in CalendarModel.Defs)
             {
@@ -441,265 +411,226 @@ namespace GK2Hud.Calendar
             return string.Join("|", parts);
         }
 
-        private int ColX(int idx) => idx * ColW;
+        private static int ColX(int idx) => idx * ColW;
 
         private static int TimeX(float tod) => Mathf.Clamp(Mathf.RoundToInt(tod * ColW), 0, ColW);
+
+        private static float Frac(double now) => (float)(now - Math.Floor(now));
+
+        private static int RowsOf(int count) => Mathf.Min(MaxRows, (count + PerRow - 1) / PerRow);
+
+        /// <summary>Altura da área de eventos de uma coluna: cada linha de ícones, mais a folga da hora quando algum tem.</summary>
+        private static int EventsHeight(List<Occurrence> occ)
+        {
+            int h = 0;
+            for (int r = 0; r < RowsOf(occ.Count); r++)
+                h += IconCell + (occ.Skip(r * PerRow).Take(PerRow).Any(HasClock) ? TimeH : 0) + 2;
+            return h;
+        }
+
+        private static bool HasClock(Occurrence o) => o.Instant && !o.Def.NoClock;
+
+        private static List<Occurrence> IconsOf(int day) =>
+            CalendarModel.OnDay(day).Where(o => o.Def.Art != null).OrderBy(o => HasClock(o) ? 1 : 0).ToList();
 
         private void RebuildTimeline(int today, double now)
         {
             HideTimelineTips();
             timelineTips.Clear();
+            eventMarks.Clear();
+            dayLabels.Clear();
             Clear(stripContent);
-            Clear(gridContent);
-            Clear(labelsContent);
+            colRoots.Clear();
+            colEvents.Clear();
+            dayLines.Clear();
             List<int> oldCols = new List<int>(cols);
             cols.Clear();
             cols.AddRange(Columns(today));
-            lanes.Clear();
-            lanes.AddRange(Lanes());
 
-            lanesH = Mathf.Max(1, Mathf.Min(lanes.Count, MaxLanes)) * LaneH;
-            int contentW = cols.Count * ColW, contentH = Mathf.Max(1, lanes.Count) * LaneH;
-            labelsVp.sizeDelta = new Vector2(LabelW, lanesH);
-            gridVp.sizeDelta = new Vector2(GridW, lanesH);
-            TopLeft(stripContent, 0, 0, contentW, StripH + AxisH);
-            TopLeft(gridContent, 0, 0, contentW, contentH);
-            TopLeft(labelsContent, 0, 0, LabelW, contentH);
+            JournalTracker j = JournalTracker.Current;
+            int eventsH = 0;
+            foreach (int day in cols)
+            {
+                List<Occurrence> occ = day == Baseline ? new List<Occurrence>() : IconsOf(day);
+                colEvents.Add(occ);
+                eventsH = Mathf.Max(eventsH, EventsHeight(occ));
+                if (day != Baseline && j != null && j.Active && day <= today) dayLines[day] = JournalView.Lines(j.OnDay(day));
+            }
+            stripH = EventsY + eventsH;
+            stripVp.sizeDelta = new Vector2(stripW, stripH);
+            TopLeft(stripContent, 0, 0, cols.Count * ColW, stripH);
             LayoutDetail();
 
-            // Fundo: faixas alternadas, noite, dia escolhido, divisas dos dias.
-            for (int l = 0; l < lanes.Count; l++)
-            {
-                if (l % 2 == 1)
-                {
-                    Rect(gridContent, "Band", Band, 0, l * LaneH, contentW, LaneH);
-                    Rect(labelsContent, "Band", Band, 0, l * LaneH, LabelW, LaneH);
-                }
-            }
             for (int i = 0; i < cols.Count; i++)
             {
-                if (cols[i] == Baseline) continue;
-                int x = ColX(i);
-                Rect(gridContent, "Night", Night, x, 0, TimeX(DayFrom), contentH);
-                Rect(gridContent, "Night", Night, x + TimeX(DayTo), 0, ColW - TimeX(DayTo), contentH);
-                Rect(stripContent, "Night", Night, x, StripH, TimeX(DayFrom), AxisH);
-                Rect(stripContent, "Night", Night, x + TimeX(DayTo), StripH, ColW - TimeX(DayTo), AxisH);
-            }
-            selGrid = Rect(gridContent, "Selected", SelectedCol, 0, 0, ColW, contentH).rectTransform;
-            selStrip = Img(stripContent, "Selected", "hint-menu_selector", 0, 0, ColW, StripH).rectTransform;
-            for (int i = 0; i < cols.Count; i++)
-            {
-                int x = ColX(i);
-                if (i > 0)
-                {
-                    Rect(gridContent, "DayLine", DayLine, x, 0, 1, contentH);
-                    Rect(stripContent, "DayLine", DayLine, x, 0, 1, StripH + AxisH);
-                }
+                var go = new GameObject("Col_" + (cols[i] == Baseline ? "before" : cols[i].ToString()), typeof(RectTransform));
+                go.transform.SetParent(stripContent, false);
+                RectTransform crt = (RectTransform)go.transform;
+                TopLeft(crt, ColX(i), 0, ColW, stripH);
+                Hover h = AddHover(go);
                 int day = cols[i];
-                foreach (RectTransform parent in new[] { gridContent, stripContent })
-                {
-                    var hit = new GameObject("Hit", typeof(RectTransform));
-                    hit.transform.SetParent(parent, false);
-                    TopLeft((RectTransform)hit.transform, x, 0, ColW, parent == gridContent ? contentH : StripH + AxisH);
-                    Hover h = AddHover(hit);
-                    h.OnClick = () => Select(day);
-                }
-                DayHeader(i, today);
-            }
-            Rect(stripContent, "Axis", DayLine, 0, StripH + AxisH - 1, contentW, 1);
-
-            // Nomes e marcas de cada faixa.
-            int journalTop = -1;
-            for (int l = 0; l < lanes.Count; l++)
-            {
-                if (lanes[l].Journal != null && journalTop < 0) journalTop = l;
-                LaneLabel(lanes[l], l);
-            }
-            for (int i = 0; i < cols.Count; i++) ColumnMarks(i, today, now);
-            if (journalTop > 0)
-            {
-                Separator(gridContent, 0, journalTop * LaneH - 2, contentW);
-                Separator(labelsContent, 0, journalTop * LaneH - 2, LabelW);
+                h.OnClick = () => Select(day);
+                colRoots.Add(crt);
+                BuildColumn(i, today, now);
             }
 
-            // Por cima: o passado sombreado e a linha do agora.
-            pastShade = Rect(gridContent, "Past", PastShade, 0, 0, 0, contentH).rectTransform;
-            // Nos nomes, só os dias que já acabaram; no eixo, até a hora atual.
-            int todayIdx = cols.IndexOf(today);
-            if (todayIdx > 0) Rect(stripContent, "PastDays", PastShade, 0, 0, ColX(todayIdx), StripH);
-            pastShadeStrip = Rect(stripContent, "Past", PastShade, 0, StripH, 0, AxisH).rectTransform;
-            nowLine = Rect(gridContent, "Now", NowColor, 0, 0, 1, contentH).rectTransform;
-            nowLineStrip = Rect(stripContent, "Now", NowColor, 0, StripH, 1, AxisH).rectTransform;
-            Image pill = Img(stripContent, "Clock", "craft_window-header_1-value_cell", 0, StripH - 1, 34, 14);
-            nowPill = pill.rectTransform;
-            nowText = Label(pill.transform, "Text", "tiny_font-effects_timer", 0, 0, 34, TextAlignmentOptions.Center, false);
-            nowText.rectTransform.sizeDelta = new Vector2(34, 14);
-            nowText.alignment = TextAlignmentOptions.Midline;
+            // Por cima das colunas: o passado escurecido, a seleção e o marcador de agora.
+            pastShade = Rect(stripContent, "Past", PastShade, 0, 0, 0, SceneH).rectTransform;
+            selFrame = Img(stripContent, "Selected", "hint-menu_selector", 0, 0, ColW, stripH).rectTransform;
+            // A moldura nativa é só uma barra discreta: contorno claro de 1 px em volta da cena do dia escolhido.
+            var selColor = new Color(1f, 0.91f, 0.66f, 0.95f);
+            Rect(selFrame, "Top", selColor, 0, 0, ColW, 1);
+            Rect(selFrame, "Bottom", selColor, 0, SceneH - 1, ColW, 1);
+            Rect(selFrame, "Left", selColor, 0, 0, 1, SceneH);
+            Rect(selFrame, "Right", selColor, ColW - 1, 0, 1, SceneH);
+            nowOutline = Rect(stripContent, "NowOutline", NowOutline, 0, 0, 3, SceneH).rectTransform;
+            nowLine = Rect(stripContent, "Now", NowColor, 0, 0, 1, SceneH).rectTransform;
 
             if (!cols.SequenceEqual(oldCols)) DefaultScroll(today);
             else ApplyScroll();
         }
 
-        private void DayHeader(int idx, int today)
+        private void BuildColumn(int i, int today, double now)
         {
-            int x = ColX(idx), day = cols[idx];
-            TMP_Text name = Label(stripContent, "Name", "small_font_bold-effects_header", x + 3, 1, ColW - 4, TextAlignmentOptions.Left, false);
-            TMP_Text rel = Label(stripContent, "Rel", "tiny_font-effects_timer", x + 4, 16, ColW - 6, TextAlignmentOptions.Left, false);
-            name.overflowMode = rel.overflowMode = TextOverflowModes.Ellipsis;
-            if (day == Baseline)
-            {
-                name.text = CalendarL10n.T("before_short");
-                JournalTracker j = JournalTracker.Current;
-                rel.text = j != null ? CalendarL10n.T("j_before", j.StartDay) : "";
-                return;
-            }
-            string id = CalendarModel.DayIdOf(day);
-            name.text = (id?.FontIcon() ?? "") + Hud.HudL10n.Day(id);
-            int off = day - today;
-            rel.text = off == 0 ? CalendarL10n.T("today") : off == 1 ? CalendarL10n.T("tomorrow") : off == -1 ? CalendarL10n.T("yesterday") : CalendarL10n.T("day_n", day);
-            if (off < 0) rel.text = CalendarL10n.T("day_n", day);
-            foreach ((float tod, string txt) in new[] { (DayFrom, "6"), (0.5f, "12"), (DayTo, "18") })
-            {
-                int tx = x + TimeX(tod);
-                Rect(stripContent, "Tick", Tick, tx, StripH + AxisH - 4, 1, 3);
-                TMP_Text t = Label(stripContent, "Hour", "tiny_font-hint_additional_text", tx - 10, StripH - 2, 20, TextAlignmentOptions.Center, false);
-                t.text = txt;
-            }
-        }
+            RectTransform c = colRoots[i];
+            int day = cols[i];
+            for (int k = eventMarks.Count - 1; k >= 0; k--) if (eventMarks[k].Col == i) eventMarks.RemoveAt(k);
+            timelineTips.RemoveAll(t => t == null);
+            Clear(c);
+            if (day == Baseline) { BuildBaselineColumn(c); return; }
 
-        private void LaneLabel(Lane lane, int l)
-        {
-            int y = l * LaneH;
-            string sw = lane.Def != null ? (lane.Def.DayId != null ? BarSprite(lane.Def.DayId) : BarSprite(null)) : JournalSprite(lane.Journal);
-            Img(labelsContent, "Swatch", sw, 6, y + 4, 8, 10);
-            TMP_Text t = Label(labelsContent, "Name", "small_font-effects_regular_text", 18, y + 1, LabelW - 20, TextAlignmentOptions.Left, false);
-            t.overflowMode = TextOverflowModes.Ellipsis;
-            t.text = lane.Def != null ? ShortTitle(lane.Def) : CalendarL10n.T("lane_" + lane.Journal);
-        }
-
-        private static string ShortTitle(EventDef e) => CalendarL10n.TOrNull("evs_" + e.Id) ?? e.Title;
-
-        private void ColumnMarks(int idx, int today, double now)
-        {
-            int x = ColX(idx), day = cols[idx];
-            JournalTracker j = JournalTracker.Current;
-            if (day == Baseline)
+            bool isToday = day == today;
+            float tod = isToday ? Frac(now) : 0.5f;
+            if (WeekStrip.EnsureWheel())
             {
-                if (j == null || !j.Active) return;
-                Dictionary<string, int> counts = j.BaselineCounts();
-                int quests = counts.TryGetValue(JournalKinds.Quest, out int q) ? q : 0;
-                int unlocks = counts.Where(kv => JournalKinds.Order.Contains(kv.Key) && kv.Key != JournalKinds.Quest && kv.Key != JournalKinds.Tutorial && kv.Key != JournalKinds.DayIcon).Sum(kv => kv.Value);
-                BaselineMark(x, "quest", quests, counts, new[] { JournalKinds.Quest }, j.StartDay);
-                BaselineMark(x, "unlock", unlocks, counts, JournalKinds.Order.Where(k => k != JournalKinds.Quest && k != JournalKinds.Tutorial && k != JournalKinds.DayIcon), j.StartDay);
-                return;
-            }
-            foreach (Occurrence o in CalendarModel.OnDay(day))
-            {
-                int l = lanes.FindIndex(ln => ln.Def == o.Def);
-                if (l >= 0) EventMark(o, x, l * LaneH, day);
-            }
-            if (j == null || !j.Active || day > today) return;
-            List<JournalLine> lines = JournalView.Lines(j.OnDay(day));
-            foreach (IGrouping<int, JournalLine> g in lines.GroupBy(LaneOf))
-            {
-                if (g.Key < 0) continue;
-                var cluster = new List<JournalLine>();
-                int start = -100;
-                foreach (JournalLine line in g.OrderBy(z => z.Tod))
-                {
-                    int lx = TimeX(line.Tod);
-                    if (cluster.Count > 0 && lx - start > ClusterPx) { JournalMark(cluster, x, g.Key * LaneH, day); cluster = new List<JournalLine>(); }
-                    if (cluster.Count == 0) start = lx;
-                    cluster.Add(line);
-                }
-                if (cluster.Count > 0) JournalMark(cluster, x, g.Key * LaneH, day);
-            }
-        }
-
-        private int LaneOf(JournalLine line)
-        {
-            if (line.Kind == JournalKinds.Sermon)
-            {
-                int s = lanes.FindIndex(ln => ln.Def != null && ln.Def.Id == "sermon");
-                if (s >= 0) return s;
-            }
-            return lanes.FindIndex(ln => ln.Journal == (line.Kind == JournalKinds.Quest ? "quest" : "unlock"));
-        }
-
-        private void EventMark(Occurrence o, int colX, int y, int day)
-        {
-            GameObject go;
-            if (o.AllDay)
-            {
-                // Dia certo, hora não: trilho escuro do jogo com o sigilo no meio.
-                Image track = Img(gridContent, "Day_" + o.Def.Id, "comm-progress_bar_bg", colX + 3, y + 3, ColW - 6, 12);
-                TMP_Text icon = Label(track.transform, "Sigil", "small_font-effects_regular_text", 0, -2, ColW - 6, TextAlignmentOptions.Center, false);
-                icon.text = CalendarModel.DayIdOf(day)?.FontIcon() ?? "";
-                go = track.gameObject;
-            }
-            else if (!o.Instant)
-            {
-                int x0 = TimeX(o.Start), x1 = Mathf.Max(x0 + 8, TimeX(o.End));
-                go = Img(gridContent, "Window_" + o.Def.Id, BarSprite(o.Def.DayId ?? CalendarModel.DayIdOf(day)), colX + x0, y + 4, x1 - x0, 10).gameObject;
+                RectTransform scene = WeekStrip.Scene(c, day, tod, true);
+                scene.anchorMin = scene.anchorMax = scene.pivot = new Vector2(0f, 1f);
+                scene.anchoredPosition = Vector2.zero;
+                scene.sizeDelta = new Vector2(ColW, SceneH);
+                if (isToday) { todayScene = scene; todayDaytime = WeekStrip.IsDaytime(tod); }
             }
             else
             {
-                int px = TimeX(o.Start);
-                int mx = Mathf.Clamp(px - 4, 0, ColW - 8);
-                go = Img(gridContent, "At_" + o.Def.Id, BarSprite(o.Def.DayId), colX + mx, y + 4, 8, 10).gameObject;
-                if (!o.Def.NoClock)
-                {
-                    bool right = mx + 8 + 30 <= ColW;
-                    TMP_Text t = Label(gridContent, "Clock", "tiny_font-effects_timer", right ? colX + mx + 10 : colX + mx - 32, y + 1, 30,
-                        right ? TextAlignmentOptions.Left : TextAlignmentOptions.Right, false);
-                    t.text = CalendarModel.Clock(o.Start);
-                }
+                Rect(c, "Scene", BaselineBg, 0, 0, ColW, SceneH);
+                if (isToday) todayScene = null;
             }
+
+            int off = day - today;
+            string rel = off == 0 ? CalendarL10n.T("today") : off == 1 ? CalendarL10n.T("tomorrow") : off == -1 ? CalendarL10n.T("yesterday") : CalendarL10n.T("day_n", day);
+            TMP_Text lbl = Label(c, "Label", day == selected ? "small_font_bold-effects_header" : "small_font-effects_regular_text", 4, LabelY, ColW - 8, TextAlignmentOptions.Left, false);
+            lbl.text = rel;
+            dayLabels[day] = lbl;
+
+            if (dayLines.TryGetValue(day, out List<JournalLine> lines) && lines.Count > 0) JournalBadge(c, lines, day);
+
+            List<Occurrence> occ = colEvents[i];
+            int y = EventsY;
+            for (int r = 0; r < RowsOf(occ.Count); r++)
+            {
+                List<Occurrence> row = occ.Skip(r * PerRow).Take(PerRow).ToList();
+                int x = (ColW - row.Count * IconPitch) / 2 + (IconPitch - IconCell) / 2;
+                foreach (Occurrence o in row)
+                {
+                    EventIcon(c, i, o, x, y, now);
+                    x += IconPitch;
+                }
+                y += IconCell + (row.Any(HasClock) ? TimeH : 0) + 2;
+            }
+        }
+
+        private void JournalBadge(RectTransform c, List<JournalLine> lines, int day)
+        {
+            var tmpText = lines.Count.ToString();
+            Image pill = Img(c, "Journal", "craft_window-header_1-value_cell", 0, LabelY, 20, LabelH);
+            TMP_Text t = Label(pill.transform, "Count", "tiny_font-effects_timer", 0, 0, 20, TextAlignmentOptions.Midline, false);
+            t.text = tmpText;
+            int w = Mathf.Max(18, Mathf.CeilToInt(t.GetPreferredValues(tmpText).x) + 8);
+            if (w % 2 != 0) w++;
+            TopLeft(pill.rectTransform, ColW - w - 2, LabelY, w, LabelH);
+            t.rectTransform.sizeDelta = new Vector2(w, LabelH);
+            RectTransform rt = pill.rectTransform;
+            Hover h = AddHover(pill.gameObject);
+            h.OnEnter = () => ShowTooltip(CalendarTooltip.JournalCluster(lines), rt);
+            h.OnExit = () => HideTooltip(rt);
+            h.OnClick = () => Select(day);
+            timelineTips.Add(rt);
+        }
+
+        private void EventIcon(RectTransform c, int col, Occurrence o, int x, int y, double now)
+        {
+            var cell = new GameObject("Event_" + o.Def.Id, typeof(RectTransform));
+            cell.transform.SetParent(c, false);
+            RectTransform rt = (RectTransform)cell.transform;
+            TopLeft(rt, x, y, IconCell, IconCell);
+            Hover h = AddHover(cell);
             Occurrence occ = o;
-            RectTransform rt = (RectTransform)go.transform;
-            Hover h = AddHover(go);
+            int day = o.Day;
             h.OnEnter = () => ShowTooltip(CalendarTooltip.Occurrence(occ), rt);
             h.OnExit = () => HideTooltip(rt);
             h.OnClick = () => Select(day);
             timelineTips.Add(rt);
-        }
 
-        private void JournalMark(List<JournalLine> cluster, int colX, int y, int day)
-        {
-            int px = TimeX(cluster[0].Tod);
-            int mx = Mathf.Clamp(px - 4, 0, ColW - 8);
-            JournalLine first = cluster[0];
-            string sprite = first.Sermon != null ? (first.Sermon.ok ? "craft_window-progress_cell-green" : "craft_window-progress_cell-red")
-                : JournalSprite(first.Kind == JournalKinds.Quest ? "quest" : "unlock");
-            Image img = Img(gridContent, "Journal", sprite, colX + mx, y + 4, 8, 10);
-            if (cluster.Count > 1)
+            EasySpritesCollection sc = LazySingletonSO<EasySpritesCollection>.Instance;
+            var mark = new EventMark { Col = col, Occ = o, State = CalendarModel.State(o, now) };
+            if (sc != null && sc.HasSprite(o.Def.Art))
             {
-                TMP_Text t = Label(gridContent, "Count", "tiny_font-effects_timer", colX + mx + 10, y + 1, 24, TextAlignmentOptions.Left, false);
-                t.text = "×" + cluster.Count;
+                Sprite sp = sc.GetSprite(o.Def.Art);
+                Image img = Img(cell.transform, "Icon", null, 0, 0, 0, 0);
+                img.sprite = sp;
+                img.type = Image.Type.Simple;
+                Vector2 size = sp.rect.size * (25f / sp.pixelsPerUnit);   // metade do tamanho nativo: 1 texel = 1 px de tela
+                RectTransform irt = img.rectTransform;
+                irt.anchorMin = irt.anchorMax = new Vector2(0.5f, 1f);
+                irt.pivot = new Vector2(0.5f, 0.5f);
+                irt.sizeDelta = size;
+                irt.anchoredPosition = new Vector2(0f, -IconCell * 0.5f) + PackedOffset(sp) * 0.5f;
+                img.color = new Color(1f, 1f, 1f, mark.State == OccState.Past ? PastIcon : 1f);
+                Material key = Quests.QuestModel.PortraitMaterial();   // tira o contorno azul (cor-chave) dos ícones
+                if (key != null) img.material = key;
+                mark.Icon = img;
             }
-            List<JournalLine> lines = cluster;
-            RectTransform rt = img.rectTransform;
-            Hover h = AddHover(img.gameObject);
-            h.OnEnter = () => ShowTooltip(lines.Count == 1 ? JournalView.Tooltip(lines[0]) : CalendarTooltip.JournalCluster(lines), rt);
-            h.OnExit = () => HideTooltip(rt);
-            h.OnClick = () => Select(day);
-            timelineTips.Add(rt);
+            if (HasClock(o))
+            {
+                TMP_Text t = Label(cell.transform, "Time", mark.State == OccState.Past ? "tiny_font-hint_additional_text" : "tiny_font-effects_timer",
+                    -(IconPitch - IconCell) / 2, IconCell, IconPitch, TextAlignmentOptions.Top, false);
+                t.text = WeekStrip.TimeText(o, now);
+                mark.Time = t;
+            }
+            eventMarks.Add(mark);
         }
 
-        private void BaselineMark(int colX, string lane, int count, Dictionary<string, int> counts, IEnumerable<string> kinds, int startDay)
+        // O desenho não fica no meio do sprite (96×96 com a figura deslocada): devolve o quanto mover para centrar a figura.
+        private static Vector2 PackedOffset(Sprite s)
         {
-            int l = lanes.FindIndex(ln => ln.Journal == lane);
-            if (l < 0 || count <= 0) return;
-            int y = l * LaneH;
-            Image img = Img(gridContent, "Baseline", JournalSprite(lane), colX + ColW / 2 - 12, y + 4, 8, 10);
-            TMP_Text t = Label(gridContent, "Count", "tiny_font-effects_timer", colX + ColW / 2 - 2, y + 1, 30, TextAlignmentOptions.Left, false);
-            t.text = "×" + count;
-            RectTransform rt = img.rectTransform;
-            List<string> k = kinds.ToList();
-            Hover h = AddHover(img.gameObject);
-            h.OnEnter = () => ShowTooltip(CalendarTooltip.Baseline(counts, k, startDay), rt);
+            if (!s.packed || s.packingMode != SpritePackingMode.Rectangle) return Vector2.zero;
+            float k = 50f / s.pixelsPerUnit;
+            Vector2 center = (s.textureRectOffset + s.textureRect.size * 0.5f) * k;
+            Vector2 full = s.rect.size * k;
+            return new Vector2(Mathf.Round(full.x * 0.5f - center.x), Mathf.Round(full.y * 0.5f - center.y));
+        }
+
+        /// <summary>A coluna de antes do diário: sem cena, só o nome, o dia em que o diário começou e quantas quests já estavam feitas.</summary>
+        private void BuildBaselineColumn(RectTransform c)
+        {
+            Rect(c, "Bg", BaselineBg, 0, 0, ColW, stripH);
+            JournalTracker j = JournalTracker.Current;
+            TMP_Text name = Label(c, "Name", "small_font_bold-effects_header", 0, 12, ColW, TextAlignmentOptions.Center, false);
+            name.text = CalendarL10n.T("before_short");
+            if (j == null || !j.Active) return;
+            TMP_Text sub = Label(c, "Since", "tiny_font-effects_timer", 4, 30, ColW - 8, TextAlignmentOptions.Center, true);
+            sub.text = CalendarL10n.T("j_before", j.StartDay);
+            Dictionary<string, int> counts = j.BaselineCounts();
+            if (counts.TryGetValue(JournalKinds.Quest, out int q) && q > 0)
+            {
+                TMP_Text n = Label(c, "Quests", "small_font-effects_regular_text", 4, LabelY, ColW - 8, TextAlignmentOptions.Center, false);
+                n.text = CalendarL10n.Count(JournalKinds.Quest, q);
+            }
+            List<string> kinds = JournalKinds.Order.Where(k => k != JournalKinds.Tutorial && k != JournalKinds.DayIcon).ToList();
+            RectTransform rt = c;
+            int start = j.StartDay;
+            Hover h = c.GetComponent<Hover>();
+            h.OnEnter = () => ShowTooltip(CalendarTooltip.Baseline(counts, kinds, start), rt);
             h.OnExit = () => HideTooltip(rt);
-            h.OnClick = () => Select(Baseline);
             timelineTips.Add(rt);
         }
 
@@ -708,7 +639,6 @@ namespace GK2Hud.Calendar
             int idx = cols.IndexOf(today - 1);
             if (idx < 0) idx = Math.Max(0, cols.IndexOf(today));
             scrollX = ColX(idx);
-            scrollY = 0;
             ApplyScroll();
         }
 
@@ -719,33 +649,35 @@ namespace GK2Hud.Calendar
             ScrollBy(col * ColW - scrollX, 0);
         }
 
-        private void ScrollBy(int dx, int dy)
+        internal void ScrollBy(int dx, int dy)
         {
             HideTimelineTips();
             scrollX += dx;
-            scrollY += dy;
+            ApplyScroll();
+        }
+
+        /// <summary>Rola a faixa até a coluna do dia ficar inteira na janela (não mexe se já está).</summary>
+        private void Reveal(int day)
+        {
+            int idx = cols.IndexOf(day);
+            if (idx < 0) return;
+            int x = ColX(idx);
+            if (x >= scrollX && x + ColW <= scrollX + stripW) return;
+            int target = Mathf.RoundToInt((x - (stripW - ColW) / 2f) / ColW) * ColW;
+            HideTimelineTips();
+            scrollX = target;
             ApplyScroll();
         }
 
         private void ApplyScroll()
         {
-            int maxX = Mathf.Max(0, cols.Count * ColW - GridW);
-            int maxY = Mathf.Max(0, lanes.Count * LaneH - lanesH);
+            if (cols.Count == 0) return;
+            int maxX = Mathf.Max(0, cols.Count * ColW - stripW);
             scrollX = Mathf.Clamp(scrollX, 0, maxX);
-            scrollY = Mathf.Clamp(scrollY, 0, maxY);
             stripContent.anchoredPosition = new Vector2(-scrollX, 0f);
-            gridContent.anchoredPosition = new Vector2(-scrollX, scrollY);
-            labelsContent.anchoredPosition = new Vector2(0f, scrollY);
             arrowLeft.sprite = SpriteOrNull(scrollX > 0 ? "btn_i_grey-arrow_horizontal_small" : "btn_i_grey-arrow_horizontal_small-inactive");
             arrowRight.sprite = SpriteOrNull(scrollX < maxX ? "btn_i_grey-arrow_horizontal_small" : "btn_i_grey-arrow_horizontal_small-inactive");
-            bool overflow = maxY > 0;
-            arrowUp.gameObject.SetActive(overflow);
-            arrowDown.gameObject.SetActive(overflow);
-            arrowUp.color = new Color(1f, 1f, 1f, scrollY > 0 ? 1f : DimAlpha);
-            arrowDown.color = new Color(1f, 1f, 1f, scrollY < maxY ? 1f : DimAlpha);
-            int below = (maxY - scrollY + LaneH - 1) / LaneH;
-            SetText(moreLanes, overflow && below > 0 ? CalendarL10n.T("lanes_below", below) : "");
-            int a = Mathf.Clamp(scrollX / ColW, 0, cols.Count - 1), b = Mathf.Clamp((scrollX + GridW - 1) / ColW, 0, cols.Count - 1);
+            int a = Mathf.Clamp(scrollX / ColW, 0, cols.Count - 1), b = Mathf.Clamp((scrollX + stripW - 1) / ColW, 0, cols.Count - 1);
             int firstDay = cols[a] == Baseline && a < b ? cols[a + 1] : cols[a];
             SetText(rangeText, cols[a] == Baseline && a == b ? CalendarL10n.T("before_short") : CalendarL10n.T("days_range", firstDay, cols[b]));
         }
@@ -754,31 +686,46 @@ namespace GK2Hud.Calendar
         {
             int idx = cols.IndexOf(today);
             if (idx < 0 || nowLine == null) return;
-            int x = ColX(idx) + TimeX((float)(now - today));
+            float tod = Frac(now);
+            if (WeekStrip.IsDaytime(tod) != todayDaytime) BuildColumn(idx, today, now);   // virou dia/noite: a arte da cena troca
+            else if (todayScene != null) WeekStrip.Retint(todayScene, tod);
+            int x = ColX(idx) + TimeX(tod);
             nowLine.anchoredPosition = new Vector2(x, 0f);
-            nowLineStrip.anchoredPosition = new Vector2(x, -StripH);
-            nowPill.anchoredPosition = new Vector2(Mathf.Clamp(x - 17, 0, cols.Count * ColW - 34), -(StripH - 1));
-            pastShade.sizeDelta = new Vector2(x, pastShade.sizeDelta.y);
-            pastShadeStrip.sizeDelta = new Vector2(x, pastShadeStrip.sizeDelta.y);
-            SetText(nowText, Hud.HudFeature.Clock(CalendarModel.Env.TimeOfDay, 10));
+            nowOutline.anchoredPosition = new Vector2(x - 1, 0f);
+            pastShade.sizeDelta = new Vector2(x, SceneH);
+            foreach (EventMark m in eventMarks)
+            {
+                OccState st = CalendarModel.State(m.Occ, now);
+                if (m.Time != null) SetText(m.Time, WeekStrip.TimeText(m.Occ, now));
+                if (st == m.State) continue;
+                m.State = st;
+                if (m.Icon != null) m.Icon.color = new Color(1f, 1f, 1f, st == OccState.Past ? PastIcon : 1f);
+                if (m.Time != null) m.Time.GetComponent<TextStyleComponent>().SetTextStyle(styles[st == OccState.Past ? "tiny_font-hint_additional_text" : "tiny_font-effects_timer"]);
+            }
         }
 
         private void UpdateSelection()
         {
             int idx = cols.IndexOf(selected);
-            bool on = idx >= 0;
-            selGrid.gameObject.SetActive(on);
-            selStrip.gameObject.SetActive(on);
-            if (!on) return;
-            selGrid.anchoredPosition = new Vector2(ColX(idx), 0f);
-            selStrip.anchoredPosition = new Vector2(ColX(idx), 0f);
+            bool on = idx >= 0 && selFrame != null;
+            if (selFrame == null) return;
+            // O dia escolhido ganha a legenda em negrito (cor do cabeçalho); os outros, o texto comum.
+            foreach (KeyValuePair<int, TMP_Text> kv in dayLabels)
+            {
+                if (kv.Value == null) continue;
+                TextStyleComponent ts = kv.Value.GetComponent<TextStyleComponent>();
+                TextStyle want = styles[kv.Key == selected ? "small_font_bold-effects_header" : "small_font-effects_regular_text"];
+                if (ts.CurrentTextStyle != want) ts.SetTextStyle(want);
+            }
+            selFrame.gameObject.SetActive(on);
+            if (on) selFrame.anchoredPosition = new Vector2(ColX(idx), 0f);
         }
 
         private void LayoutDetail()
         {
-            int y = LanesY + lanesH + 6;
+            int y = StripY + stripH + 4;
             detail.anchoredPosition = new Vector2(0f, -y);
-            int h = Mathf.Max(LineH, pageH - y - HeaderH - 4);
+            int h = Mathf.Max(LineH, pageH - y - HeaderH - 6);
             leftScroll.viewport.sizeDelta = new Vector2(leftScroll.viewport.sizeDelta.x, h);
             rightScroll.viewport.sizeDelta = new Vector2(rightScroll.viewport.sizeDelta.x, h);
         }
@@ -798,6 +745,7 @@ namespace GK2Hud.Calendar
             selected = today;
             shownToday = today;
             timelineSig = detailSig = null;
+            revealPending = true;
             cols.Clear();
             Refresh();
         }
@@ -819,15 +767,17 @@ namespace GK2Hud.Calendar
         {
             foreach (TMP_Text l in labels) l?.GetComponent<TextStyleComponent>()?.ApplyStyle();
             timelineSig = detailSig = null;
+            descCache.Clear();
             if (rightHeader != null) rightHeader.text = CalendarL10n.T("journal");
             if (root != null && root.activeSelf) Refresh();
         }
 
         public void Select(int day)
         {
-            if (day == selected) return;
+            if (day == selected) { Reveal(day); return; }
             if (!cols.Contains(day)) return;
             selected = day;
+            Reveal(day);
             Refresh();
         }
 
@@ -838,7 +788,6 @@ namespace GK2Hud.Calendar
             int idx = cols.IndexOf(today) + offset;
             if (idx < 0 || idx >= cols.Count) return;
             Select(cols[idx]);
-            if (ColX(idx) < scrollX || ColX(idx) + ColW > scrollX + GridW) { scrollX = ColX(idx) - ColW; ApplyScroll(); }
         }
 
         public void Refresh()
@@ -856,6 +805,7 @@ namespace GK2Hud.Calendar
             string sig = TimelineSig(today);
             if (sig != timelineSig) { timelineSig = sig; RebuildTimeline(today, now); }
             if (!cols.Contains(selected)) selected = today;
+            if (revealPending) { revealPending = false; Reveal(selected); }
             SetText(header, CalendarTooltip.ResetLine(today) ?? CalendarL10n.T("tab"));
             UpdateNow(today, now);
             UpdateSelection();
@@ -866,14 +816,14 @@ namespace GK2Hud.Calendar
 
         private void RefreshDetail(int today, double now)
         {
-            int w = (int)leftScroll.viewport.sizeDelta.x;
             JournalTracker j = JournalTracker.Current;
             List<Occurrence> occ = selected != Baseline ? CalendarModel.OnDay(selected) : new List<Occurrence>();
             string sig = selected + "|" + LLBase.CurrentLang + "|" + (j?.Version ?? -1) + "|" + string.Join(",", occ.Select(o => o.Def.Id + "@" + o.Start.ToString("0.000") + ":" +
                 (CalendarModel.State(o, now) == OccState.Past) + ":" + (CalendarTooltip.Extra(o) ?? "")));
             if (sig != detailSig)
             {
-                bool sameDay = detailSig != null && detailSig.StartsWith(selected + "|");
+                bool sameDay = detailDay == selected;
+                detailDay = selected;
                 detailSig = sig;
                 if (selected == Baseline)
                 {
@@ -883,10 +833,14 @@ namespace GK2Hud.Calendar
                 {
                     int off = selected - today;
                     string rel = off >= 0 ? CalendarL10n.Relative(off) : off == -1 ? CalendarL10n.T("yesterday") : CalendarL10n.T("days_ago", -off);
-                    SetText(leftHeader, CalendarTooltip.DayIcon(selected) + " " + Hud.HudL10n.Day(CalendarModel.DayIdOf(selected)) + " · " + rel + " · " + CalendarL10n.T("day_n", selected));
+                    string full = CalendarTooltip.DayIcon(selected) + " " + Hud.HudL10n.Day(CalendarModel.DayIdOf(selected)) + " · " + rel + " · " + CalendarL10n.T("day_n", selected);
+                    // O cabeçalho tem a largura de um terço da página: se não cabe entre os enfeites, tira o nome do dia da semana (o ícone fica).
+                    if (leftHeader.GetPreferredValues(full).x > leftW - 52)   // 22 px de enfeite de cada lado + folga
+                        full = CalendarTooltip.DayIcon(selected) + " " + rel + " · " + CalendarL10n.T("day_n", selected);
+                    SetText(leftHeader, full);
                 }
                 SetText(rightHeader, CalendarL10n.T("journal"));
-                RebuildDetail(occ, w, today, now);
+                RebuildDetail(occ, today, now);
                 if (!sameDay) leftContent.anchoredPosition = rightContent.anchoredPosition = Vector2.zero;
             }
             foreach (Entry e in entries)
@@ -896,34 +850,36 @@ namespace GK2Hud.Calendar
             }
         }
 
-        private void RebuildDetail(List<Occurrence> occ, int w, int today, double now)
+        private void RebuildDetail(List<Occurrence> occ, int today, double now)
         {
             HideTooltip();
             entries.Clear();
             tooltipTargets.Clear();
+            groupInfo.Clear();
+            journalLinesShown = 0;
             Clear(leftContent);
             Clear(rightContent);
             JournalTracker j = JournalTracker.Current;
             int ly = 4, ry = 4;
             if (selected == Baseline)
             {
-                ly = BaselineText(leftContent, w, ly, j);
-                ry = BaselineCounts(rightContent, w, ry, j);
+                ly = BaselineText(leftContent, leftW, ly, j);
+                ry = BaselineCounts(rightContent, rightW, ry, j);
             }
             else
             {
-                ly = occ.Count > 0 ? EventsSection(leftContent, occ, w, ly, now) : Empty(leftContent, CalendarL10n.T("nothing"), w, ly);
-                if (j == null || !j.Active) ry = Empty(rightContent, CalendarL10n.T("j_off"), w, ry);
-                else if (selected > today) ry = Empty(rightContent, CalendarL10n.T("j_future"), w, ry);
+                ly = occ.Count > 0 ? EventsSection(leftContent, occ, leftW, ly, now) : Empty(leftContent, CalendarL10n.T("nothing"), leftW, ly);
+                if (j == null || !j.Active) ry = Empty(rightContent, CalendarL10n.T("j_off"), rightW, ry);
+                else if (selected > today) ry = Empty(rightContent, CalendarL10n.T("j_future"), rightW, ry);
                 else
                 {
-                    List<JournalLine> lines = JournalView.Lines(j.OnDay(selected));
-                    ry = lines.Count > 0 ? JournalSection(rightContent, lines, w, ry)
-                        : Empty(rightContent, CalendarL10n.T(selected == today ? "j_today_empty" : "j_empty"), w, ry);
+                    List<JournalLine> lines = dayLines.TryGetValue(selected, out List<JournalLine> cached) ? cached : JournalView.Lines(j.OnDay(selected));
+                    ry = lines.Count > 0 ? JournalSection(rightContent, lines, rightW, ry)
+                        : Empty(rightContent, CalendarL10n.T(selected == today ? "j_today_empty" : "j_empty"), rightW, ry);
                 }
             }
-            leftContent.sizeDelta = new Vector2(w, ly + 4);
-            rightContent.sizeDelta = new Vector2(w, ry + 4);
+            leftContent.sizeDelta = new Vector2(leftW, ly + 4);
+            rightContent.sizeDelta = new Vector2(rightW, ry + 4);
         }
 
         private int Empty(RectTransform content, string text, int w, int y)
@@ -964,8 +920,7 @@ namespace GK2Hud.Calendar
                 {
                     TMP_Text d = Label(go.transform, "Description", "small_font-effects_regular_text", textX, h, textW, TextAlignmentOptions.TopLeft, true);
                     d.text = string.Join("\n", parts);
-                    int dh = Mathf.CeilToInt(d.GetPreferredValues(d.text, textW, 0f).y);
-                    if (dh % 2 != 0) dh++;
+                    int dh = TextHeight(d, textW);
                     d.rectTransform.sizeDelta = new Vector2(textW, dh);
                     h += dh;
                 }
@@ -978,71 +933,127 @@ namespace GK2Hud.Calendar
             return y;
         }
 
-        /// <summary>Diário de um dia: sermão, "Concluído" (quests) e "Desbloqueado" (o resto), uma linha por coisa, com tooltip.</summary>
+        /// <summary>Diário de um dia: um grupo por tipo (sermão, quests concluídas e cada tipo de desbloqueio), na ordem do diário.</summary>
         private int JournalSection(RectTransform content, List<JournalLine> lines, int w, int y)
         {
-            List<JournalLine> sermons = lines.Where(l => l.Kind == JournalKinds.Sermon).ToList();
-            List<JournalLine> quests = lines.Where(l => l.Kind == JournalKinds.Quest).ToList();
-            List<JournalLine> unlocks = lines.Where(l => l.Kind != JournalKinds.Quest && l.Kind != JournalKinds.Sermon).ToList();
-            bool any = false;
-            if (sermons.Count > 0) { y = JournalGroup(content, CalendarL10n.T("j_sermon_h"), sermons, w, y); any = true; }
-            if (quests.Count > 0)
+            bool first = true;
+            foreach (IGrouping<string, JournalLine> g in lines.GroupBy(l => l.Kind))
             {
-                if (any) y += 6;
-                y = JournalGroup(content, CalendarL10n.T("j_completed_h"), quests, w, y);
-                any = true;
-            }
-            if (unlocks.Count > 0)
-            {
-                if (any) y += 6;
-                y = JournalGroup(content, CalendarL10n.T("j_unlocked_h"), unlocks, w, y);
+                if (!first) y += 8;
+                first = false;
+                y = JournalGroup(content, g.Key, g.ToList(), w, y);
             }
             return y;
         }
 
-        private int JournalGroup(RectTransform content, string title, List<JournalLine> lines, int w, int y)
+        private static bool AlwaysOpen(string kind) => kind == JournalKinds.Sermon || kind == JournalKinds.Quest;
+
+        private bool IsOpen(string kind, int count) =>
+            AlwaysOpen(kind) || (groupOpen.TryGetValue(selected + ":" + kind, out bool o) ? o : count <= OpenLimit);
+
+        private string GroupTitle(string kind, int count)
         {
-            TMP_Text h = Label(content, "Group", "small_font_bold-sub_header_2", Pad, y, w - 2 * Pad, TextAlignmentOptions.Left, false);
-            h.text = title;
+            if (kind == JournalKinds.Sermon) return CalendarL10n.T("j_sermon_h") + " · " + count;
+            if (kind == JournalKinds.Quest) return CalendarL10n.T("j_completed_h") + " · " + count;
+            return CalendarL10n.Count(kind, count);
+        }
+
+        private int JournalGroup(RectTransform content, string kind, List<JournalLine> lines, int w, int y)
+        {
+            bool open = IsOpen(kind, lines.Count);
+            bool fixedOpen = AlwaysOpen(kind);
+            var hg = new GameObject("Group_" + kind, typeof(RectTransform));
+            hg.transform.SetParent(content, false);
+            RectTransform hrt = (RectTransform)hg.transform;
+            TopLeft(hrt, Pad, y, w - 2 * Pad, 18);
+            int titleX = 0;
+            if (!fixedOpen)
+            {
+                Hover hv = AddHover(hg);
+                string k = kind;
+                hv.OnClick = () => ToggleGroup(k);
+                // Seta nativa: para baixo = aberto; a horizontal (espelhada, aponta para a direita) = recolhido.
+                Image arrow = open ? Img(hg.transform, "Arrow", "btn_i_grey-arrow_vertical_small-d", 0, 5, 14, 8) : Img(hg.transform, "Arrow", "btn_i_grey-arrow_horizontal_small", 3, 3, 8, 12);
+                if (!open) arrow.rectTransform.localScale = new Vector3(-1f, 1f, 1f);
+                if (!open) arrow.rectTransform.pivot = new Vector2(1f, 1f);
+                if (!open) arrow.rectTransform.anchoredPosition = new Vector2(3, -3);
+                titleX = 18;
+            }
+            TMP_Text h = Label(hg.transform, "Title", "small_font_bold-sub_header_2", titleX, 0, w - 2 * Pad - titleX, TextAlignmentOptions.Left, false);
+            h.text = GroupTitle(kind, lines.Count);
             y += 18;
             Separator(content, Pad, y, w - 2 * Pad);
             y += 6;
-            foreach (JournalLine l in lines)
+            groupInfo.Add(kind + "=" + lines.Count + (open ? "+" : "-"));
+            if (!open) return y;
+            for (int i = 0; i < lines.Count; i++)
             {
-                JournalLine line = l;
-                var go = new GameObject("Line_" + l.Kind + "_" + l.Id, typeof(RectTransform));
-                go.transform.SetParent(content, false);
-                RectTransform rt = (RectTransform)go.transform;
-                int lineH = l.Sermon != null ? LineH + SermonDetailH : LineH;
-                TopLeft(rt, Pad, y, w - 2 * Pad, lineH);
-                Hover hv = AddHover(go);
-                hv.OnEnter = () => ShowTooltip(JournalView.Tooltip(line), rt);
-                hv.OnExit = () => HideTooltip(rt);
-                tooltipTargets.Add(rt);
-                int rightLabelW = 110;
-                TMP_Text name = Label(go.transform, "Name", "small_font_bold-effects_header", 0, 3, w - 2 * Pad - rightLabelW - 6, TextAlignmentOptions.Left, false);
-                name.overflowMode = TextOverflowModes.Ellipsis;
-                name.text = l.Name;
-                TMP_Text kind = Label(go.transform, "Kind", "tiny_font-effects_timer", w - 2 * Pad - rightLabelW, 5, rightLabelW, TextAlignmentOptions.Right, false);
-                kind.text = JournalView.KindLabel(l.Kind) + " · " + (l.Approx ? "~" : "") + CalendarModel.Clock(l.Tod);
-                if (l.Sermon != null)
-                {
-                    TMP_Text detailText = Label(go.transform, "Detail", "small_font-effects_regular_text", 0, LineH - 2, w - 2 * Pad, TextAlignmentOptions.Left, false);
-                    detailText.overflowMode = TextOverflowModes.Ellipsis;
-                    detailText.text = JournalView.SermonDetail(l.Sermon);
-                }
-                y += lineH;
+                y = JournalLineRow(content, lines[i], w, y);
+                journalLinesShown++;
             }
             return y;
         }
+
+        private string DescOf(JournalLine l)
+        {
+            string key = LLBase.CurrentLang + ":" + l.Kind + ":" + l.Id;
+            if (!descCache.TryGetValue(key, out string d)) descCache[key] = d = JournalView.DescriptionOf(l);
+            return d;
+        }
+
+        /// <summary>Uma anotação: nome inteiro (quebra de linha), tipo e hora à direita, e embaixo a descrição que o jogo tem para ela.</summary>
+        private int JournalLineRow(RectTransform content, JournalLine line, int w, int y)
+        {
+            var go = new GameObject("Line_" + line.Kind + "_" + line.Id, typeof(RectTransform));
+            go.transform.SetParent(content, false);
+            RectTransform rt = (RectTransform)go.transform;
+            int inner = w - 2 * Pad, nameW = inner - KindW - 6;
+            TMP_Text name = Label(go.transform, "Name", "small_font_bold-effects_header", 0, 0, nameW, TextAlignmentOptions.TopLeft, true);
+            name.text = line.Name;
+            int nh = Mathf.Max(18, TextHeight(name, nameW));
+            name.rectTransform.sizeDelta = new Vector2(nameW, nh);
+            TMP_Text kind = Label(go.transform, "Kind", "tiny_font-effects_timer", inner - KindW, 2, KindW, TextAlignmentOptions.TopRight, false);
+            kind.text = JournalView.KindLabel(line.Kind) + " · " + (line.Approx ? "~" : "") + CalendarModel.Clock(line.Tod);
+            int h = nh;
+            string desc = DescOf(line);
+            if (desc != null)
+            {
+                TMP_Text d = Label(go.transform, "Description", "small_font-effects_regular_text", 0, h, inner, TextAlignmentOptions.TopLeft, true);
+                d.text = desc;
+                int dh = TextHeight(d, inner);
+                d.rectTransform.sizeDelta = new Vector2(inner, dh);
+                h += dh;
+            }
+            h += 6;
+            TopLeft(rt, Pad, y, inner, h);
+            Hover hv = AddHover(go);
+            hv.OnEnter = () => ShowTooltip(JournalView.Tooltip(line), rt);
+            hv.OnExit = () => HideTooltip(rt);
+            tooltipTargets.Add(rt);
+            return y + h + 4;
+        }
+
+        /// <summary>Abre/fecha um grupo do diário do dia escolhido (os fixos não fecham).</summary>
+        internal void ToggleGroup(string kind)
+        {
+            if (AlwaysOpen(kind) || root == null) return;
+            string key = selected + ":" + kind;
+            int count = dayLines.TryGetValue(selected, out List<JournalLine> l) ? l.Count(x => x.Kind == kind) : 0;
+            groupOpen[key] = !IsOpen(kind, count);
+            detailSig = null;
+            double now = CalendarModel.Now;
+            RefreshDetail((int)Math.Floor(now), now);
+        }
+
+        /// <summary>Para os cenários: rola o diário (px de arte a partir do topo).</summary>
+        internal void ScrollJournal(int y) => rightContent.anchoredPosition = new Vector2(0f, y);
 
         private int BaselineText(RectTransform content, int w, int y, JournalTracker j)
         {
             if (j == null || !j.Active) return Empty(content, CalendarL10n.T("j_off"), w, y);
             TMP_Text d = Label(content, "Text", "small_font-effects_regular_text", Pad, y, w - 2 * Pad, TextAlignmentOptions.TopLeft, true);
             d.text = CalendarL10n.T("j_baseline_d", j.StartDay);
-            int dh = Mathf.CeilToInt(d.GetPreferredValues(d.text, w - 2 * Pad, 0f).y);
-            if (dh % 2 != 0) dh++;
+            int dh = TextHeight(d, w - 2 * Pad);
             d.rectTransform.sizeDelta = new Vector2(w - 2 * Pad, dh);
             return y + dh + 8;
         }
@@ -1088,8 +1099,8 @@ namespace GK2Hud.Calendar
 
         internal string Describe()
         {
-            return $"selected={(selected == Baseline ? "antes" : selected.ToString())} cols={cols.Count} lanes={lanes.Count} scroll={scrollX},{scrollY} marcas={timelineTips.Count} " +
-                   $"entries={entries.Count} linhas={tooltipTargets.Count} active={(root != null && root.activeSelf)} header='{header?.text}'";
+            return $"selected={(selected == Baseline ? "antes" : selected.ToString())} cols={cols.Count} scroll={scrollX} strip={stripW}x{stripH} icones={eventMarks.Count} marcas={timelineTips.Count} " +
+                   $"entries={entries.Count} linhas={tooltipTargets.Count} grupos=[{string.Join(" ", groupInfo)}] active={(root != null && root.activeSelf)} header='{header?.text}' range='{rangeText?.text}'";
         }
     }
 }

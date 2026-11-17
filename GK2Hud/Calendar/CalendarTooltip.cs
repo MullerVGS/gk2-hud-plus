@@ -29,16 +29,9 @@ namespace GK2Hud.Calendar
                 Text(CalendarL10n.T("day_n", today), s.Small, TextAlignmentOptions.Center),
                 new UITooltipSeparatorWidgetData(),
             };
-            for (int d = today; d < today + CalendarModel.DaysInWeek; d++)
-            {
-                List<Occurrence> occ = CalendarModel.OnDay(d);
-                string names = occ.Count == 0 ? CalendarL10n.T("nothing_short")
-                    : string.Join(" · ", occ.Where(o => d > today || CalendarModel.State(o, now) != OccState.Past).Select(o => ShortName(o)).DefaultIfEmpty(CalendarL10n.T("nothing_short")));
-                string line = DayIcon(d) + " " + s.SmallSelected.ApplyStyleToString(CalendarL10n.Relative(d - today) + ":") + " " + names;
-                list.Add(Text(line, s.Small, TextAlignmentOptions.Left));
-            }
+            // Os dias vão em cartões (WeekStrip, posto pelo WheelFeature depois do separador).
             Occurrence? next = CalendarModel.NextUpcoming(now);
-            string reset = ResetLine(today);
+            string reset = null;   // protótipo: menos texto (a renovação segue no popup do dia)
             if (next.HasValue || reset != null) list.Add(new UITooltipSeparatorWidgetData());
             if (next.HasValue)
             {
@@ -50,7 +43,8 @@ namespace GK2Hud.Calendar
         }
 
         /// <summary>Um dia da semana (o próximo com esse sigilo, hoje inclusive): eventos com horário e contagem.</summary>
-        public static List<LazyWidgetDataBase> Day(string dayId)
+        /// <remarks><paramref name="full"/> = bolha fixada: o burro ganha a descrição e a previsão de corpos (no hover, só nome e hora).</remarks>
+        public static List<LazyWidgetDataBase> Day(string dayId, bool full = false)
         {
             Styles s = Styles.Read();
             if (s == null || !CalendarModel.Ready) return null;
@@ -77,6 +71,7 @@ namespace GK2Hud.Calendar
                 bool past = CalendarModel.State(o, now) == OccState.Past;
                 list.Add(Text(o.Def.Title, past ? s.Small : s.Description, TextAlignmentOptions.Center));
                 list.Add(Text(When(o, now), past ? s.Small : s.SmallSelected, TextAlignmentOptions.Center));
+                if (!full && BasicOnHover(o)) continue;
                 string desc = o.Def.Description;
                 if (desc != null && !past) list.Add(Text(desc, s.Small, TextAlignmentOptions.Center));
                 string extra = Extra(o);
@@ -86,7 +81,7 @@ namespace GK2Hud.Calendar
         }
 
         /// <summary>Uma marca da linha do tempo: o evento, quando (com contagem) e a regra.</summary>
-        public static List<LazyWidgetDataBase> Occurrence(Occurrence o)
+        public static List<LazyWidgetDataBase> Occurrence(Occurrence o, bool full = true)
         {
             Styles s = Styles.Read();
             if (s == null || !CalendarModel.Ready) return null;
@@ -102,12 +97,16 @@ namespace GK2Hud.Calendar
                 new UITooltipSeparatorWidgetData(),
                 Text(Window(o) + (off >= 0 ? " · " + Remaining(o, now) : ""), past ? s.Small : s.SmallSelected, TextAlignmentOptions.Center),
             };
+            if (!full && BasicOnHover(o)) return list;
             string desc = o.Def.Description;
             if (desc != null) list.Add(Text(desc, s.Description, TextAlignmentOptions.Center));
             string extra = off >= 0 ? Extra(o) : null;
             if (extra != null) list.Add(Text(extra, s.Small, TextAlignmentOptions.Center));
             return list;
         }
+
+        /// <summary>Eventos cujo texto completo só aparece na bolha fixada.</summary>
+        private static bool BasicOnHover(Occurrence o) => o.Def.Id == "donkey";
 
         /// <summary>A janela do evento, sem contagem: "13:12", "00:14–23:45", "a qualquer hora do dia".</summary>
         public static string Window(Occurrence o)

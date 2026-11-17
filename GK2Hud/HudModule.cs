@@ -112,15 +112,18 @@ namespace GK2Hud
                 "Time above the medallion. Hover: with the mouse on the medallion; Always; Off.");
             ConfigEntry<float> wheelDelay = cfg.Bind("Calendar", "HoverDelay", 0.35f,
                 new ConfigDescription("Seconds with the mouse still on the medallion before the popup shows.", new AcceptableValueRange<float>(0f, 5f)));
-            FeatureInfo popup = null;
+            FeatureInfo popup = null, carousel = null;
             FeatureInfo wheel = host.Feature("Wheel", "calendar", "Calendar", "Wheel",
                 new Loc("Time and week on the medallion", "Hora e semana no medalhão"),
                 new Loc("Hover the day medallion to see the time and the week.", "Passe o mouse no medalhão dos dias para ver a hora e a semana."),
-                h => Wheel = new WheelFeature(wheelClock, clockStep, wheelDelay, fade, popup.Toggle),
+                h => Wheel = new WheelFeature(wheelClock, clockStep, wheelDelay, fade, popup.Toggle, carousel.Toggle),
                 f => f.Update(), f => { f.Dispose(); Wheel = null; }, options: new ConfigEntryBase[] { wheelClock, wheelDelay, clockStep, fade });
             popup = host.Option(wheel, "WheelPopup", "Calendar", "WheelPopup", true,
                 new Loc("Week popup", "Popup da semana"),
                 new Loc("Hover a sigil to see what happens on that day.", "Passe o mouse num sigilo para ver o que acontece naquele dia."));
+            carousel = host.Option(wheel, "WheelCarousel", "Calendar", "WeekCarousel", false,
+                new Loc("Week as a carousel", "Semana em carrossel"),
+                new Loc("Shows the week in one row that slides as the day goes by, instead of stacked.", "Mostra a semana numa linha só, que desliza conforme o dia passa, em vez de empilhada."));
 
             host.Feature("CalendarTab", "calendar", "Calendar", "Tab",
                 new Loc("Calendar tab", "Aba Calendário"),

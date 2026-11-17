@@ -286,6 +286,11 @@ namespace GK2Hud.Tooltips
             Bubble b = Stack.Transient;
             Stack.Transient = null;
             b.Pinned = true;
+            if (b.PinData != null)
+            {
+                List<LazyWidgetDataBase> full = b.PinData();
+                if (full != null && full.Count > 0) b.Data = full;
+            }
             Stack.Pinned.Add(b);
             b.Rt.name = PinStack.Prefix + "Bubble" + b.Depth;
             Stack.Render(b, Styles.Read());
@@ -315,6 +320,7 @@ namespace GK2Hud.Tooltips
             b.Data = new List<LazyWidgetDataBase>(lastData);
             b.Live = World.WorldHoverFeature.Current?.LiveFor(lastTarget) ?? Calendar.WheelFeature.Current?.LiveFor(lastTarget);
             if (b.Live != null) b.LiveSig = World.WorldContent.Signature(lastData);
+            Calendar.WheelFeature.Current?.OnPinning(b, lastTarget);
             // Nó da árvore de quests: a bolha leva o retrato e, depois de fixada, abre ao lado a ficha do NPC.
             string childLink = parent == null ? Quests.QuestTreeFeature.Current?.OnPinning(b, lastTarget) : null;
             if (parent != null)
@@ -357,6 +363,7 @@ namespace GK2Hud.Tooltips
             string link = null;
             Rect rect = default;
             if (top.Contains(mouse)) link = Links.LinkAt(top.LinkTexts, mouse, out rect);
+            if (link == null && top.Hot != null && top.Contains(mouse)) link = top.Hot(mouse, out rect);
 
             if (tr != null && link == tr.SourceLink && tr.Parent == top) { transientAway = 0f; hoverLink = null; return; }
 
@@ -383,12 +390,21 @@ namespace GK2Hud.Tooltips
             if (Stack.Transient != null && Stack.Transient.SourceLink == link && Stack.Transient.Parent == parent) return;
             Stack.CloseTransient();
             if (Stack.Pinned.Count >= maxDepth.Value) return;
-            Entity e = Entity.FromLink(link);
-            if (e == null) return;
-            List<LazyWidgetDataBase> data;
-            try { data = Content.Build(e); }
+            // Termo de uma área própria da bolha (ícone de evento do calendário): o conteúdo vem de quem a decorou.
+            List<LazyWidgetDataBase> data = null;
+            Entity e = null;
+            try
+            {
+                data = parent.HotData?.Invoke(link);
+                if (data == null)
+                {
+                    e = Entity.FromLink(link);
+                    if (e == null) return;
+                    data = Content.Build(e);
+                }
+            }
             catch (Exception ex) { HudModule.Log.LogError($"montar {link}: {ex}"); return; }
-            if (data.Count == 0) return;
+            if (data == null || data.Count == 0) return;
             Bubble b = Stack.Create(parent.Depth + 1);
             if (b == null) return;
             b.Rt.name = PinStack.Prefix + "Transient" + b.Depth;
@@ -397,7 +413,13 @@ namespace GK2Hud.Tooltips
             b.Data = data;
             b.SourceLink = link;
             b.SourceRect = termRect;
-            if (e.Kind == EntityKind.Station) b.Image = Content.StationImage(e.Id);
+            if (e == null && parent.HotDataPinned != null)
+            {
+                System.Func<string, List<LazyWidgetDataBase>> pinned = parent.HotDataPinned;
+                b.PinData = () => pinned(link);
+            }
+            if (e == null) { }
+            else if (e.Kind == EntityKind.Station) b.Image = Content.StationImage(e.Id);
             else if (e.Kind == EntityKind.Npc && parent.Image == null)
             {
                 // A ficha aberta a partir do tooltip do nó não repete o retrato que a mãe já mostra.

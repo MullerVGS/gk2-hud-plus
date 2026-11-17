@@ -6,7 +6,7 @@ using LazyBearTechnology;
 using UnityEngine;
 
 // Demos do calendário (clipes "CalendarTab", "Journal" e "Wheel"). MODO:
-//   aba      — abre a aba Calendário; o cursor passa em duas marcas da linha do tempo (tooltip) e clica (o dia embaixo muda)
+//   aba      — abre a aba Calendário; o cursor passa em duas marcas da faixa de cenas (tooltip) e clica (o dia embaixo muda)
 //   diario   — na aba, o cursor escolhe um dia passado com diário (achado antes por MODO=diario-escolher) e passa na
 //              primeira linha do diário dele
 //   medalhao — sem janelas: o cursor para no medalhão dos dias (hora e semana) e depois num sigilo (o que há naquele dia)
@@ -29,20 +29,20 @@ public static class Snippet
     static TMPro.TMP_Text Text(string text) => Object.FindObjectsByType<TMPro.TMP_Text>(FindObjectsSortMode.None)
         .FirstOrDefault(t => t.isActiveAndEnabled && t.text == text);
 
-    /// <summary>Área da coluna do diário, abaixo do título "Journal" (o calendário encolhe quando há poucas faixas).</summary>
+    /// <summary>Área da coluna do diário (dois terços da página, à direita), abaixo do título "Journal".</summary>
     static Rect JournalArea()
     {
         var title = Text("Journal");
         Vector2 c = title != null ? Demo.Center(title.transform) : new Vector2(1280, 692);
-        return new Rect(c.x - 300, c.y + 40, 520, 260);
+        return new Rect(c.x - 410, c.y + 40, 820, 400);
     }
 
-    /// <summary>Área das marcas da linha do tempo: entre a régua de horas e os títulos de baixo.</summary>
+    /// <summary>Área da faixa de cenas (cenas, legendas e ícones): do topo da página até os títulos de baixo.</summary>
     static Rect TimelineArea()
     {
         var title = Text("Journal");
         float bottom = title != null ? Demo.Center(title.transform).y - 20 : 660;
-        return new Rect(560, 330 - 0, 1040, bottom - 330 > 40 ? bottom - 330 : 330);
+        return new Rect(330, 240, 1264, bottom - 240 > 40 ? bottom - 240 : 240);
     }
 
     /// <summary>Linhas da coluna do diário.</summary>
@@ -131,7 +131,7 @@ public static class Snippet
                 Call(tab, "TestOffset", d - today);   // seleciona e rola a linha do tempo até o dia
                 yield return null; yield return null;
                 int n = JournalLines().Count;
-                if (n >= 2) { System.IO.File.WriteAllText(memo, d.ToString()); yield return "dia " + d + " com " + n + " linhas"; yield break; }
+                if (n >= 1) { System.IO.File.WriteAllText(memo, d.ToString()); yield return "dia " + d + " com " + n + " linhas"; yield break; }
             }
             yield return "nenhum dia com diário nos últimos 60";
             yield break;
@@ -143,7 +143,7 @@ public static class Snippet
         yield return Demo.Wait(0.6f);
         string label = day == today ? "Today" : "Day " + day;
         var header = Object.FindObjectsByType<TMPro.TMP_Text>(FindObjectsSortMode.None)
-            .FirstOrDefault(t => t.isActiveAndEnabled && t.text == label && Demo.Center(t.transform).y < 330);
+            .FirstOrDefault(t => t.isActiveAndEnabled && t.GetParsedText() == label && Demo.Center(t.transform).y < 420);
         Vector2 at = header != null ? Demo.Center(header.transform) : new Vector2(700, 290);
         yield return Demo.Glide(at + new Vector2(3, 5), 0.8f);
         Call(tab, "TestOffset", day - today);

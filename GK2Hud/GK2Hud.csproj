@@ -6,5 +6,7 @@
     <Compile Include="../Shared/ModGuard.cs" Link="Shared/ModGuard.cs" />
     <Compile Include="../Shared/ModHost.cs" Link="Shared/ModHost.cs" />
     <Compile Include="../Shared/HudPlusId.cs" Link="Shared/HudPlusId.cs" />
+    <!-- Cenas expandidas dos cartões do calendário. -->
+    <EmbeddedResource Include="Calendar/art/*.png" LogicalName="calart.%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

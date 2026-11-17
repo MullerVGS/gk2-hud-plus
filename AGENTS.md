@@ -130,6 +130,25 @@ Pacote público (`GK2HudPlus/`, `mullervgs.gk2.hudplus`, nome `GK2 HUD+`): os mo
   confere os patches), `hudplus-menu.cs` (`abrir` pelo botão da pausa, `trocar` ID, `hover` ID, `rolar` POS,
   `fechar`), `settings.cs`, `mods-nativo.cs`, `guard-desligar.cs` (MOD = GUID do HUD+, PARTE = id da funcionalidade).
 
+## Calendário com a arte do jogo (HUD+ 0.4.0)
+
+- **Cenas dos dias**: o centro do medalhão tem uma cena por dia (`UIHUDWheel.dayCustomWheelCenterIconDay/Night`, 56×52), liberada
+  por `KnowledgeSystem.unlockedCustomHudDaySprites`; sem liberação, a cidade padrão. O mod segue a mesma lista (sem spoiler).
+- **Arte expandida** (`GK2Hud/Calendar/art/*.png`, embutida na DLL como `calart.<nome>`): `<dia>_dia|noite.png` (112×80, a cena
+  inteira, usada no popup de um dia) e `<dia>_semana_dia|noite.png` (96×56, ladrilhos que emendam lado a lado com qualquer outro,
+  usados na semana e na aba); `city_*` para dia não liberado. Derivada da arte do jogo com gerador de imagens + pós-processamento
+  (grade de 1 px, paleta do original, pixels originais intactos).
+- **`WeekStrip`**: os cartões dentro do `UITooltip` nativo (alarga a largura máxima do tooltip enquanto aberto e devolve ao fechar).
+  Semana empilhada (3×2) ou em carrossel (`[Calendar] WeekCarousel`: uma linha que desliza com a hora, 6 h para trás e marcador
+  de agora). Hora sob o ícone vira contagem quando falta menos de um dia. No hover, só o básico; na bolha fixada entram os
+  rótulos dos dias, o texto completo do burro, e os ícones/cenas viram áreas que abrem a bolha do evento/dia
+  (`Bubble.Decorate/Hot/HotData/PinData` no `PinStack`).
+- **Aba do TAB** (`CalendarPage`): faixa de cenas no topo (uma coluna de 96 px por dia, selo com a contagem do diário, rola até
+  o dia escolhido) e, embaixo, eventos do dia (1/3) e diário (2/3) com descrição (`JournalView.DescriptionOf`) e grupos que
+  recolhem acima de 8 linhas; só cria as linhas de grupos abertos.
+- Cenários: `arte-dias.cs` (exporta a arte de dia), `gk2hud-calendario.cs` (medalhão, sigilo, aba; GRUPO/ROLAR/FAIXA),
+  `gk2hud-calendario-fixar.cs` (fixa a semana e passa o mouse num ícone).
+
 ## GK2 Saves
 
 Mod de jogador (`GK2Saves/`, `arthur.gk2.saves`): **Save** e **Load** no topo do menu de pausa, clonados do botão Settings.

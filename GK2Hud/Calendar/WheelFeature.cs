@@ -8,6 +8,7 @@ using HarmonyLib;
 using LazyBearTechnology;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 using Object = UnityEngine.Object;
 
 namespace GK2Hud.Calendar
@@ -38,6 +39,7 @@ namespace GK2Hud.Calendar
         private readonly ConfigEntry<float> delay;
         private readonly ConfigEntry<float> fadeDuration;
         private readonly ConfigEntry<bool> popupOn;
+        private readonly ConfigEntry<bool> carouselOn;
 
         private HUD hud;
         private RectTransform wheel;
@@ -61,19 +63,22 @@ namespace GK2Hud.Calendar
         internal Vector2? VirtualMouse { get; set; }
 
         public WheelFeature(ConfigEntry<HudNumbersMode> clockMode, ConfigEntry<int> clockStep, ConfigEntry<float> delay, ConfigEntry<float> fadeDuration,
-            ConfigEntry<bool> popupOn)
+            ConfigEntry<bool> popupOn, ConfigEntry<bool> carouselOn)
         {
             this.clockMode = clockMode;
             this.clockStep = clockStep;
             this.delay = delay;
             this.fadeDuration = fadeDuration;
             this.popupOn = popupOn;
+            this.carouselOn = carouselOn;
             Current = this;
         }
 
         public void Dispose()
         {
             HideOwn();
+            WeekStrip.Remove(Native.Instance?.transform);
+            WeekStrip.Dispose();
             if (proxy != null) Object.Destroy(proxy.gameObject);
             proxy = null;
             if (clock != null) Object.Destroy(clock);
@@ -142,6 +147,7 @@ namespace GK2Hud.Calendar
                 // Outro tooltip tomou o singleton ou a bolha foi fixada: não volta por cima até sair do medalhão.
                 showing = false;
                 dismissed = true;
+                WeekStrip.Remove(Native.Instance?.transform);
             }
             if (dismissed) return;
             if (!showing)
@@ -300,6 +306,7 @@ namespace GK2Hud.Calendar
         private void Show(bool first)
         {
             if (!EnsureProxy()) return;
+            WeekStrip.Carousel = carouselOn.Value;
             List<LazyWidgetDataBase> list = Build(target);
             if (list == null || list.Count == 0) { HideOwn(); return; }
             string sig = World.WorldContent.Signature(list);
@@ -307,18 +314,22 @@ namespace GK2Hud.Calendar
             Vector3 scale = proxy.lossyScale;
             proxy.sizeDelta = new Vector2(r.width / Mathf.Max(0.0001f, scale.x), r.height / Mathf.Max(0.0001f, scale.y));
             proxy.position = new Vector3(r.center.x, r.center.y, proxy.position.z);
-            if (!first && sig == shownSig) return;
             UITooltip native = Native.Instance;
+            if (!first && sig == shownSig) { WeekStrip.Place(native.transform, target, Styles.Read()); return; }
+            // Antes do ShowAt, para o tooltip já se posicionar com o tamanho final; depois, para ficar abaixo do cabeçalho.
+            WeekStrip.Place(native.transform, target, Styles.Read());
             Native.ShowAt.Invoke(native, new object[] { list, proxy, UIBasicBubble.ForceCornerPosition.Auto, true, Vector2.zero, TooltipPlacementPriority.BottomRight });
             if (!first) { CanvasGroup g = Native.GroupOf(native); if (g != null) g.alpha = 1f; }
+            WeekStrip.Place(native.transform, target, Styles.Read());
+            LayoutRebuilder.ForceRebuildLayoutImmediate((RectTransform)native.transform);
             showing = UITooltip.IsTooltipShowingAtTarget(proxy);
             shownSig = sig;
         }
 
-        private static List<LazyWidgetDataBase> Build(string t)
+        private static List<LazyWidgetDataBase> Build(string t, bool full = false)
         {
             if (t == null) return null;
-            return t == "week" ? CalendarTooltip.Week() : CalendarTooltip.Day(t);
+            return t == "week" ? CalendarTooltip.Week() : CalendarTooltip.Day(t, full);
         }
 
         private void Lose()
@@ -331,6 +342,7 @@ namespace GK2Hud.Calendar
         private void HideOwn()
         {
             if (showing && proxy != null && UITooltip.IsTooltipShowingAtTarget(proxy)) UITooltip.Hide();
+            if (showing) WeekStrip.Remove(Native.Instance?.transform);
             showing = false;
             shownSig = null;
         }
@@ -340,7 +352,29 @@ namespace GK2Hud.Calendar
         {
             if (tooltipTarget == null || tooltipTarget != proxy || target == null) return null;
             string t = target;
-            return () => Build(t);
+            return () => Build(t, true);
+        }
+
+        /// <summary>
+        /// Bolha fixada a partir do medalhão: leva os cartões (a cada redesenho) e, na semana, cada ícone de evento vira
+        /// uma área que abre a bolha do evento ao passar o mouse.
+        /// </summary>
+        internal void OnPinning(Tooltips.Bubble b, RectTransform tooltipTarget)
+        {
+            if (tooltipTarget == null || tooltipTarget != proxy || target == null) return;
+            string t = target;
+            b.Decorate = rt => WeekStrip.Place(rt, t, Styles.Read(), true);
+            Transform tip = b.Rt;
+            b.Hot = (Vector2 screen, out Rect rect) => WeekStrip.EventAt(tip, screen, out rect);
+            b.HotData = link => WeekStrip.EventData(link, false);
+            b.HotDataPinned = link => WeekStrip.EventData(link, true);
+            // Fixada já nasce com o conteúdo completo (o hover mostra só o básico do burro).
+            List<LazyWidgetDataBase> fullData = Build(t, true);
+            if (fullData != null && fullData.Count > 0)
+            {
+                b.Data = fullData;
+                b.LiveSig = World.WorldContent.Signature(fullData);
+            }
         }
 
         internal string Describe()

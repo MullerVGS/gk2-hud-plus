@@ -259,6 +259,12 @@ namespace GK2Hud.Calendar
 
         internal void TestOffset(int offset) => page?.SelectOffset(offset);
 
+        internal void TestGroup(string kind) => page?.ToggleGroup(kind);
+
+        internal void TestJournalScroll(int y) => page?.ScrollJournal(y);
+
+        internal void TestScroll(int dx) => page?.ScrollBy(dx, 0);
+
         internal string Describe() => $"window={(window != null ? window.name : "-")} shown={(window != null && window.IsShown)} open={open} " +
                                       $"last={(window != null ? window.LastOpenedPage.ToString() : "-")} page={(page != null ? page.Describe() : "-")}";
     }

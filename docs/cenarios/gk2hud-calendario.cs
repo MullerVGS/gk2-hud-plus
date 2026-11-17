@@ -7,12 +7,18 @@ using LazyBearTechnology;
 using UnityEngine;
 
 // GK2Hud (só leitura): calendário. ALVO = "medalhao" (mouse virtual no medalhão, popup da semana), "sigilo:day_wrath"
-// (popup do dia), "aba" (abre o TAB no calendário; DIA = deslocamento a partir de hoje), "fechar" ou "limpar".
+// (popup do dia), "aba" (abre o TAB no calendário; DIA = deslocamento a partir de hoje, ANTES = coluna "antes do diário"),
+// "fechar" ou "limpar". Na aba: GRUPO = tipo do grupo do diário a abrir/fechar (ex.: "craft"), ROLAR = px que o diário desce,
+// FAIXA = dias que a faixa de cenas anda (negativo = passado). Cada execução com GRUPO inverte o estado do grupo.
 // REVELAR = true mostra eventos ainda não descobertos (só para ver o layout; o padrão do mod é sem spoiler).
 public static class Snippet
 {
     static string ALVO = "medalhao";
     const int DIA = 0;
+    static bool ANTES = false;
+    static string GRUPO = "";
+    static int ROLAR = 0;
+    static int FAIXA = 0;
     const bool REVELAR = false;
 
     static object Plugin() => AccessTools.Property(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance.GetType(), "Hud").GetValue(Chainloader.PluginInfos["mullervgs.gk2.hudplus"].Instance);
@@ -63,7 +69,12 @@ public static class Snippet
                 if (Time.realtimeSinceStartup - t1 > 0.1f) Call(tab, "TestOpen", (int?)null);
             }
             int today = MainGame.Instance.GameSave.environmentData.Day;
-            Call(tab, "TestHover", (int?)(today + DIA));
+            Call(tab, "TestHover", (int?)(ANTES ? int.MinValue : today + DIA));
+            yield return null;
+            yield return null;
+            if (FAIXA != 0) Call(tab, "TestScroll", FAIXA * 96);
+            if (GRUPO != "") Call(tab, "TestGroup", GRUPO);
+            if (ROLAR != 0) Call(tab, "TestJournalScroll", ROLAR);
             yield return null;
             yield return null;
             yield return Call(tab, "Describe").ToString();

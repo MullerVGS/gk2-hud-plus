@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.RegularExpressions;
 using GK2Hud.Calendar;
 using GK2Hud.Tooltips;
 using LazyBearTechnology;
@@ -116,42 +117,97 @@ namespace GK2Hud.Journal
 
         private static string Num(Styles s, string v) => s.Description.ApplyStyleToString(v) ?? v;
 
+        /// <summary>Tooltip completo do GK2Hud da coisa (receita, perk, construção), ou null quando a linha não tem um.</summary>
+        private static List<LazyWidgetDataBase> EntityTooltip(JournalLine l)
+        {
+            Entity e = EntityFor(l.Kind, l.Id);
+            if (e == null || TooltipFeature.Current == null) return null;
+            List<LazyWidgetDataBase> full = TooltipFeature.Current.Content.Build(e);
+            return full != null && full.Count > 0 ? full : null;
+        }
+
+        /// <summary>Tecnologia: o que veio junto com ela (mesmo momento): receitas e construções como links (fixe para abrir).</summary>
+        private static string CameWith(JournalLine l, Styles s, int max = 1000000)
+        {
+            JournalTracker j = JournalTracker.Current;
+            JournalEntry me = j?.Find(l.Kind, l.Id, out _);
+            if (me == null) return null;
+            List<string> with = j.Entries.Where(x => x.d == me.d && System.Math.Abs(x.t - me.t) < 0.0001f && (x.k == JournalKinds.Craft || x.k == JournalKinds.Building))
+                .Select(x => LinkFor(x.k, x.id)).Where(x => x != null).Distinct().ToList();
+            if (with.Count == 0) return null;
+            string more = with.Count > max ? " +" + (with.Count - max) : "";
+            return s.SmallSelected.ApplyStyleToString(CalendarL10n.T("j_came_with") + ":") + " " + string.Join(", ", with.Take(max)) + more;
+        }
+
         /// <summary>Conteúdo do tooltip de uma linha: o tooltip completo do GK2Hud quando a coisa tem um.</summary>
         public static List<LazyWidgetDataBase> Tooltip(JournalLine l)
         {
             Styles s = Styles.Read();
             if (s == null) return null;
             if (l.Sermon != null) return SermonTooltip(l, s);
-            Entity e = EntityFor(l.Kind, l.Id);
-            if (e != null && TooltipFeature.Current != null)
-            {
-                List<LazyWidgetDataBase> full = TooltipFeature.Current.Content.Build(e);
-                if (full != null && full.Count > 0) return full;
-            }
+            List<LazyWidgetDataBase> full = EntityTooltip(l);
+            if (full != null) return full;
             var list = new List<LazyWidgetDataBase> { new UITooltipTextWidgetData(l.Name, TextAlignmentOptions.Center, s.Header), new UITooltipSeparatorWidgetData() };
             string desc = Description(l.Kind, l.Id);
             if (desc != null) list.Add(new UITooltipTextWidgetData(desc, TextAlignmentOptions.Center, s.Description));
             if (l.Kind == JournalKinds.Tech)
             {
-                // O que veio junto com a tech (mesmo momento): receitas e construções como links (fixe para abrir).
-                JournalTracker j = JournalTracker.Current;
-                JournalEntry me = j?.Find(l.Kind, l.Id, out _);
-                if (me != null)
+                string with = CameWith(l, s);
+                if (with != null)
                 {
-                    List<string> with = j.Entries.Where(x => x.d == me.d && System.Math.Abs(x.t - me.t) < 0.0001f && (x.k == JournalKinds.Craft || x.k == JournalKinds.Building))
-                        .Select(x => LinkFor(x.k, x.id)).Where(x => x != null).Distinct().ToList();
-                    if (with.Count > 0)
-                    {
-                        if (!(list[list.Count - 1] is UITooltipSeparatorWidgetData)) list.Add(new UITooltipSeparatorWidgetData());
-                        list.Add(new UITooltipTextWidgetData(s.SmallSelected.ApplyStyleToString(CalendarL10n.T("j_came_with") + ":") + " " + string.Join(", ", with),
-                            TextAlignmentOptions.Center, s.Small));
-                    }
+                    if (!(list[list.Count - 1] is UITooltipSeparatorWidgetData)) list.Add(new UITooltipSeparatorWidgetData());
+                    list.Add(new UITooltipTextWidgetData(with, TextAlignmentOptions.Center, s.Small));
                 }
             }
             if (!(list[list.Count - 1] is UITooltipSeparatorWidgetData)) list.Add(new UITooltipSeparatorWidgetData());
             list.Add(new UITooltipTextWidgetData(KindLabel(l.Kind) + " · " + When(l.Kind, l.Id), TextAlignmentOptions.Center, s.Small));
             Names.Scrub(list);
             return list;
+        }
+
+        private static readonly Regex AnyTag = new Regex("<[^>]+>");
+        private static readonly Regex LinkTags = new Regex("</?link[^>]*>");
+
+        /// <summary>
+        /// O texto de apoio de uma anotação, o mesmo que o tooltip dela mostra: o resultado do sermão, o texto da quest, o que a
+        /// receita/perk/construção é (primeiro bloco do tooltip completo, depois do título) e, na tecnologia, o que veio com ela.
+        /// A lista do que veio com a tecnologia é cortada em 10 nomes ("+N"); o tooltip mostra tudo. Null quando o jogo não tem descrição.
+        /// </summary>
+        public static string DescriptionOf(JournalLine l)
+        {
+            if (l.Sermon != null) return SermonDetail(l.Sermon);
+            string text;
+            List<LazyWidgetDataBase> full = EntityTooltip(l);
+            if (full != null) text = FirstBlock(full, l.Name);
+            else
+            {
+                var parts = new List<string>();
+                string desc = Description(l.Kind, l.Id);
+                if (desc != null) parts.Add(desc);
+                Styles s = Styles.Read();
+                // Hora aproximada = lote anotado de uma vez (várias tecnologias no mesmo instante): a lista seria a mesma em
+                // todas e não diz o que cada uma liberou. Só entra quando a hora é exata.
+                string with = l.Kind == JournalKinds.Tech && !l.Approx && s != null ? CameWith(l, s, 10) : null;
+                if (with != null) parts.Add(with);
+                text = parts.Count > 0 ? string.Join("\n", parts) : null;
+            }
+            if (string.IsNullOrWhiteSpace(text)) return null;
+            text = LinkTags.Replace(text, "");
+            return Names.IsDevText(text) ? null : text;
+        }
+
+        /// <summary>Textos do primeiro bloco depois do título (até o próximo separador) de um tooltip montado.</summary>
+        private static string FirstBlock(List<LazyWidgetDataBase> list, string name)
+        {
+            int i = list.FindIndex(d => d is UITooltipSeparatorWidgetData);
+            if (i < 0) return null;
+            var texts = new List<string>();
+            // "Desbloqueado: Dia N" é a linha do próprio diário (o tooltip a repete): não descreve a coisa.
+            string[] own = { CalendarL10n.T("j_unlocked") + ":", CalendarL10n.T("j_gained") + ":", CalendarL10n.T("j_recipe") + ":" };
+            for (i++; i < list.Count && !(list[i] is UITooltipSeparatorWidgetData); i++)
+                if (list[i] is UITooltipTextWidgetData t && !string.IsNullOrWhiteSpace(t.Text) && t.Text != name
+                    && !own.Any(o => AnyTag.Replace(t.Text, "").TrimStart().StartsWith(o))) texts.Add(t.Text);
+            return texts.Count > 0 ? string.Join("\n", texts) : null;
         }
 
         private static string LinkFor(string kind, string id)
