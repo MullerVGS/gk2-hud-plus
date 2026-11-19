@@ -6,7 +6,7 @@
   gameplay docs/media/reddit/gameplay.mp4: clipe curto a 60 qps com as tomadas de tela inteira (roteiro em GAMEPLAY),
            gravadas antes com `gk2 rec-clip <demo> 0,0,1920,1080 <nome> --fps 60 --escala 2 --tomada`
 
-Uso: showcase.py <repo> [webp|trailer|gameplay|tudo]
+Uso: showcase.py <repo> [webp [Id ...]|trailer|gameplay|tudo]
 """
 import os
 import subprocess
@@ -171,7 +171,7 @@ if what == "gameplay":
     gameplay()
 if what in ("webp", "tudo"):
     os.makedirs(SHOWCASE, exist_ok=True)
-    ids = sorted(f[:-4] for f in os.listdir(MEDIA) if f.endswith(".mp4"))
+    ids = sys.argv[3:] or sorted(f[:-4] for f in os.listdir(MEDIA) if f.endswith(".mp4"))
     with ThreadPoolExecutor(6) as pool:
         print("webp:", " ".join(pool.map(webp, ids)))
 if what in ("trailer", "tudo"):

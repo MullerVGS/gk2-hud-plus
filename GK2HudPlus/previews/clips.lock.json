@@ -17,7 +17,11 @@
       "tools/snippet/DemoKit.cs": "26d68e222f910497",
       "tools/snippet/Slots.cs": "60719f4e37c234dd"
     },
-    "game": "1.012.7"
+    "game": "1.012.7",
+    "media": {
+      "webm": "282d37810b1adbd8",
+      "webp": "d836c571cef5d7ef"
+    }
   },
   "Hud": {
     "date": "2026-11-15",
@@ -33,7 +37,11 @@
       "tools/snippet/DemoKit.cs": "26d68e222f910497",
       "tools/snippet/Slots.cs": "60719f4e37c234dd"
     },
-    "game": "1.012.7"
+    "game": "1.012.7",
+    "media": {
+      "webm": "e2c0905780c82573",
+      "webp": "42b7d4edeaee9846"
+    }
   },
   "HudDayPlate": {
     "date": "2026-11-15",
@@ -48,7 +56,11 @@
       "tools/snippet/DemoKit.cs": "26d68e222f910497",
       "tools/snippet/Slots.cs": "60719f4e37c234dd"
     },
-    "game": "1.012.7"
+    "game": "1.012.7",
+    "media": {
+      "webm": "60ab50fcbed3a743",
+      "webp": "7e0d062f28e765a6"
+    }
   },
   "HudShowMax": {
     "date": "2026-11-19",
@@ -64,7 +76,11 @@
       "tools/snippet/DemoKit.cs": "26d68e222f910497",
       "tools/snippet/Slots.cs": "60719f4e37c234dd"
     },
-    "game": "1.012.7"
+    "game": "1.012.7",
+    "media": {
+      "webm": "4546886edabc9eb7",
+      "webp": "fe85d303aaacf9a3"
+    }
   },
   "Journal": {
     "date": "2026-11-17",
@@ -80,7 +96,11 @@
       "tools/snippet/DemoKit.cs": "26d68e222f910497",
       "tools/snippet/Slots.cs": "60719f4e37c234dd"
     },
-    "game": "1.012.7"
+    "game": "1.012.7",
+    "media": {
+      "webm": "3e0213e9c41ec29f",
+      "webp": "90bd90023e8ca122"
+    }
   },
   "Map": {
     "date": "2026-11-18",
@@ -97,7 +117,11 @@
       "tools/snippet/DemoKit.cs": "26d68e222f910497",
       "tools/snippet/Slots.cs": "60719f4e37c234dd"
     },
-    "game": "1.012.7"
+    "game": "1.012.7",
+    "media": {
+      "webm": "836eb9fc7909d42c",
+      "webp": "0707df35dd5b581c"
+    }
   },
   "MapOrders": {
     "date": "2026-11-19",
@@ -112,7 +136,11 @@
       "tools/snippet/DemoKit.cs": "26d68e222f910497",
       "tools/snippet/Slots.cs": "60719f4e37c234dd"
     },
-    "game": "1.012.7"
+    "game": "1.012.7",
+    "media": {
+      "webm": "341dc3c2a24a387a",
+      "webp": "a8a0b7e64c3183f4"
+    }
   },
   "MapPlaces": {
     "date": "2026-11-18",
@@ -135,7 +163,11 @@
       "tools/snippet/DemoKit.cs": "26d68e222f910497",
       "tools/snippet/Slots.cs": "60719f4e37c234dd"
     },
-    "game": "1.012.7"
+    "game": "1.012.7",
+    "media": {
+      "webm": "a250d5b86e160875",
+      "webp": "a40bf28746ba27d6"
+    }
   },
   "Quests": {
     "date": "2026-11-17",
@@ -152,7 +184,11 @@
       "tools/snippet/DemoKit.cs": "26d68e222f910497",
       "tools/snippet/Slots.cs": "60719f4e37c234dd"
     },
-    "game": "1.012.7"
+    "game": "1.012.7",
+    "media": {
+      "webm": "790d2a930ed9f44f",
+      "webp": "81bb45a7ce46c4ea"
+    }
   },
   "Refund": {
     "date": "2026-11-15",
@@ -166,7 +202,11 @@
       "tools/snippet/DemoKit.cs": "26d68e222f910497",
       "tools/snippet/Slots.cs": "60719f4e37c234dd"
     },
-    "game": "1.012.7"
+    "game": "1.012.7",
+    "media": {
+      "webm": "b5e2e3837788ee65",
+      "webp": "0d0fc5095fd5bd6a"
+    }
   },
   "SaveLoad": {
     "date": "2026-11-15",
@@ -186,7 +226,11 @@
       "tools/snippet/DemoKit.cs": "26d68e222f910497",
       "tools/snippet/Slots.cs": "60719f4e37c234dd"
     },
-    "game": "1.012.7"
+    "game": "1.012.7",
+    "media": {
+      "webm": "975b2894621d2f76",
+      "webp": "d4edfd1565a5251a"
+    }
   },
   "Tooltips": {
     "date": "2026-11-18",
@@ -207,7 +251,11 @@
       "tools/snippet/DemoKit.cs": "26d68e222f910497",
       "tools/snippet/Slots.cs": "60719f4e37c234dd"
     },
-    "game": "1.012.7"
+    "game": "1.012.7",
+    "media": {
+      "webm": "3cee047d83116d8e",
+      "webp": "0c8cdfa59707aeba"
+    }
   },
   "Wheel": {
     "date": "2026-11-17",
@@ -225,7 +273,11 @@
       "tools/snippet/DemoKit.cs": "26d68e222f910497",
       "tools/snippet/Slots.cs": "60719f4e37c234dd"
     },
-    "game": "1.012.7"
+    "game": "1.012.7",
+    "media": {
+      "webm": "9aa9cc55c91e41b8",
+      "webp": "e4115c42f8a6e932"
+    }
   },
   "WheelCarousel": {
     "date": "2026-11-19",
@@ -243,10 +295,14 @@
       "tools/snippet/DemoKit.cs": "26d68e222f910497",
       "tools/snippet/Slots.cs": "60719f4e37c234dd"
     },
-    "game": "1.012.7"
+    "game": "1.012.7",
+    "media": {
+      "webm": "fd7e78fd4f0f1d97",
+      "webp": "e07cfbb0ebc7ee26"
+    }
   },
   "WheelSpin": {
-    "date": "2026-11-15",
+    "date": "2026-11-19",
     "files": {
       "GK2Hud/Hud/WheelSpinFeature.cs": "c5e7928a22153a45",
       "clips.txt": "c946f6a4314a92ad",
@@ -256,7 +312,11 @@
       "tools/snippet/DemoKit.cs": "26d68e222f910497",
       "tools/snippet/Slots.cs": "60719f4e37c234dd"
     },
-    "game": "1.012.7"
+    "game": "1.012.7",
+    "media": {
+      "webm": "2b7feb915ec32f5a",
+      "webp": "d4b52abbdedc6a38"
+    }
   },
   "World": {
     "date": "2026-11-15",
@@ -274,6 +334,10 @@
       "tools/snippet/DemoKit.cs": "26d68e222f910497",
       "tools/snippet/Slots.cs": "60719f4e37c234dd"
     },
-    "game": "1.012.7"
+    "game": "1.012.7",
+    "media": {
+      "webm": "6829e2644f2bb416",
+      "webp": "2892fe5ee5412fec"
+    }
   }
 }

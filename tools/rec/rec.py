@@ -5,6 +5,10 @@ Receita de cada clipe em tools/rec/clips.txt; o que foi gravado, com o hash de c
 GK2HudPlus/previews/clips.lock.json. Se o código de uma funcionalidade muda, o clipe dela fica desatualizado e o
 `gk2 check GK2HudPlus` falha até ele ser regravado.
 
+Uma gravação alimenta os dois lados: o preview do menu do jogo (GK2HudPlus/previews/<Id>.webm) e o clipe do README
+(docs/showcase/<Id>.webp, gerado na mesma hora). O lock guarda o hash dos dois; o status acusa clipe do README que não
+é o da última gravação, clipe com receita que o README não mostra e clipe que o README cita e não existe.
+
 Uso: rec.py <gk2> <repo> status [--estrito] | todos | desatualizados | <Id> [<Id> ...]
 """
 import datetime
@@ -21,6 +25,8 @@ args = sys.argv[3:] or ["status"]
 MANIFEST = os.path.join(repo, "tools/rec/clips.txt")
 LOCK = os.path.join(repo, "GK2HudPlus/previews/clips.lock.json")
 PREVIEWS = os.path.join(repo, "GK2HudPlus/previews")
+SHOWCASE = os.path.join(repo, "docs/showcase")
+README = os.path.join(repo, "README.md")
 MODULES = ["GK2Hud/HudModule.cs", "GK2Map/MapModule.cs", "GK2Saves/SavesModule.cs", "GK2ZombieRefund/RefundModule.cs"]
 KIT = "tools/snippet/DemoKit.cs"
 SLOTS = "tools/snippet/Slots.cs"
@@ -63,6 +69,15 @@ def digest(clip):
     return d
 
 
+def file_hash(path):
+    return hashlib.sha256(open(path, "rb").read()).hexdigest()[:16] if os.path.exists(path) else None
+
+
+def media(cid):
+    """Os dois arquivos que saem de uma gravação: preview do jogo e clipe do README."""
+    return {"webm": file_hash(os.path.join(PREVIEWS, cid + ".webm")), "webp": file_hash(os.path.join(SHOWCASE, cid + ".webp"))}
+
+
 def load_lock():
     return json.load(open(LOCK, encoding="utf-8")) if os.path.exists(LOCK) else {}
 
@@ -87,8 +102,16 @@ def status(strict):
             continue
         now, then = digest(c), entry.get("files", {})
         changed = sorted(p for p in set(now) | set(then) if now.get(p) != then.get(p))
+        now_media, readme_text = media(c["id"]), open(README, encoding="utf-8").read()
         if changed:
             print(f"- {c['id']}: DESATUALIZADO (mudou {', '.join(changed[:4])}{' …' if len(changed) > 4 else ''}) · gravado em {entry.get('date')}")
+            problems += 1
+        elif now_media != entry.get("media"):
+            which = "do README (docs/showcase)" if now_media["webm"] == (entry.get("media") or {}).get("webm") else "do jogo (previews)"
+            print(f"- {c['id']}: o clipe {which} não é o da última gravação: gk2 rec {c['id']}")
+            problems += 1
+        elif f"docs/showcase/{c['id']}.webp" not in readme_text:
+            print(f"- {c['id']}: gravado, mas o README.md não mostra docs/showcase/{c['id']}.webp")
             problems += 1
         else:
             print(f"- {c['id']}: ok · gravado em {entry.get('date')} · jogo {entry.get('game', '?')}")
@@ -96,6 +119,9 @@ def status(strict):
         if fid not in known:
             print(f"- {fid}: funcionalidade sem receita de clipe em tools/rec/clips.txt")
             problems += 1
+    for cited in sorted(set(re.findall(r"docs/showcase/(\w+)\.webp", open(README, encoding="utf-8").read())) - known):
+        print(f"- {cited}: o README.md cita docs/showcase/{cited}.webp, que não tem receita em tools/rec/clips.txt")
+        problems += 1
     print(f"{len(clips)} clipes, {problems} problema(s)")
     if strict and problems:
         sys.exit(1)
@@ -138,7 +164,10 @@ def record(ids):
         r = subprocess.run([gk2, "rec-clip", os.path.join(repo, demo), c["region"], cid] + consts)
         if r.returncode:
             sys.exit(f"{cid}: gravação falhou")
-        lock[cid] = {"files": digest(c), "date": datetime.date.today().isoformat(), "game": version}
+        # O clipe do README sai da mesma gravação (docs/media/<Id>.mp4) que o preview do jogo.
+        if subprocess.run(["python3", os.path.join(repo, "tools/rec/showcase.py"), repo, "webp", cid]).returncode:
+            sys.exit(f"{cid}: clipe do README falhou")
+        lock[cid] = {"files": digest(c), "media": media(cid), "date": datetime.date.today().isoformat(), "game": version}
         json.dump(lock, open(LOCK, "w", encoding="utf-8"), indent=2, ensure_ascii=False, sort_keys=True)
         open(LOCK, "a").write("\n")
     run("docs/cenarios/fechar-janelas.cs", "fim")
@@ -153,7 +182,7 @@ elif args[0] == "desatualizados":
     stale = []
     for c in manifest():
         e = lock.get(c["id"])
-        if e is None or not os.path.exists(os.path.join(PREVIEWS, c["id"] + ".webm")) or e.get("files") != digest(c):
+        if e is None or e.get("files") != digest(c) or e.get("media") != media(c["id"]):
             stale.append(c["id"])
     print("desatualizados: " + (", ".join(stale) or "nenhum"))
     if stale:
