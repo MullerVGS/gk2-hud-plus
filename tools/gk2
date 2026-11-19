@@ -216,6 +216,9 @@ EOF
     fi
     echo "$res" | grep -q '"ok": *true' || { api "/rec/stop?out=$(urlenc "$(winpath "$out")")" >/dev/null; rm -f "$out.rgb"; echo "$res" | tail -c 600; die "cenário falhou; gravação descartada"; }
     echo "$res" | python3 -c 'import json,sys; print("cenário:", json.load(sys.stdin).get("result"))' 2>/dev/null || true
+    # Demo que desistiu no meio (item fora da tela, funcionalidade desligada) termina sem "demo ... ok": o clipe não presta.
+    echo "$res" | python3 -c 'import json,re,sys; sys.exit(0 if re.match(r"demo .* ok", str(json.load(sys.stdin).get("result"))) else 1)' || {
+      api "/rec/stop?out=$(urlenc "$(winpath "$out")")" >/dev/null; rm -f "$out.rgb"; die "demo não terminou com \"demo ... ok\"; gravação descartada"; }
     sleep "$depois"
     api "/rec/stop?out=$(urlenc "$(winpath "$out")")" | pretty | grep -E '"frames"|"w"|"h"' | tr -d ' \n'; echo
     read -r W H F < <(python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print(d["w"], d["h"], d["fps"])' "$out.json")

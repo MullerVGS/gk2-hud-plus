@@ -3,7 +3,7 @@
 # Fontes = arquivos cujo comportamento o clipe mostra: se mudarem, o clipe fica desatualizado e o `gk2 check GK2HudPlus` falha.
 # Região: até 588x384 aparece em tamanho real no painel; até 1176x768, em meio tamanho (pixel de arte = 1 px).
 # Só conteúdo do começo do jogo (spoiler). Todo lote começa do save de teste limpo (gk2 save reset restaura Steam_1 e Steam_2).
-Tooltips | docs/cenarios/fechar-janelas.cs; docs/cenarios/hud-exterior-dia.cs | docs/cenarios/demo-tooltips.cs | 320,96,900,520 | GK2Hud/Tooltips/*.cs GK2Hud/Names.cs
+Tooltips | docs/cenarios/fechar-janelas.cs; docs/cenarios/hud-exterior-dia.cs | docs/cenarios/demo-tooltips.cs | 300,110,900,560 | GK2Hud/Tooltips/*.cs GK2Hud/Names.cs
 World | docs/cenarios/fechar-janelas.cs; docs/cenarios/hud-exterior-dia.cs | docs/cenarios/demo-world.cs | 200,180,1176,600 | GK2Hud/World/*.cs GK2Hud/Tooltips/TooltipContent.cs GK2Hud/Names.cs
 Hud | docs/cenarios/fechar-janelas.cs; docs/cenarios/hud-exterior-dia.cs; docs/cenarios/gk2hud-recursos.cs | docs/cenarios/demo-hud.cs | 0,0,560,200 | GK2Hud/Hud/HudFeature.cs GK2Hud/Hud/HudConfig.cs GK2Hud/Hud/HudFader.cs
 HudDayPlate | docs/cenarios/fechar-janelas.cs; docs/cenarios/hud-exterior-dia.cs | docs/cenarios/demo-dayplate.cs | 0,0,560,240 | GK2Hud/Hud/HudFeature.cs GK2Hud/Hud/HudFader.cs GK2Hud/Hud/HudL10n.cs
