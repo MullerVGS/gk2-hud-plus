@@ -135,6 +135,18 @@ Pacote público (`GK2HudPlus/`, `mullervgs.gk2.hudplus`, nome `GK2 HUD+`): os mo
   confere os patches), `hudplus-menu.cs` (`abrir` pelo botão da pausa, `trocar` ID, `hover` ID, `rolar` POS,
   `fechar`), `settings.cs`, `mods-nativo.cs`, `guard-desligar.cs` (MOD = GUID do HUD+, PARTE = id da funcionalidade).
 
+## Steam Workshop
+
+O envio é feito de dentro do jogo de verdade, pela conta Steam de quem joga (o green roda como outro app e não publica):
+`"workshopCreatorMode": true` em `Mods/workshop.json`, Shift+F11, título `GK2 HUD+`, tag `Mod`, pasta `Mods/Code/GK2HudPlus`.
+Item novo nasce Unlisted; atualização mantém a visibilidade. Só o HUD+ vai para a Workshop.
+
+- `GK2HudPlus/workshop/`: `_description.bbcode` (página), `_changenote.txt` (nota da versão, reescrita a cada release) e
+  `Thumbnail.png`. O `gk2 promote GK2HudPlus` copia os três para a pasta do item; o jogo não envia arquivos que começam com `_`.
+- A miniatura sai do `gk2 showcase capa` (quadrada, 256 cores, abaixo de 1 MB, limite da Steam).
+- Quem publica não assina o próprio item com a cópia local em `Mods/Code` (duas cópias do mesmo plugin); para testar como
+  assinante, renomear a pasta local com `~` na frente.
+
 ## Tooltips em dois níveis (HUD+ 0.6.x)
 
 Regra: o hover mostra só o que se quer num relance; o resto entra na bolha fixada (`[Tooltips] PinKey`, botão do meio).

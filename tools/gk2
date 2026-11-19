@@ -327,6 +327,9 @@ im.save(sys.argv[1])" "$out" "$crop"
         done
         echo "previews: $(ls "$HERE/$proj/previews/"*.webm | wc -l) clipes"
       fi
+      if [ -d "$HERE/$proj/workshop" ]; then   # página da Workshop: miniatura, descrição e nota (o Workshop Creator do jogo, Shift+F11, lê da pasta do item)
+        cp "$HERE/$proj/workshop/"* "$pack/"; echo "workshop: $(ls "$HERE/$proj/workshop" | tr '\n' ' ')"
+      fi
     fi
     case "$proj" in GK2HotLoader|GK2DevBridge) echo "$proj não se recarrega a quente: vale ao reabrir" ;;
       *) [ "$target" = "--sem-hot" ] && { echo "sem hot-reload (mod de gameplay): vale ao reabrir"; sha256sum "$dll"; exit 0; } ;;&

@@ -91,4 +91,12 @@ half = wide.convert("RGB").resize((1280, 640), Image.NEAREST)
 half.save(os.path.join(repo, "docs/showcase/cover.png"), optimize=True)
 half.save(os.path.join(out, "capa-github-1280x640.png"), optimize=True)
 square.convert("RGB").resize((1024, 1024), Image.NEAREST).save(os.path.join(out, "capa-workshop-1024.png"), optimize=True)
-print("capas:", os.path.join(repo, "docs/showcase/cover.png"), out)
+# Miniatura do item da Workshop (versionada; o `gk2 promote` a leva para a pasta do item). A Steam recusa acima de 1 MB:
+# a paleta cai para 256 cores (pixel art, perda mínima) e, se ainda passar, para a metade exata do tamanho.
+thumb_path = os.path.join(repo, "GK2HudPlus/workshop/Thumbnail.png")
+os.makedirs(os.path.dirname(thumb_path), exist_ok=True)
+thumb = square.convert("RGB").resize((1024, 1024), Image.NEAREST)
+thumb.quantize(256, method=Image.MEDIANCUT, dither=Image.NONE).save(thumb_path, optimize=True)
+if os.path.getsize(thumb_path) > 950_000:
+    thumb.resize((512, 512), Image.NEAREST).quantize(256, method=Image.MEDIANCUT, dither=Image.NONE).save(thumb_path, optimize=True)
+print("capas:", os.path.join(repo, "docs/showcase/cover.png"), out, "· miniatura", os.path.getsize(thumb_path), "bytes")

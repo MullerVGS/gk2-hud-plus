@@ -1,0 +1,6 @@
+0.6.2
+- Tooltips in two levels: hovering shows the essentials, pinning (middle click) opens the details.
+- World tooltips use the game's own progress cells; a stuck craft shows the reason and the missing ingredients.
+- Pinned item tooltips show the recipe in item cells; an undiscovered recipe shows as "?".
+- Pinned world tooltips follow the object and stay inside the screen.
+- The pin key can be changed in the game's Controls window.
