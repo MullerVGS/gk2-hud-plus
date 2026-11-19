@@ -109,7 +109,8 @@ Pacote público (`GK2HudPlus/`, `mullervgs.gk2.hudplus`, nome `GK2 HUD+`): os mo
   falha. Todo lote começa com `gk2 save reset` + `recarregar.cs` (o relógio do green anda; calendário e diário dependem
   do dia) e cada receita prepara a cena (`hud-exterior-dia.cs`: quintal ao meio-dia). Região: até 588×384 em tamanho
   real no painel, até 1176×768 em meio tamanho (pixel de arte = 1 px). Mudou o comportamento de propósito? Regrave e
-  olhe a tira de quadros antes de commitar.
+  olhe a tira de quadros antes de commitar. Suba a `Version` antes de regravar: o `Plugin.cs` do avulso é fonte dos clipes da
+  pasta, e subir depois deixa o clipe defasado de novo.
 - **Save de gravação** (`Steam_2`, snapshot `GK2-green-saves/inicio`): jogo novo, ainda na masmorra da abertura, com
   "Certificate, Please" concluída antes do diário e "What the Fairy?" concluída ao vivo no dia 1 (o diário tem a
   anotação). Os clipes de árvore de quests, calendário, diário e medalhão saem dele, sem spoiler. Feito com
@@ -229,8 +230,17 @@ Mod de jogador (`GK2Map/`, `arthur.gk2.map`), só informação, nas duas janelas
 - **Custo de construção (0.2.1)**: placas de reparo da cidade (`repair_sign_*`, `TownBuildingPlace`) mostram no hover o
   que o jogo oferece erguer ali (`TownBuildingWgoComponent.GetAvailableBuildings`, que respeita o que está liberado) e o
   custo de cada opção no widget nativo `UITooltipNeedsItemWidgetData(needItems, WorkerMultiInventory)`.
+- **Pedidos (HUD+ 0.5.0, opção `[Map] Orders`)**: o ícone da Pride no mapa (`UIMapDayActivityIcon`, dica
+  `UIMapActivityIconHint.ShowAsDayIcon`) mostra cada pedido só como caixote genérico e "0/10". Com a opção, o hover abre o
+  `UITooltip` nativo: título `ui_orders`, células `UITooltipNeedsItemWidgetData((CraftDef)null, inventário, itens)` (com
+  CraftDef nulo a célula é "item que falta": entregue/pedido, vermelho até completar; o construtor só com itens desenha
+  sem o "entregue"), até 2 por fileira (3 passam da moldura), e uma linha por pedido com nome e recompensa na ordem das
+  células. O "entregue" é a conta de `UIVendorOrdersWorldWidgetData.TryCreate` (paletes do armazém + porão +
+  `VendorOrderData.Count`) num `Inventory` falso por fileira; o mesmo item pedido duas vezes vai para outra fileira.
+  Sem clipe próprio (o save de gravação não tem o ícone): usa o do Map.
 - Cenários: `gk2map-zoom.cs`, `gk2map-local.cs` (hover/entrar/scroll/sair/lista), `gk2map-inspecionar.cs`,
-  `gk2map-estado.cs` (lugar, nível, pilha, portas; scroll sobre um alvo), `gk2map-ir.cs` (vista externa num objeto).
+  `gk2map-estado.cs` (lugar, nível, pilha, portas; scroll sobre um alvo), `gk2map-ir.cs` (vista externa num objeto),
+  `gk2map-pedidos.cs` (rola até o ícone dos pedidos e passa o mouse; o save precisa de pedido aceito).
 - O overlay de FPS de terceiros nos prints do blue marcava 11–14; a telemetria do blue (`gk2_fps`) no mesmo período
   ficou em 84–238. Consultar: `ssh vps 'docker exec victoriametrics wget -qO- "http://127.0.0.1:8428/api/v1/query_range?..."'`.
 - A placa "Портовый район" no canto do green é do jogo (aparece sem o mod ao carregar o save de teste na mina).

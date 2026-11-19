@@ -67,9 +67,9 @@
     "game": "1.012.7"
   },
   "Map": {
-    "date": "2026-11-15",
+    "date": "2026-11-18",
     "files": {
-      "GK2Map/MapModule.cs": "8d7577dada61e3b6",
+      "GK2Map/MapModule.cs": "8a6d2d7278307f4d",
       "GK2Map/MapZoom.cs": "52ec3855c9d322d5",
       "GK2Map/PlaceView.cs": "d672a3fd3a5294e4",
       "GK2Map/Places.cs": "ee5418952960f700",
@@ -84,16 +84,17 @@
     "game": "1.012.7"
   },
   "MapPlaces": {
-    "date": "2026-11-15",
+    "date": "2026-11-18",
     "files": {
       "GK2Map/L10n.cs": "b9971b0b9f049693",
-      "GK2Map/MapModule.cs": "8d7577dada61e3b6",
+      "GK2Map/MapModule.cs": "8a6d2d7278307f4d",
       "GK2Map/MapZoom.cs": "52ec3855c9d322d5",
+      "GK2Map/Orders.cs": "e8368032028c75cc",
       "GK2Map/Outline.cs": "232b01b4333ea851",
-      "GK2Map/PlaceInspect.cs": "3c445805f6e5bea0",
+      "GK2Map/PlaceInspect.cs": "d0d83306174d0ecb",
       "GK2Map/PlaceView.cs": "d672a3fd3a5294e4",
       "GK2Map/Places.cs": "ee5418952960f700",
-      "GK2Map/Plugin.cs": "ee38b9eed4c01e57",
+      "GK2Map/Plugin.cs": "50d83216e6b82771",
       "GK2Map/TerrainMap.cs": "900ee922d691a2a3",
       "GK2Map/ZoneInfo.cs": "1a9b89e6b50720ae",
       "clips.txt": "8db060cad52df470",

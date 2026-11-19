@@ -25,6 +25,10 @@ namespace GK2Map
         internal readonly ModHost Host;
         internal ConfigEntry<bool> ZoomEnabled;
         internal ConfigEntry<bool> PlacesEnabled;
+        internal ConfigEntry<bool> OrdersEnabled;
+
+        /// <summary>Dica nativa do ícone da Pride cujo lugar o tooltip dos pedidos ocupa agora.</summary>
+        internal UIMapActivityIconHint OrdersShownBy;
 
         /// <summary>Nível de zoom atual do mapa (índice em <see cref="MapZoom.Levels"/>), comum às duas janelas de mapa.</summary>
         internal int ZoomIndex = MapZoom.DefaultLevel;
@@ -74,14 +78,18 @@ namespace GK2Map
                         postfix: new HarmonyMethod(typeof(MapModule), nameof(RedrawPostfix)));
                     foreach (MapPageWidget w in Object.FindObjectsByType<MapPageWidget>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
                         Attach(w);
+                    Orders.Patch(h);
                     return this;
-                }, dispose: m => m.RestoreAll());
+                }, dispose: m => { Orders.Dispose(); m.RestoreAll(); });
             ZoomEnabled = host.Option(map, "MapZoom", "Map", "Zoom", true,
                 new Loc("Zoom", "Zoom"),
                 new Loc("Zoom the map with the mouse wheel.", "Zoom no mapa com o scroll do mouse.")).Toggle;
             PlacesEnabled = host.Option(map, "MapPlaces", "Map", "Places", true,
                 new Loc("Look inside places", "Ver os locais por dentro"),
                 new Loc("Zoom into a yellow arrow to peek inside that place.", "Aproxime numa setinha amarela para espiar o local por dentro.")).Toggle;
+            OrdersEnabled = host.Option(map, "MapOrders", "Map", "Orders", true,
+                new Loc("Order details", "Detalhes dos pedidos"),
+                new Loc("Hover the town orders icon on the map to see the item of each order.", "Passe o mouse no ícone dos pedidos da cidade, no mapa, para ver o item de cada pedido.")).Toggle;
             host.ImportLegacy(LegacyGuid);
         }
 

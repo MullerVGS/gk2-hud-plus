@@ -436,7 +436,7 @@ namespace GK2Map
             list.Add(new UITooltipTextWidgetData(sb.ToString(), TextAlignmentOptions.Center, text));
         }
 
-        private static TextStyle Style(string field)
+        internal static TextStyle Style(string field)
         {
             if (!StyleFields.TryGetValue(field, out FieldInfo f)) StyleFields[field] = f = AccessTools.Field(typeof(UITooltip), field);
             object tip = TooltipInstance.GetValue(null);

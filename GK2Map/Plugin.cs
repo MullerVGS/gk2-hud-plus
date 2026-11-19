@@ -10,7 +10,7 @@ namespace GK2Map
     {
         public const string Guid = MapModule.LegacyGuid;
         public const string Name = "GK2 Map";
-        public const string Version = "0.3.0";
+        public const string Version = "0.4.0";
 
         internal ModHost Host { get; private set; }
         internal MapModule Module { get; private set; }
