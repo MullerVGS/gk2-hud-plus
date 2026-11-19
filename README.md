@@ -9,6 +9,7 @@
 </p>
 
 <p align="center">
+  <a href="https://steamcommunity.com/sharedfiles/filedetails/?id=3842328876"><b>Steam Workshop</b></a> ·
   <a href="#features"><b>Features</b></a> ·
   <a href="#install"><b>Install</b></a> ·
   <a href="#after-a-game-update"><b>Game updates</b></a> ·
@@ -117,7 +118,7 @@ turns on or off on the spot. Settings live in `BepInEx/config/mullervgs.gk2.hudp
 
 Graveyard Keeper 2 ships its own mod loader (BepInEx 5), so there is nothing else to install.
 
-**Steam Workshop** (recommended): subscribe to GK2 HUD+ and start the game. The game installs and updates the mod by
+**Steam Workshop** (recommended): subscribe to [GK2 HUD+ on the Workshop](https://steamcommunity.com/sharedfiles/filedetails/?id=3842328876) and start the game. The game installs and updates the mod by
 itself.
 
 **Manual**:
