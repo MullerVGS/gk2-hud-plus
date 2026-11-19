@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Capa do projeto a partir de prints reais do green (.shots/*-capa-<nome>.png, o mais recente de cada).
 
-Prints: capa-limpo (quintal), capa-mundo (demo-world FIM=primeiro), capa-medalhao (demo-calendar MODO=medalhao FIM=meio),
+Prints: capa-limpo (quintal), capa-mundo (demo-world FIM=primeiro, fixado com gk2hud-mundo-fixar.cs LINK vazio), capa-medalhao (demo-calendar MODO=medalhao FIM=meio),
 capa-mapa (demo-map MODO=zoom FIM=meio). Saídas: docs/showcase/cover.png (1280x640: topo do README e prévia social do
 GitHub) e docs/media/capa/ (matriz 2560x1280 e quadrada 1024 para a miniatura da Workshop).
 
@@ -59,7 +59,7 @@ def text(draw, xy, s, size, color, anchor="la"):
 
 
 clean, world, wheel, gmap = shot("limpo"), shot("mundo"), shot("medalhao"), shot("mapa")
-tip = world.crop(parchment_box(world, (380, 140, 820, 520)))
+tip = world.crop(parchment_box(world, (380, 140, 820, 760)))
 week = wheel.crop(parchment_box(wheel, (80, 220, 930, 620)))
 window = gmap.crop((308, 118, 1612, 962))
 print("recortes:", tip.size, week.size, window.size)
@@ -68,7 +68,7 @@ print("recortes:", tip.size, week.size, window.size)
 wide = backdrop(clean, (2560, 1280))
 paste(wide, window, (1176, 318))
 paste(wide, week, (1070, 84))
-paste(wide, tip, (836, 838))
+paste(wide, tip, (1176 - tip.width + 60, 1280 - 70 - tip.height))   # sobre o canto da janela, com o pé alinhado a ela
 d = ImageDraw.Draw(wide)
 text(d, (112, 268), "GK2 HUD+", 262, GOLD)
 text(d, (118, 560), "Quality-of-life mods", 92, CREAM)
