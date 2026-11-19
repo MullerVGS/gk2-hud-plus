@@ -84,15 +84,22 @@ turns on or off on the spot. Settings live in `BepInEx/config/mullervgs.gk2.hudp
 
 Graveyard Keeper 2 ships its own mod loader (BepInEx 5), so there is nothing else to install.
 
+**Steam Workshop** (recommended): subscribe to GK2 HUD+ and start the game. The game installs and updates the mod by
+itself.
+
+**Manual**:
+
 1. Download `GK2HudPlus-<version>.zip` from [Releases](../../releases).
 2. Unzip it into the game's save data folder, so that you end up with
    `%USERPROFILE%\AppData\LocalLow\Lazy Bear Games\Graveyard Keeper 2\Mods\Code\GK2HudPlus\modinfo.json`.
-3. Start the game. The mod shows up in the game's Mods window and as a **GK2 HUD+** button in the pause menu.
+3. Start the game.
+
+Either way, the mod shows up in the game's Mods window and as a **GK2 HUD+** button in the pause menu.
 
 Steam Deck and Linux (Proton): set the game's launch options to `WINEDLLOVERRIDES="winhttp=n,b" %command%`, as the
 game asks for any BepInEx plugin.
 
-To remove it, delete the `GK2HudPlus` folder. Your settings stay in `BepInEx/config`.
+To remove it, unsubscribe or delete the `GK2HudPlus` folder. Your settings stay in `BepInEx/config`.
 
 ## After a game update
 
@@ -139,6 +146,11 @@ a .NET SDK container; paths to the game are at the top of the script.
 ```
 gk2 package GK2HudPlus     # dist/GK2HudPlus-<version>.zip
 ```
+
+## License
+
+[MIT](LICENSE). The font used in the trailer captions (Jersey 10) is under the SIL Open Font License, in
+`tools/rec/fonts/`.
 
 ## Disclaimer
 
