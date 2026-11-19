@@ -1,4 +1,6 @@
-<h1 align="center">GK2 HUD+</h1>
+<p align="center">
+  <img src="docs/showcase/cover.png" alt="GK2 HUD+: quality-of-life mods for Graveyard Keeper 2" width="100%">
+</p>
 
 <p align="center">
   Quality-of-life mods for <b>Graveyard Keeper 2</b>, in one plugin.<br>
@@ -6,7 +8,7 @@
 </p>
 
 <p align="center">
-  <img src="docs/showcase/MapPlaces.webp" alt="Zooming from the map into the church" width="588">
+  <img src="docs/showcase/extra/gameplay.webp" alt="World tooltips, the week on the medallion, nested tooltips and the map zooming into a place" width="100%">
 </p>
 
 - **Looks native.** Every window, tooltip and label is built from the game's own UI: same fonts, frames, colors and

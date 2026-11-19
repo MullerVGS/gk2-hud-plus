@@ -164,6 +164,10 @@ def gameplay():
         target = os.path.join(OUT, "gameplay.mp4")
         run(["ffmpeg", "-v", "error", "-y", *inputs, "-filter_complex", ";".join(graph), "-map", f"[{last}]", "-r", "60",
              "-c:v", "libx264", "-crf", "17", "-preset", "slow", "-pix_fmt", "yuv420p", "-movflags", "+faststart", target])
+        # Versão do README: pixel de arte = 1 px, 20 qps.
+        os.makedirs(os.path.join(SHOWCASE, "extra"), exist_ok=True)
+        run(["ffmpeg", "-v", "error", "-y", "-i", target, "-vf", "fps=20,scale=960:540:flags=neighbor", "-c:v", "libwebp_anim",
+             "-lossless", "0", "-q:v", "70", "-compression_level", "3", "-loop", "0", os.path.join(SHOWCASE, "extra/gameplay.webp")])
         print("gameplay:", target)
 
 

@@ -294,11 +294,14 @@ gk2 run <cenario.cs>                             C# dentro do jogo (≈1,5 s): a
 gk2 rec status|todos|desatualizados|<Id>         clipes do menu (receitas em tools/rec/clips.txt); status acusa clipe defasado
 gk2 rec-clip <demo.cs> <x,y,w,h> <Id> [K=V]      grava um clipe avulso: previews/<Id>.webm + docs/media/<Id>.gif/.mp4
 gk2 log [n] [grep] | state | windows | ping
-gk2 showcase [webp|trailer|gameplay]             mídias de divulgação a partir de docs/media/*.mp4: docs/showcase/*.webp (README,
+gk2 showcase [webp|trailer|gameplay|capa]        mídias de divulgação a partir de docs/media/*.mp4: docs/showcase/*.webp (README,
                                                  versionados), docs/media/reddit/trailer.mp4 e gameplay.mp4 (clipe curto a 60 qps das
                                                  tomadas de tela inteira: gk2 rec-clip <demo> 0,0,1920,1080 <nome> --fps 60 --escala 2
                                                  --tomada; roteiros em tools/rec/showcase.py). `gk2 run` não troca constantes (K=V):
                                                  para preparo com constante, tools/update/smoke.py --subst antes
+                                                 `capa`: docs/showcase/cover.png (topo do README e prévia social, 1280x640) e
+                                                 docs/media/capa/ (matriz e quadrada da Workshop), montadas por tools/rec/cover.py
+                                                 com recortes de prints reais (.shots/*-capa-limpo|mundo|medalhao|mapa.png)
 gk2 package <Mod>                                dist/<Mod>-<versão>.zip no layout do jogo (Mods/Code), para a página de releases
 gk2 save snapshot|reset|inicio                   save de teste a partir do blue (reset limpa backups e histórico do GK2Saves e
                                                  restaura o Steam_2 de gravação com o diário; inicio guarda o Steam_2)

@@ -194,7 +194,8 @@ EOF
     python3 "$HERE/tools/rec/rec.py" "$0" "$HERE" "$@" ;;
   showcase)
     # gk2 showcase [webp|trailer|tudo]: mídias de divulgação a partir de docs/media/*.mp4 (ver tools/rec/showcase.py)
-    python3 "$HERE/tools/rec/showcase.py" "$HERE" "${1:-tudo}" ;;
+    if [ "${1:-}" = capa ]; then python3 "$HERE/tools/rec/cover.py" "$HERE"; exit; fi   # prints capa-* em .shots/ (ver cover.py)
+    python3 "$HERE/tools/rec/showcase.py" "$HERE" "${1:-tudo}" "${@:2}" ;;
   package)
     # gk2 package <Proj>: zip no layout do contrato de mods do jogo (descompactar em <dados do jogo>/Mods/Code/)
     proj=${1:?projeto}; dll=$(build "$proj")
@@ -457,7 +458,7 @@ run <arquivo.cs>           executa um cenário C# dentro do jogo (static class S
 shot [nome] [--hideui] [--crop x,y,w,h] [--frames n]   print pelo Unity → .shots/
 rec status|todos|desatualizados|<Id>   clipes do menu do HUD+ (tools/rec/clips.txt); status diz quais ficaram velhos
 rec-clip <demo.cs> <x,y,w,h> <Id> [K=V]   grava um clipe avulso (WebM em previews/, GIF/MP4 em docs/media/)
-showcase [webp|trailer|gameplay] mídias de divulgação: docs/showcase/*.webp (README) e docs/media/reddit/trailer.mp4
+showcase [webp|trailer|gameplay|capa] mídias de divulgação: docs/showcase/*.webp (README) e docs/media/reddit/trailer.mp4
 package <Proj>             dist/<Proj>-<versão>.zip no layout do jogo (Mods/Code), para a página de releases
 winshot [nome]             print pela janela (fallback, sem ponte)
 log [n] [grep] | state | ping | windows | ui [filtro] [prof] [inativos 0|1] | wait [s]
