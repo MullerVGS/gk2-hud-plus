@@ -106,7 +106,11 @@ Pacote público (`GK2HudPlus/`, `mullervgs.gk2.hudplus`, nome `GK2 HUD+`): os mo
   `tools/rec/clips.txt` (preparo, demo, região, fontes) e o que foi gravado fica em `GK2HudPlus/previews/clips.lock.json`
   com o hash de cada fonte, do demo, do preparo e do `DemoKit`. Mudou uma fonte, o clipe fica desatualizado e o
   `gk2 check GK2HudPlus` (logo, o `promote`) falha até `gk2 rec desatualizados`. Funcionalidade nova sem receita também
-  falha. Todo lote começa com `gk2 save reset` + `recarregar.cs` (o relógio do green anda; calendário e diário dependem
+  falha. Uma gravação alimenta o jogo e o GitHub: o `gk2 rec` gera na mesma hora o preview do menu
+  (`previews/<Id>.webm`) e o clipe do README (`docs/showcase/<Id>.webp`, versionado), e o lock guarda o hash dos dois.
+  O check também falha se o clipe do README não é o da última gravação, se um clipe com receita não aparece no
+  `README.md` ou se o README cita um clipe sem receita. Funcionalidade nova: receita em `clips.txt`, `gk2 rec <Id>` e
+  uma célula no README com `docs/showcase/<Id>.webp`. Todo lote começa com `gk2 save reset` + `recarregar.cs` (o relógio do green anda; calendário e diário dependem
   do dia) e cada receita prepara a cena (`hud-exterior-dia.cs`: quintal ao meio-dia). Região: até 588×384 em tamanho
   real no painel, até 1176×768 em meio tamanho (pixel de arte = 1 px). Mudou o comportamento de propósito? Regrave e
   olhe a tira de quadros antes de commitar. Suba a `Version` antes de regravar: o `Plugin.cs` do avulso é fonte dos clipes da
