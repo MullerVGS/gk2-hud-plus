@@ -206,13 +206,15 @@ EOF
     python3 -c 'import shutil,sys;shutil.make_archive(sys.argv[1][:-4],"zip",sys.argv[2])' "$out" "$tmp"; rm -rf "$tmp"
     echo "pacote: $out"; sha256sum "$out" ;;
   rec-clip)
-    # gk2 rec-clip <cenario.cs> <x,y,w,h> <nome> [--fps n] [--antes s] [--depois s] [K=V ...]
+    # gk2 rec-clip <cenario.cs> <x,y,w,h> <nome> [--fps n] [--antes s] [--depois s] [--escala n] [--tomada] [K=V ...]
+    # --tomada: gravação de divulgação (docs/media/tomadas/<nome>.mp4, nada em previews/); --escala 2 guarda 1 pixel de
+    # arte por pixel (um quarto da memória), o que deixa gravar a tela inteira a 60 qps.
     # Grava um clipe da região (px de tela, alinhada em pares) enquanto o cenário roda. Saídas: GK2HudPlus/previews/<nome>.webm
     # (preview do menu, VP8) e docs/media/<nome>.gif e .mp4 (páginas). K=V troca constantes do cenário, como no smoke.
     src=${1:?cenário}; reg=${2:?x,y,w,h}; nome=${3:?nome}; shift 3
-    fps=20; antes=0.4; depois=0.6; subs=()
+    fps=20; antes=0.4; depois=0.6; subs=(); escala=1; tomada=0
     while [ $# -gt 0 ]; do case "$1" in
-      --fps) fps=$2; shift ;; --antes) antes=$2; shift ;; --depois) depois=$2; shift ;; *=*) subs+=("$1") ;; *) die "opção desconhecida: $1" ;;
+      --fps) fps=$2; shift ;; --escala) escala=$2; shift ;; --tomada) tomada=1 ;; --antes) antes=$2; shift ;; --depois) depois=$2; shift ;; *=*) subs+=("$1") ;; *) die "opção desconhecida: $1" ;;
     esac; shift; done
     IFS=, read -r rx ry rw rh <<<"$reg"; rx=$((rx/2*2)); ry=$((ry/2*2)); rw=$((rw/2*2)); rh=$((rh/2*2))
     tmp="$HERE/.shots/rec-cenario.cs"; mkdir -p "$(dirname "$tmp")"   # fora de tools/snippet/work (o host compila a pasta inteira)
@@ -222,7 +224,7 @@ EOF
     cp "$tmp" "$HERE/tools/snippet/work/Snippet.cs"; refs >&2; builder
     docker exec -w /src/tools/snippet "$BUILDER" dotnet build -c Release -nologo -v q -clp:NoSummary >&2 || die "cenário não compilou"
     dll=$(stage "$HERE/tools/snippet/bin/Release/Snippet.dll" snippet)
-    api "/rec/start?x=$rx&y=$ry&w=$rw&h=$rh&fps=$fps&scale=1" >/dev/null || die "gravador não iniciou (DevBridge 0.2.0? rode gk2 bridge)"
+    api "/rec/start?x=$rx&y=$ry&w=$rw&h=$rh&fps=$fps&scale=$escala&max=$((fps * 30))" >/dev/null || die "gravador não iniciou (DevBridge 0.2.0? rode gk2 bridge)"
     sleep "$antes"
     if ! res=$(GK2_TIMEOUT=180 api "/run?path=$(urlenc "$dll")&timeout=120"); then
       api "/rec/stop?out=$(urlenc "$(winpath "$out")")" >/dev/null; rm -f "$out.rgb"; echo "$res" | tail -5; die "cenário falhou; gravação descartada"
@@ -237,6 +239,11 @@ EOF
     read -r W H F < <(python3 -c 'import json,sys; d=json.load(open(sys.argv[1])); print(d["w"], d["h"], d["fps"])' "$out.json")
     mkdir -p "$HERE/GK2HudPlus/previews" "$HERE/docs/media"
     raw=(-loglevel error -y -f rawvideo -pix_fmt rgb24 -s "${W}x${H}" -r "$F" -i "$out.rgb")
+    if [ "$tomada" = 1 ]; then   # tomada de divulgação: só o MP4, de volta ao tamanho de tela, sem tocar nos previews
+      mkdir -p "$HERE/docs/media/tomadas"
+      ffmpeg "${raw[@]}" -vf "scale=iw*$escala:ih*$escala:flags=neighbor" -c:v libx264 -crf 14 -preset medium -pix_fmt yuv420p "$HERE/docs/media/tomadas/$nome.mp4" || die "ffmpeg mp4 falhou"
+      rm -f "$out.rgb"; ls -la "$HERE/docs/media/tomadas/$nome.mp4" | awk '{print $5, $9}'; exit 0
+    fi
     ffmpeg "${raw[@]}" -c:v libvpx -crf 10 -b:v 1M -auto-alt-ref 0 -pix_fmt yuv420p "$HERE/GK2HudPlus/previews/$nome.webm" || die "ffmpeg webm falhou"
     ffmpeg "${raw[@]}" -c:v libx264 -crf 16 -preset slow -pix_fmt yuv420p -movflags +faststart "$HERE/docs/media/$nome.mp4" || die "ffmpeg mp4 falhou"
     ffmpeg "${raw[@]}" -vf "scale=iw/2:ih/2:flags=neighbor,split[a][b];[a]palettegen=stats_mode=diff[p];[b][p]paletteuse=dither=none" "$HERE/docs/media/$nome.gif" || die "ffmpeg gif falhou"
@@ -450,7 +457,7 @@ run <arquivo.cs>           executa um cenário C# dentro do jogo (static class S
 shot [nome] [--hideui] [--crop x,y,w,h] [--frames n]   print pelo Unity → .shots/
 rec status|todos|desatualizados|<Id>   clipes do menu do HUD+ (tools/rec/clips.txt); status diz quais ficaram velhos
 rec-clip <demo.cs> <x,y,w,h> <Id> [K=V]   grava um clipe avulso (WebM em previews/, GIF/MP4 em docs/media/)
-showcase [webp|trailer]    mídias de divulgação: docs/showcase/*.webp (README) e docs/media/reddit/trailer.mp4
+showcase [webp|trailer|gameplay] mídias de divulgação: docs/showcase/*.webp (README) e docs/media/reddit/trailer.mp4
 package <Proj>             dist/<Proj>-<versão>.zip no layout do jogo (Mods/Code), para a página de releases
 winshot [nome]             print pela janela (fallback, sem ponte)
 log [n] [grep] | state | ping | windows | ui [filtro] [prof] [inativos 0|1] | wait [s]

@@ -3,8 +3,10 @@
 
   webp     docs/showcase/<Id>.webp: os clipes do README (WebP animado; clipe largo sai com pixel de arte = 1 px)
   trailer  docs/media/reddit/trailer.mp4: os clipes em sequência, 1920x1080, com legenda (roteiro em TRAILER)
+  gameplay docs/media/reddit/gameplay.mp4: clipe curto a 60 qps com as tomadas de tela inteira (roteiro em GAMEPLAY),
+           gravadas antes com `gk2 rec-clip <demo> 0,0,1920,1080 <nome> --fps 60 --escala 2 --tomada`
 
-Uso: showcase.py <repo> [webp|trailer|tudo]
+Uso: showcase.py <repo> [webp|trailer|gameplay|tudo]
 """
 import os
 import subprocess
@@ -40,6 +42,16 @@ TRAILER = [
     ("../showcase/menu.png", "Everything toggles in the pause menu", "Each feature turns on and off without restarting the game"),
 ]
 STILL_SECONDS = 4.0
+
+# Clipe curto: (tomada em docs/media/tomadas, início s, fim s, rótulo). Emendas com fusão de FADE segundos.
+GAMEPLAY = [
+    ("world", 1.5, 7.5, "Tooltips in the world"),
+    ("medalhao", 1.0, 7.0, "The week on the day medallion"),
+    ("tooltips", 2.5, 8.5, "Richer tooltips, pinned and nested"),
+    ("mapa", 0.5, 9.2, "Zoom the map into places you have visited"),
+]
+FADE = 0.35
+SANS = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
 
 
 def run(cmd):
@@ -126,6 +138,37 @@ def trailer():
         print("trailer:", target)
 
 
+def gameplay():
+    os.makedirs(OUT, exist_ok=True)
+    with tempfile.TemporaryDirectory() as tmp:
+        inputs, graph, offset, last = [], [], 0.0, None
+        for i, (take, start, end, label) in enumerate(GAMEPLAY):
+            png = os.path.join(tmp, f"label{i}.png")
+            im = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+            draw = ImageDraw.Draw(im)
+            font = ImageFont.truetype(SANS, 34)
+            box = draw.textbbox((0, 0), label, font=font)
+            tw, th = box[2] - box[0], box[3] - box[1]
+            x, y = (W - tw) // 2, H - 96
+            draw.rounded_rectangle((x - 26, y - 16, x + tw + 26, y + th + 26), 14, fill=(12, 11, 15, 190))
+            draw.text((x, y), label, font=font, fill=(245, 240, 228, 255))
+            im.save(png)
+            inputs += ["-ss", str(start), "-t", str(end - start), "-i", os.path.join(MEDIA, "tomadas", take + ".mp4"),
+                       "-loop", "1", "-t", str(end - start), "-i", png]
+            graph.append(f"[{2 * i}:v]fps=60,setpts=PTS-STARTPTS[c{i}];[c{i}][{2 * i + 1}:v]overlay=0:0:shortest=1,format=yuv420p[s{i}]")
+            if last is None:
+                last, offset = f"s{i}", end - start
+            else:
+                graph.append(f"[{last}][s{i}]xfade=transition=fade:duration={FADE}:offset={offset - FADE:.3f}[x{i}]")
+                last, offset = f"x{i}", offset + (end - start) - FADE
+        target = os.path.join(OUT, "gameplay.mp4")
+        run(["ffmpeg", "-v", "error", "-y", *inputs, "-filter_complex", ";".join(graph), "-map", f"[{last}]", "-r", "60",
+             "-c:v", "libx264", "-crf", "17", "-preset", "slow", "-pix_fmt", "yuv420p", "-movflags", "+faststart", target])
+        print("gameplay:", target)
+
+
+if what == "gameplay":
+    gameplay()
 if what in ("webp", "tudo"):
     os.makedirs(SHOWCASE, exist_ok=True)
     ids = sorted(f[:-4] for f in os.listdir(MEDIA) if f.endswith(".mp4"))
