@@ -4,83 +4,114 @@
 
 <p align="center">
   Quality-of-life mods for <b>Graveyard Keeper 2</b>, in one plugin.<br>
-  More numbers, more context, a better map and a calendar. It looks like the game made it.
+  More numbers, more context, a better map and a calendar. It looks like the game made it.<br>
+  <sub>English and Brazilian Portuguese, following the game's language.</sub>
 </p>
+
+<p align="center">
+  <a href="#features"><b>Features</b></a> ·
+  <a href="#install"><b>Install</b></a> ·
+  <a href="#after-a-game-update"><b>Game updates</b></a> ·
+  <a href="#how-it-is-built"><b>How it is built</b></a>
+</p>
+
+<table>
+  <tr>
+    <td width="25%" valign="top"><b>Looks native</b><br>Built from the game's own UI: same fonts, frames, colors and pixel grid.</td>
+    <td width="25%" valign="top"><b>No spoilers</b><br>Shows only what your save has already revealed, checked against what unlocks what in the game.</td>
+    <td width="25%" valign="top"><b>Information first</b><br>Nothing changes the rules by default. The two features that do ship turned off.</td>
+    <td width="25%" valign="top"><b>Toggles live</b><br>Every feature turns on and off from the pause menu, without restarting.</td>
+  </tr>
+</table>
 
 <p align="center">
   <img src="docs/showcase/extra/gameplay.webp" alt="World tooltips, the week on the medallion, nested tooltips and the map zooming into a place" width="100%">
 </p>
 
-- **Looks native.** Every window, tooltip and label is built from the game's own UI: same fonts, frames, colors and
-  pixel grid. Nothing floats on top of the game looking like a debug overlay.
-- **No spoilers.** The mod only shows what your save has already revealed: explored map areas, visited places, events
-  you have heard about. This is checked against an index of what unlocks what in the game, not guessed from names.
-- **Information first.** By default nothing changes the rules of the game. The two features that do (Save/Load and
-  zombie perk refund) ship turned off.
-- **Everything toggles live.** Each feature turns on and off from the pause menu, without restarting.
-- **English and Brazilian Portuguese**, following the game's language.
-
 ## Features
-
-### Tooltips
-
-| Richer tooltips | Tooltips in the world |
-| :---: | :---: |
-| <img src="docs/showcase/Tooltips.webp" width="420"> | <img src="docs/showcase/World.webp" width="420"> |
-| More numbers on items, stations and characters. Middle click pins a tooltip; highlighted terms open another one inside it. | Rest the mouse on a craft, a garden bed or a body to see what is going on and how long is left. |
 
 ### Map
 
-| Zoom | Look inside places |
-| :---: | :---: |
-| <img src="docs/showcase/Map.webp" width="420"> | <img src="docs/showcase/MapPlaces.webp" width="420"> |
-| Mouse wheel zoom in four pixel-perfect levels, anchored on the cursor. One more step goes down to the world itself. | Zoom into a yellow arrow to peek inside a place you have visited. Doors and stairs lead further in; hover an object to inspect it. |
+**Zoom.** Mouse wheel zoom in four pixel-perfect levels, anchored on the cursor. One more step goes down to the world itself. The map only shows what you have explored.
 
-| Order details |
-| :---: |
-| <img src="docs/showcase/MapOrders.webp" width="420"> |
-| Hover the town orders icon to see the item of each order, how much is delivered and the reward. |
+<p align="center"><img src="docs/showcase/Map.webp" alt="Zoom" width="588"></p>
+
+**Look inside places.** Zoom into a yellow arrow to peek inside a place you have visited. Doors and stairs lead further in, and hovering an object inspects it.
+
+<p align="center"><img src="docs/showcase/MapPlaces.webp" alt="Look inside places" width="588"></p>
+
+**Order details.** Hover the town orders icon to see the item of each order, how much is delivered and the reward.
+
+<p align="center"><img src="docs/showcase/MapOrders.webp" alt="Order details" width="480"></p>
+
+### Tooltips
+
+**Richer tooltips.** More numbers on items, stations and characters. Middle click pins a tooltip, and highlighted terms open another one inside it.
+
+<p align="center"><img src="docs/showcase/Tooltips.webp" alt="Richer tooltips" width="450"></p>
+
+**Tooltips in the world.** Rest the mouse on a craft, a garden bed or a body to see what is going on and how long is left.
+
+<p align="center"><img src="docs/showcase/World.webp" alt="Tooltips in the world" width="588"></p>
+
+**Quest tree.** NPC names on the quest tree. Click a quest to read how you got there.
+
+<p align="center"><img src="docs/showcase/Quests.webp" alt="Quest tree" width="588"></p>
 
 ### Calendar and journal
 
-| Time and week on the medallion | Week as a carousel (option) |
-| :---: | :---: |
-| <img src="docs/showcase/Wheel.webp" width="380"> | <img src="docs/showcase/WheelCarousel.webp" width="420"> |
-| Hover the day medallion to see the time and the week ahead; hover a sigil for that day. | The same week in one row that slides as the day goes by. |
+**Time and week on the medallion.** Hover the day medallion to see the time and the week ahead. Hover a sigil for that day.
 
-| Calendar tab | Journal |
-| :---: | :---: |
-| <img src="docs/showcase/CalendarTab.webp" width="420"> | <img src="docs/showcase/Journal.webp" width="420"> |
-| A calendar page in the TAB window, with the days and their events. | A diary of what you unlocked and finished each day. |
+<p align="center"><img src="docs/showcase/Wheel.webp" alt="Time and week on the medallion" width="380"></p>
 
-### Quest tree
+**Week as a carousel.** Optional: the same week in one row that slides as the day goes by.
 
-<p align="center"><img src="docs/showcase/Quests.webp" width="588"></p>
+<p align="center"><img src="docs/showcase/WheelCarousel.webp" alt="Week as a carousel" width="460"></p>
 
-NPC names on the quest tree. Click a quest to read how you got there.
+**Calendar tab.** A calendar page in the TAB window, with the days and their events.
+
+<p align="center"><img src="docs/showcase/CalendarTab.webp" alt="Calendar tab" width="588"></p>
+
+**Journal.** A diary of what you unlocked and finished each day.
+
+<p align="center"><img src="docs/showcase/Journal.webp" alt="Journal" width="588"></p>
 
 ### HUD
 
-| HUD numbers | Show the maximum (option) | Day plate (option) | Turning medallion |
-| :---: | :---: | :---: | :---: |
-| <img src="docs/showcase/Hud.webp" width="210"> | <img src="docs/showcase/HudShowMax.webp" width="210"> | <img src="docs/showcase/HudDayPlate.webp" width="210"> | <img src="docs/showcase/WheelSpin.webp" width="120"> |
-| Numbers on the energy and insanity bars. | The maximum too, like 120/150. | A small plate with the day and time. | The day medallion turns slowly as the hours pass. |
+**HUD numbers.** Numbers on the energy and insanity bars.
 
-### Gameplay (off by default)
+<p align="center"><img src="docs/showcase/Hud.webp" alt="HUD numbers" width="560"></p>
+
+**Show the maximum.** Optional: the maximum too, like 120/150.
+
+<p align="center"><img src="docs/showcase/HudShowMax.webp" alt="Show the maximum" width="560"></p>
+
+**Day plate.** Optional: a small plate with the day and time under happiness.
+
+<p align="center"><img src="docs/showcase/HudDayPlate.webp" alt="Day plate" width="560"></p>
+
+**Turning day medallion.** The day medallion turns slowly as the hours pass.
+
+<p align="center"><img src="docs/showcase/WheelSpin.webp" alt="Turning day medallion" width="240"></p>
+
+### Gameplay, off by default
 
 These two change the state of the game, so they start turned off.
 
-| Save and Load in the pause menu | Zombie perk refund |
-| :---: | :---: |
-| <img src="docs/showcase/SaveLoad.webp" width="380"> | <img src="docs/showcase/Refund.webp" width="320"> |
-| The game only saves when you wake up. Save works whenever the game is free (no dialog, fight, sleep or work going on); Load lists the current save, the game's backups and the mod's own history. | Right-click a bought zombie perk to get its points back, one perk at a time. |
+**Save and Load in the pause menu.** The game only saves when you wake up. Save works whenever the game is free (no dialog, fight, sleep or work going on). Load lists the current save, the game's backups and the mod's own history.
+
+<p align="center"><img src="docs/showcase/SaveLoad.webp" alt="Save and Load in the pause menu" width="380"></p>
+
+**Zombie perk refund.** Right-click a bought zombie perk to get its points back, one perk at a time.
+
+<p align="center"><img src="docs/showcase/Refund.webp" alt="Zombie perk refund" width="320"></p>
 
 ### The menu
 
-<p align="center"><img src="docs/showcase/menu.png" alt="GK2 HUD+ window in the pause menu" width="760"></p>
-
 A **GK2 HUD+** button in the pause menu opens the list of features. Each one has a short clip of itself in action and
 turns on or off on the spot. Settings live in `BepInEx/config/mullervgs.gk2.hudplus.cfg`.
+
+<p align="center"><img src="docs/showcase/menu.png" alt="GK2 HUD+ window in the pause menu" width="760"></p>
 
 ## Install
 
