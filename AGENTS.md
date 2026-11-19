@@ -290,6 +290,9 @@ gk2 run <cenario.cs>                             C# dentro do jogo (≈1,5 s): a
 gk2 rec status|todos|desatualizados|<Id>         clipes do menu (receitas em tools/rec/clips.txt); status acusa clipe defasado
 gk2 rec-clip <demo.cs> <x,y,w,h> <Id> [K=V]      grava um clipe avulso: previews/<Id>.webm + docs/media/<Id>.gif/.mp4
 gk2 log [n] [grep] | state | windows | ping
+gk2 showcase [webp|trailer]                      mídias de divulgação a partir de docs/media/*.mp4: docs/showcase/*.webp (README,
+                                                 versionados) e docs/media/reddit/trailer.mp4 (roteiro e legendas em tools/rec/showcase.py)
+gk2 package <Mod>                                dist/<Mod>-<versão>.zip no layout do jogo (Mods/Code), para a página de releases
 gk2 save snapshot|reset|inicio                   save de teste a partir do blue (reset limpa backups e histórico do GK2Saves e
                                                  restaura o Steam_2 de gravação com o diário; inicio guarda o Steam_2)
 gk2 promote <Mod> [--green]                      entrega com o jogo aberto (blue, com aprovação) ou ensaio no green

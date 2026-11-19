@@ -192,6 +192,19 @@ EOF
   rec)
     # gk2 rec status [--estrito] | todos | desatualizados | <Id>...   (receitas em tools/rec/clips.txt; ver tools/rec/rec.py)
     python3 "$HERE/tools/rec/rec.py" "$0" "$HERE" "$@" ;;
+  showcase)
+    # gk2 showcase [webp|trailer|tudo]: mídias de divulgação a partir de docs/media/*.mp4 (ver tools/rec/showcase.py)
+    python3 "$HERE/tools/rec/showcase.py" "$HERE" "${1:-tudo}" ;;
+  package)
+    # gk2 package <Proj>: zip no layout do contrato de mods do jogo (descompactar em <dados do jogo>/Mods/Code/)
+    proj=${1:?projeto}; dll=$(build "$proj")
+    ver=$(python3 -c 'import json,sys;print(json.load(open(sys.argv[1]))["version"])' "$HERE/$proj/modinfo.json")
+    tmp=$(mktemp -d); item="$tmp/$proj"; mkdir -p "$item/BepInEx/plugins/$proj" "$HERE/dist"
+    cp "$HERE/$proj/modinfo.json" "$item/"; cp "$dll" "$item/BepInEx/plugins/$proj/"
+    if [ -d "$HERE/$proj/previews" ]; then mkdir "$item/BepInEx/plugins/$proj/previews"; cp "$HERE/$proj/previews/"*.webm "$item/BepInEx/plugins/$proj/previews/"; fi
+    out="$HERE/dist/$proj-$ver.zip"; rm -f "$out"
+    python3 -c 'import shutil,sys;shutil.make_archive(sys.argv[1][:-4],"zip",sys.argv[2])' "$out" "$tmp"; rm -rf "$tmp"
+    echo "pacote: $out"; sha256sum "$out" ;;
   rec-clip)
     # gk2 rec-clip <cenario.cs> <x,y,w,h> <nome> [--fps n] [--antes s] [--depois s] [K=V ...]
     # Grava um clipe da região (px de tela, alinhada em pares) enquanto o cenário roda. Saídas: GK2HudPlus/previews/<nome>.webm
@@ -437,6 +450,8 @@ run <arquivo.cs>           executa um cenário C# dentro do jogo (static class S
 shot [nome] [--hideui] [--crop x,y,w,h] [--frames n]   print pelo Unity → .shots/
 rec status|todos|desatualizados|<Id>   clipes do menu do HUD+ (tools/rec/clips.txt); status diz quais ficaram velhos
 rec-clip <demo.cs> <x,y,w,h> <Id> [K=V]   grava um clipe avulso (WebM em previews/, GIF/MP4 em docs/media/)
+showcase [webp|trailer]    mídias de divulgação: docs/showcase/*.webp (README) e docs/media/reddit/trailer.mp4
+package <Proj>             dist/<Proj>-<versão>.zip no layout do jogo (Mods/Code), para a página de releases
 winshot [nome]             print pela janela (fallback, sem ponte)
 log [n] [grep] | state | ping | windows | ui [filtro] [prof] [inativos 0|1] | wait [s]
 promote <Proj> [--green|--sem-hot]   entrega o mod aprovado (blue: Mods/Code + hot-reload pelo HotLoader; --green: ensaio)

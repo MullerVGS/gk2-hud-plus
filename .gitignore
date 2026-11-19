@@ -10,3 +10,4 @@ decomp.anterior/
 .update/
 # GIF/MP4 das páginas: saem do gk2 rec junto com os previews; vão para a publicação, não para o git.
 docs/media/
+dist/
