@@ -98,15 +98,23 @@ namespace GK2Hud.Tooltips
 
         // ---------- hover normal: acrescenta ao que o jogo montou ----------
 
-        public void Enrich(List<LazyWidgetDataBase> list, Entity e)
+        /// <summary>
+        /// <paramref name="detail"/> falso = hover: só o que se quer num relance, mais a dica da tecla quando fixar mostra
+        /// mais. Verdadeiro = bolha fixada: receita, usos, custos por tick, diário.
+        /// </summary>
+        public void Enrich(List<LazyWidgetDataBase> list, Entity e, bool detail = false)
         {
             Styles s = Styles.Read();
             if (s == null || e == null) return;
+            string key = BlockKey(e) + (detail ? "|d" : "|h");
+            bool more = false;
             switch (e.Kind)
             {
                 case EntityKind.Item:
                     ReplaceCraftedAt(list, s, ItemStations(e.Id));
-                    AppendBlock(list, Block(BlockKey(e), () => ItemLines(e, s)));
+                    AppendBlock(list, Block(key, () => ItemLines(e, s, detail)));
+                    if (detail) PlaceRecipe(list, s, Block(key + "|recipe", () => RecipeWidgets(e, s)));
+                    else more = HasMore(e, s);
                     break;
                 case EntityKind.Craft:
                 {
@@ -116,16 +124,65 @@ namespace GK2Hud.Tooltips
                         ItemDef res = e.CraftDef.TryGetResultingItemDef();
                         ReplaceCraftedAt(list, s, e.CraftDef.craftsIn, res != null ? ItemStations(res.id) : null);
                     }
-                    InsertBlock(list, Block(BlockKey(e) + "|" + hadCraftedAt, () => CraftLines(e, s, !hadCraftedAt)), BlockIndexBeforeNeeds(list));
+                    InsertBlock(list, Block(key + "|" + hadCraftedAt, () => CraftLines(e, s, !hadCraftedAt, detail)), BlockIndexBeforeNeeds(list));
+                    more = !detail;
                     break;
                 }
                 case EntityKind.Perk:
-                    AppendBlock(list, Block(BlockKey(e), () => PerkLines(e, s)));
+                    AppendBlock(list, Block(key, () => PerkLines(e, s, detail)));
+                    more = !detail && Block(BlockKey(e) + "|d", () => PerkLines(e, s, true)).Count > Block(key, () => PerkLines(e, s, false)).Count;
                     break;
                 case EntityKind.Station:
-                    AppendBlock(list, Block(BlockKey(e), () => StationLines(e, s, false)));
+                    if (detail) AppendBlock(list, Block(key, () => StationLines(e, s, false)));
+                    else more = Block(BlockKey(e) + "|d", () => StationLines(e, s, false)).Count > 0;
                     break;
             }
+            if (more && TooltipFeature.Current?.PinHint is string hint) list.Add(new PinHintData { Text = hint });
+        }
+
+        /// <summary>O item tem algo a mais para mostrar fixado: receita (mesmo desconhecida), usos ou anotação do diário.</summary>
+        private bool HasMore(Entity e, Styles s) =>
+            Cached("more:" + e.Id, () =>
+            {
+                List<CraftDef> made = index.MadeBy(e.Id);
+                if (made != null && made.Exists(IsListable)) return true;
+                return UsedInLine(e.Id, s) != null || Journal.JournalView.ItemLine(e.Id) != null;
+            });
+
+        /// <summary>
+        /// Receita do item em células nativas (possui/precisa), a primeira que o jogador conhece. Se existe receita e
+        /// nenhuma é conhecida, "Recipe: ?" (sem dizer do quê é feita).
+        /// </summary>
+        private List<LazyWidgetDataBase> RecipeWidgets(Entity e, Styles s)
+        {
+            var w = new List<LazyWidgetDataBase>();
+            List<CraftDef> made = index.MadeBy(e.Id)?.Where(IsListable).ToList();
+            if (made == null || made.Count == 0) return w;
+            CraftDef known = made.FirstOrDefault(Known);
+            string label = L10n.T("recipe");
+            if (known == null)
+            {
+                w.Add(new UITooltipTextWidgetData((s.SmallSelected.ApplyStyleToString(label + ": ") ?? "") + "?", TextAlignmentOptions.Center, s.Small));
+                return w;
+            }
+            PlayerData pd = MainGame.PlayerData;
+            if (pd == null) return w;
+            w.Add(new UITooltipNeedsItemWidgetData(known, new MultiInventory(pd)));
+            return w;
+        }
+
+        /// <summary>
+        /// A receita vai logo abaixo do "Crafted at" nativo (feito em X, com isto); sem essa linha, num bloco próprio no
+        /// fim com o rótulo "Recipe".
+        /// </summary>
+        private static void PlaceRecipe(List<LazyWidgetDataBase> list, Styles s, List<LazyWidgetDataBase> recipe)
+        {
+            if (recipe == null || recipe.Count == 0) return;
+            int at = list.FindIndex(d => d is UITooltipTextWidgetData t && t.Text != null && t.Text.Contains(s.CraftedAtText));
+            if (at >= 0) { list.InsertRange(at + 1, recipe); return; }
+            var block = new List<LazyWidgetDataBase>(recipe);
+            if (block[0] is UITooltipNeedsItemWidgetData) block.Insert(0, new UITooltipTextWidgetData(L10n.T("recipe"), TextAlignmentOptions.Center, s.SmallSelected));
+            AppendBlock(list, block);
         }
 
         /// <summary>
@@ -170,7 +227,8 @@ namespace GK2Hud.Tooltips
                 case EntityKind.Item:
                     Native.AddItemWidgets(list, e.ItemDef);
                     ReplaceCraftedAt(list, s, ItemStations(e.Id));
-                    AppendBlock(list, ItemLines(e, s));
+                    AppendBlock(list, ItemLines(e, s, true));
+                    PlaceRecipe(list, s, RecipeWidgets(e, s));
                     break;
                 case EntityKind.Craft:
                 {
@@ -187,13 +245,13 @@ namespace GK2Hud.Tooltips
                     else
                         AddDescription(list, cd.id, s.Small);
                     Native.TryAddRequiredExtensionWidget(list, cd);
-                    AppendBlock(list, CraftLines(e, s, true));
+                    AppendBlock(list, CraftLines(e, s, true, true));
                     Native.TryAddNeedItemsWidget(list, cd.needItems);
                     break;
                 }
                 case EntityKind.Perk:
                     Native.AddPerkWidgets(list, e.PerkDef);
-                    AppendBlock(list, PerkLines(e, s));
+                    AppendBlock(list, PerkLines(e, s, true));
                     break;
                 case EntityKind.Station:
                     string sn = Names.Wgo(e.Id);
@@ -215,7 +273,7 @@ namespace GK2Hud.Tooltips
 
         // ---------- seções ----------
 
-        private List<LazyWidgetDataBase> ItemLines(Entity e, Styles s)
+        private List<LazyWidgetDataBase> ItemLines(Entity e, Styles s, bool detail)
         {
             var lines = new List<string>();
             ItemDef def = e.ItemDef;
@@ -229,7 +287,10 @@ namespace GK2Hud.Tooltips
             KeyValuePair<int, int> c = Counts(def.id);
             string have = L10n.T("you_have") + ": " + Num(s, (c.Key + c.Value).ToString());
             if (c.Value > 0) have += " (" + L10n.T("have_split", c.Key, c.Value) + ")";
-            lines.Add(have);
+            // No hover a contagem só entra quando diz algo que a célula não diz: há mais guardado, ou o tooltip não é de
+            // uma pilha do inventário (ingrediente, vitrine).
+            if (detail || c.Value > 0 || e.Instance == null) lines.Add(have);
+            if (!detail) return Widgets(lines, s);
             string used = UsedInLine(def.id, s);
             if (used != null) lines.Add(used);
             string journal = Journal.JournalView.ItemLine(def.id);
@@ -237,7 +298,7 @@ namespace GK2Hud.Tooltips
             return Widgets(lines, s);
         }
 
-        private List<LazyWidgetDataBase> CraftLines(Entity e, Styles s, bool withCraftedAt)
+        private List<LazyWidgetDataBase> CraftLines(Entity e, Styles s, bool withCraftedAt, bool detail)
         {
             var lines = new List<string>();
             CraftDef cd = e.CraftDef;
@@ -248,6 +309,20 @@ namespace GK2Hud.Tooltips
             if (ticks > 0 && worker != null) ticks = Mathf.Max(0, ticks + worker.GetPerksCraftAddTotalProgressTicksValue(cd));
             Item tool = e.Wgo != null && worker != null ? worker.GetToolForWorkOnCraft(e.Wgo, cd) : null;
             bool hasTool = tool != null && !tool.IsEmpty && tool.Definition != null;
+            float energyAdd0 = (worker?.GetPerksEnergyBonusValue(cd) ?? 0f) - (hasTool ? tool.Definition.GetGameResOnUse("energy") : 0f);
+            float insanityAdd0 = (worker?.GetPerksInsanityBonusValue(cd) ?? 0f) - (hasTool ? tool.Definition.GetGameResOnUse("insanity") : 0f);
+            if (!detail)
+            {
+                // Hover: uma linha só, com o custo total do craft (o por-tick fica para a bolha fixada).
+                var parts = new List<string>();
+                if (ticks > 0 && cd.isAuto && e.Wgo != null && e.Wgo.AutoCraftTickDuration > 0f)
+                    parts.Add("cell_time".FontIcon() + Num(s, PerkSystemData.GetFormattedDuration(e.Wgo.AutoCraftTickDuration * ticks)));
+                if (Total(cd.energyPerTick, energyAdd0, ticks) is float en) parts.Add("energy".FontIcon() + Num(s, F(en)));
+                if (Total(cd.insanityPerTick, insanityAdd0, ticks) is float ins) parts.Add("insanity".FontIcon() + Num(s, F(ins)));
+                var hover = new List<string>();
+                if (parts.Count > 0) hover.Add(string.Join("  ", parts));
+                return Widgets(hover, s);
+            }
             if (ticks > 0)
             {
                 string t = L10n.T("duration") + ": " + string.Format(L10n.T("ticks"), Num(s, ticks.ToString()));
@@ -272,6 +347,16 @@ namespace GK2Hud.Tooltips
             return w;
         }
 
+        /// <summary>Custo total do craft num recurso (por tick × ticks); null quando o craft não gasta esse recurso.</summary>
+        private static float? Total(LazyExpression expr, float perkAdd, int ticks)
+        {
+            if (expr == null || !expr.HasExpression || ticks <= 0) return null;
+            float baseValue = expr.EvaluateFloat();
+            float per = baseValue + perkAdd;
+            if (Mathf.Approximately(baseValue, 0f) && Mathf.Approximately(per, 0f)) return null;
+            return per * ticks;
+        }
+
         private static void AddPerTick(List<string> lines, Styles s, string res, LazyExpression expr, float perkAdd, int ticks)
         {
             if (expr == null || !expr.HasExpression) return;
@@ -284,7 +369,7 @@ namespace GK2Hud.Tooltips
             lines.Add(t);
         }
 
-        private List<LazyWidgetDataBase> PerkLines(Entity e, Styles s)
+        private List<LazyWidgetDataBase> PerkLines(Entity e, Styles s, bool detail)
         {
             var lines = new List<string>();
             PerkDef p = e.PerkDef;
@@ -296,6 +381,7 @@ namespace GK2Hud.Tooltips
                     t += " (" + L10n.T("left", Num(s, PerkSystemData.GetFormattedDuration(Mathf.Max(0f, active.currentDuration)))) + ")";
                 lines.Add(t);
             }
+            if (!detail) return Widgets(lines, s);
             if (!Mathf.Approximately(p.energyAdd, 0f))
                 lines.Add(L10n.T("craft_energy") + ": " + "energy".FontIcon() + L10n.T("per_tick", Num(s, Signed(p.energyAdd))));
             if (!Mathf.Approximately(p.insanityAdd, 0f))

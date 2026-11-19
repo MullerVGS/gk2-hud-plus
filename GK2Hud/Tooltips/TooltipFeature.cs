@@ -28,6 +28,8 @@ namespace GK2Hud.Tooltips
 
         private Entity pending;
         private List<LazyWidgetDataBase> lastData;
+        private List<LazyWidgetDataBase> lastPlain;   // o mesmo tooltip como o jogo o montou, antes do nosso básico
+        private Entity lastEntity;
         private RectTransform lastTarget;
         private RectTransform suppressTarget;   // alvo recém-fixado: o nativo não volta por cima até o mouse sair dele
         private bool indexReady;
@@ -66,6 +68,8 @@ namespace GK2Hud.Tooltips
             MainGame.OnGoToMainMenu -= OnGoToMainMenu;
             Stack.Dispose();
             Content.Dispose();
+            TipWidgets.Release();
+            PinKeyControl.Dispose();
             if (Current == this) Current = null;
         }
 
@@ -80,8 +84,13 @@ namespace GK2Hud.Tooltips
 
         // ---------------- Harmony ----------------
 
+        /// <summary>Dica do canto do hover ("[MMB] more"); o mouse do meio é o padrão.</summary>
+        internal string PinHint => TipWidgets.KeyText(pinKey.Value) + " " + L10n.T("pin_more");
+
         private void Patch()
         {
+            TipWidgets.Acquire(harmony, false);
+            PinKeyControl.Patch(harmony, pinKey);
             Type t = typeof(UITooltip);
             Type p = typeof(TooltipFeature);
             // Finalizer (não postfix): se o Show* nativo lançar, a entidade não fica presa para o próximo tooltip.
@@ -169,8 +178,13 @@ namespace GK2Hud.Tooltips
             // O Draw da célula ainda sob o mouse chama ShowItemCell de novo: não reabre o nativo por cima da bolha fixada.
             if (f.suppressTarget != null && target == f.suppressTarget) return false;
             // Só enriquece se a entidade é deste tooltip (mesmo alvo, mesmo frame).
+            f.lastEntity = null;
+            f.lastPlain = null;
             if (e != null && e.Target == target && e.Frame == Time.frameCount)
             {
+                // Guarda o que o jogo montou: a bolha fixada parte daí e recebe o detalhe (o hover só o básico).
+                f.lastPlain = new List<LazyWidgetDataBase>(dataList);
+                f.lastEntity = e;
                 try { f.Content.Enrich(dataList, e); }
                 catch (Exception ex) { HudModule.Log.LogError($"enriquecer {e.Kind} {e.Id}: {ex}"); }
             }
@@ -245,6 +259,7 @@ namespace GK2Hud.Tooltips
             }
             UpdateHover(mouse);
             Stack.RefreshLive(Styles.Read(), World.WorldContent.Signature);
+            Stack.Follow();
         }
 
         /// <summary>
@@ -319,7 +334,20 @@ namespace GK2Hud.Tooltips
             b.Parent = parent;
             b.Data = new List<LazyWidgetDataBase>(lastData);
             b.Live = World.WorldHoverFeature.Current?.LiveFor(lastTarget) ?? Calendar.WheelFeature.Current?.LiveFor(lastTarget);
-            if (b.Live != null) b.LiveSig = World.WorldContent.Signature(lastData);
+            if (b.Live == null && lastEntity != null && lastPlain != null)
+            {
+                var full = new List<LazyWidgetDataBase>(lastPlain);
+                try { Content.Enrich(full, lastEntity, true); b.Data = full; }
+                catch (Exception ex) { HudModule.Log.LogError($"detalhe {lastEntity.Kind} {lastEntity.Id}: {ex}"); }
+            }
+            b.Data.RemoveAll(d => d is PinHintData);
+            if (b.Live != null)
+            {
+                // A bolha fixada já nasce com o detalhe (o hover só tem o básico).
+                List<LazyWidgetDataBase> full = b.Live();
+                if (full != null && full.Count > 0) b.Data = full;
+                b.LiveSig = World.WorldContent.Signature(b.Data);
+            }
             Calendar.WheelFeature.Current?.OnPinning(b, lastTarget);
             // Nó da árvore de quests: a bolha leva o retrato e, depois de fixada, abre ao lado a ficha do NPC.
             string childLink = parent == null ? Quests.QuestTreeFeature.Current?.OnPinning(b, lastTarget) : null;
@@ -331,6 +359,10 @@ namespace GK2Hud.Tooltips
             else
             {
                 b.RootPos = native.transform.position;
+                b.Anchor = World.WorldHoverFeature.Current?.AnchorFor(lastTarget);
+                Vector2? at = b.Anchor?.Invoke();
+                if (at.HasValue) { b.AnchorAtPin = at.Value; b.PosAtPin = native.transform.position; }
+                else b.Anchor = null;
                 int k = 0;
                 foreach (UIBubbleCorner c in Native.Corners(native)) { if (c.gameObject.activeSelf) b.RootCorner = k; k++; }
             }

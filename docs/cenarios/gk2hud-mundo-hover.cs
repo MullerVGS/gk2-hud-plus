@@ -23,7 +23,7 @@ public static class Snippet
         var sb = new StringBuilder();
         object world = Prop(Plugin(), "WorldHover");
         object tips = Prop(Plugin(), "Tooltips");
-        if (LIMPAR) { SetProp(world, "VirtualMouse", null); SetProp(tips, "VirtualMouse", null); yield return "limpo"; yield break; }
+        if (LIMPAR) { SetProp(world, "VirtualMouse", null); if (tips != null) SetProp(tips, "VirtualMouse", null); yield return "limpo"; yield break; }
         object targets = AccessTools.Field(world.GetType(), "Targets").GetValue(world);
         // Força a lista de candidatos.
         AccessTools.Method(targets.GetType(), "Invalidate").Invoke(targets, null);
@@ -49,7 +49,7 @@ public static class Snippet
         Vector2 center = (Vector2)AccessTools.Field(best.GetType(), "Center").GetValue(best);
         Vector2 m = BOLHA ? rect.center : center;
         SetProp(world, "VirtualMouse", (Vector2?)m);
-        SetProp(tips, "VirtualMouse", (Vector2?)m);
+        if (tips != null) SetProp(tips, "VirtualMouse", (Vector2?)m);
         float t0 = Time.realtimeSinceStartup;
         while (Time.realtimeSinceStartup - t0 < 1.2f) yield return null;
         sb.AppendLine("mouse " + m.ToString("0") + " → " + AccessTools.Method(world.GetType(), "Describe").Invoke(world, null));

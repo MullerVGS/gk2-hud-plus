@@ -60,14 +60,14 @@ namespace GK2Hud
                 new Loc("Richer tooltips", "Tooltips com mais informação"),
                 new Loc("More numbers in item, station and character tooltips. Middle click pins one.", "Mais números nos tooltips de itens, estações e personagens. O botão do meio fixa um."),
                 h => Tooltips = new TooltipFeature(h, pinKey, linkDelay, maxDepth),
-                f => f.Update(), f => { f.Dispose(); Tooltips = null; }, options: new ConfigEntryBase[] { pinKey, linkDelay, maxDepth });
+                f => f.Update(), f => { f.Dispose(); Tooltips = null; }, options: new ConfigEntryBase[] { linkDelay, maxDepth });
 
             ConfigEntry<float> worldDelay = cfg.Bind("World", "HoverDelay", 0.5f,
                 new ConfigDescription("Seconds with the mouse still on an object before its tooltip shows.", new AcceptableValueRange<float>(0f, 5f)));
             host.Feature("World", "tooltips", "World", "Enabled",
                 new Loc("Tooltips in the world", "Tooltips no mundo"),
                 new Loc("Rest the mouse on a craft, a garden bed or a body to see how long is left.", "Pare o mouse num craft, num canteiro ou num corpo para ver quanto falta."),
-                h => WorldHover = new WorldHoverFeature(worldDelay),
+                h => WorldHover = new WorldHoverFeature(h, worldDelay),
                 f => f.Update(), f => { f.Dispose(); WorldHover = null; }, options: worldDelay);
 
             // ---- HUD

@@ -19,7 +19,7 @@ namespace GK2HudPlus
     {
         public const string Guid = HudPlusId.Guid;
         public const string Name = HudPlusId.Name;
-        public const string Version = "0.5.0";
+        public const string Version = "0.6.2";
 
         internal ModHost Host { get; private set; }
 

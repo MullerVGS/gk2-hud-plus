@@ -1,6 +1,6 @@
 {
   "CalendarTab": {
-    "date": "2026-11-17",
+    "date": "2026-11-19",
     "files": {
       "GK2Hud/Calendar/CalendarL10n.cs": "e6c6ad96ae87d358",
       "GK2Hud/Calendar/CalendarModel.cs": "27a34978f4954dda",
@@ -9,7 +9,7 @@
       "GK2Hud/Calendar/CalendarTooltip.cs": "804f3d2fe2db66f7",
       "GK2Hud/Calendar/WeekStrip.cs": "e1a6d5f1ac7e3b83",
       "GK2Hud/Calendar/WheelFeature.cs": "5f6689bd216008d8",
-      "GK2Hud/Names.cs": "bf205c97a94198c1",
+      "GK2Hud/Names.cs": "a0a81bc037c836b2",
       "clips.txt": "2bc109b4d547d2f6",
       "docs/cenarios/carregar-slot.cs": "0a7f164ef97a753d",
       "docs/cenarios/demo-calendar.cs": "0cc9f52afb12d0a1",
@@ -19,8 +19,8 @@
     },
     "game": "1.012.7",
     "media": {
-      "webm": "282d37810b1adbd8",
-      "webp": "d836c571cef5d7ef"
+      "webm": "5e25c9de6051e7bc",
+      "webp": "e2e18906c141317f"
     }
   },
   "Hud": {
@@ -83,12 +83,12 @@
     }
   },
   "Journal": {
-    "date": "2026-11-17",
+    "date": "2026-11-19",
     "files": {
       "GK2Hud/Calendar/CalendarPage.cs": "ba9b5542312e5777",
       "GK2Hud/Journal/JournalTracker.cs": "87a4342b476ec7e8",
       "GK2Hud/Journal/JournalView.cs": "f2a3c6a26a566fa6",
-      "GK2Hud/Names.cs": "bf205c97a94198c1",
+      "GK2Hud/Names.cs": "a0a81bc037c836b2",
       "clips.txt": "e0814dd8204e15ae",
       "docs/cenarios/carregar-slot.cs": "0a7f164ef97a753d",
       "docs/cenarios/demo-calendar.cs": "0cc9f52afb12d0a1",
@@ -98,8 +98,8 @@
     },
     "game": "1.012.7",
     "media": {
-      "webm": "3e0213e9c41ec29f",
-      "webp": "90bd90023e8ca122"
+      "webm": "5763868571be9319",
+      "webp": "975de8860aaefe2d"
     }
   },
   "Map": {
@@ -170,9 +170,9 @@
     }
   },
   "Quests": {
-    "date": "2026-11-17",
+    "date": "2026-11-19",
     "files": {
-      "GK2Hud/Names.cs": "bf205c97a94198c1",
+      "GK2Hud/Names.cs": "a0a81bc037c836b2",
       "GK2Hud/Quests/QuestContent.cs": "5eb0fa2fc07c5373",
       "GK2Hud/Quests/QuestL10n.cs": "6a64edee9a8dd8af",
       "GK2Hud/Quests/QuestModel.cs": "5740df22a9aa2e44",
@@ -186,8 +186,8 @@
     },
     "game": "1.012.7",
     "media": {
-      "webm": "790d2a930ed9f44f",
-      "webp": "81bb45a7ce46c4ea"
+      "webm": "5d8fe90d7ef907e7",
+      "webp": "1e2f33d6c401dcd0"
     }
   },
   "Refund": {
@@ -233,17 +233,19 @@
     }
   },
   "Tooltips": {
-    "date": "2026-11-18",
+    "date": "2026-11-19",
     "files": {
-      "GK2Hud/Names.cs": "bf205c97a94198c1",
-      "GK2Hud/Tooltips/Index.cs": "041ddae0794aa847",
-      "GK2Hud/Tooltips/L10n.cs": "bf829e4f33e7fdf3",
+      "GK2Hud/Names.cs": "a0a81bc037c836b2",
+      "GK2Hud/Tooltips/Index.cs": "ae6023f2f3feab12",
+      "GK2Hud/Tooltips/L10n.cs": "d601b0f3961f248e",
       "GK2Hud/Tooltips/LeakSweeper.cs": "428160ea9cc62563",
       "GK2Hud/Tooltips/Links.cs": "1f20e8183a34a8f9",
-      "GK2Hud/Tooltips/PinStack.cs": "b9ddb9ffb98c1d74",
-      "GK2Hud/Tooltips/TooltipContent.cs": "b85da1acbf6a26d4",
+      "GK2Hud/Tooltips/PinKeyControl.cs": "dbe1a9950be34e5b",
+      "GK2Hud/Tooltips/PinStack.cs": "edcaa608255a4f24",
+      "GK2Hud/Tooltips/TipWidgets.cs": "6851fd57eacb8566",
+      "GK2Hud/Tooltips/TooltipContent.cs": "eb1cf793a5e13057",
       "GK2Hud/Tooltips/TooltipContext.cs": "69eda75c1e7f576a",
-      "GK2Hud/Tooltips/TooltipFeature.cs": "c3db366447ca9021",
+      "GK2Hud/Tooltips/TooltipFeature.cs": "8f0dbf9c6681b17d",
       "clips.txt": "06831bc759faf56e",
       "docs/cenarios/demo-tooltips.cs": "03a834ce2783cb0a",
       "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
@@ -253,18 +255,18 @@
     },
     "game": "1.012.7",
     "media": {
-      "webm": "3cee047d83116d8e",
-      "webp": "0c8cdfa59707aeba"
+      "webm": "a916f381ccf37a84",
+      "webp": "dfe2042434ccb6f3"
     }
   },
   "Wheel": {
-    "date": "2026-11-17",
+    "date": "2026-11-19",
     "files": {
       "GK2Hud/Calendar/CalendarModel.cs": "27a34978f4954dda",
       "GK2Hud/Calendar/CalendarTooltip.cs": "804f3d2fe2db66f7",
       "GK2Hud/Calendar/WeekStrip.cs": "e1a6d5f1ac7e3b83",
       "GK2Hud/Calendar/WheelFeature.cs": "5f6689bd216008d8",
-      "GK2Hud/Names.cs": "bf205c97a94198c1",
+      "GK2Hud/Names.cs": "a0a81bc037c836b2",
       "clips.txt": "cf446ed8dce2b319",
       "docs/cenarios/carregar-slot.cs": "0a7f164ef97a753d",
       "docs/cenarios/demo-calendar.cs": "0cc9f52afb12d0a1",
@@ -275,8 +277,8 @@
     },
     "game": "1.012.7",
     "media": {
-      "webm": "9aa9cc55c91e41b8",
-      "webp": "e4115c42f8a6e932"
+      "webm": "1b68c63646990fe5",
+      "webp": "0254f0a7934a110f"
     }
   },
   "WheelCarousel": {
@@ -286,7 +288,7 @@
       "GK2Hud/Calendar/CalendarTooltip.cs": "804f3d2fe2db66f7",
       "GK2Hud/Calendar/WeekStrip.cs": "e1a6d5f1ac7e3b83",
       "GK2Hud/Calendar/WheelFeature.cs": "5f6689bd216008d8",
-      "GK2Hud/Names.cs": "bf205c97a94198c1",
+      "GK2Hud/Names.cs": "a0a81bc037c836b2",
       "clips.txt": "8a5f07a25f1571bb",
       "docs/cenarios/carregar-slot.cs": "0a7f164ef97a753d",
       "docs/cenarios/demo-carousel.cs": "efeab3bcfd56e36a",
@@ -297,8 +299,8 @@
     },
     "game": "1.012.7",
     "media": {
-      "webm": "fd7e78fd4f0f1d97",
-      "webp": "e07cfbb0ebc7ee26"
+      "webm": "2fd59c582f1b9078",
+      "webp": "0e32c7a0186486e1"
     }
   },
   "WheelSpin": {
@@ -319,12 +321,12 @@
     }
   },
   "World": {
-    "date": "2026-11-15",
+    "date": "2026-11-19",
     "files": {
-      "GK2Hud/Names.cs": "bf205c97a94198c1",
-      "GK2Hud/Tooltips/TooltipContent.cs": "b85da1acbf6a26d4",
-      "GK2Hud/World/WorldContent.cs": "0e3636a4acdd6b94",
-      "GK2Hud/World/WorldHoverFeature.cs": "83240413bbf9228f",
+      "GK2Hud/Names.cs": "a0a81bc037c836b2",
+      "GK2Hud/Tooltips/TooltipContent.cs": "eb1cf793a5e13057",
+      "GK2Hud/World/WorldContent.cs": "403b78bae30b02f7",
+      "GK2Hud/World/WorldHoverFeature.cs": "638204fc62e4e484",
       "GK2Hud/World/WorldProcesses.cs": "6d5954ff69db59f7",
       "GK2Hud/World/WorldTargets.cs": "e312b1746842b610",
       "clips.txt": "fd19c3f473aa1b54",
@@ -336,8 +338,8 @@
     },
     "game": "1.012.7",
     "media": {
-      "webm": "6829e2644f2bb416",
-      "webp": "2892fe5ee5412fec"
+      "webm": "ea6cfb823eaec87c",
+      "webp": "66d82218825f5ff7"
     }
   }
 }

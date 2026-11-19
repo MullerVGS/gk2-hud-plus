@@ -3,13 +3,14 @@ using System.Collections.Generic;
 namespace GK2Hud.Tooltips
 {
     /// <summary>
-    /// Índices reversos que o jogo não tem: item → crafts que o consomem; perk → itens que a dão.
+    /// Índices reversos que o jogo não tem: item → crafts que o consomem e que o produzem; perk → itens que a dão.
     /// Montados uma vez, preguiçosos (só depois do GameBalance carregado). Leitura pura do balanço.
     /// </summary>
     internal sealed class Index
     {
         private Dictionary<string, List<CraftDef>> usedIn;
         private Dictionary<string, List<ItemDef>> perkSources;
+        private Dictionary<string, List<CraftDef>> madeBy;
 
         public bool EnsureBuilt()
         {
@@ -18,6 +19,7 @@ namespace GK2Hud.Tooltips
             if (gb == null || gb.craftDefs == null || gb.craftDefs.Count == 0 || gb.itemDefs == null) return false;
 
             var used = new Dictionary<string, List<CraftDef>>();
+            var made = new Dictionary<string, List<CraftDef>>();
             foreach (CraftDef cd in gb.craftDefs)
             {
                 if (cd == null || cd.isHidden || cd.doNotShowInTooltips || string.IsNullOrEmpty(cd.id)) continue;
@@ -26,6 +28,10 @@ namespace GK2Hud.Tooltips
                 {
                     foreach (string itemId in Expand(gb, need)) Add(used, itemId, cd);
                 }
+                // Receita = craft com ingredientes cuja saída principal é o item (só os ids; nada é avaliado).
+                if (cd.needItems.Count > 0 && cd.outputItems?.chanceOutputItems != null)
+                    foreach (ChanceOutputItem o in cd.outputItems.chanceOutputItems)
+                        if (o != null) Add(made, o.id, cd);
             }
 
             var sources = new Dictionary<string, List<ItemDef>>();
@@ -42,6 +48,7 @@ namespace GK2Hud.Tooltips
             }
 
             usedIn = used;
+            madeBy = made;
             perkSources = sources;
             HudModule.Log.LogInfo($"índices: {usedIn.Count} itens usados em crafts, {perkSources.Count} perks com origem em item");
             return true;
@@ -51,6 +58,13 @@ namespace GK2Hud.Tooltips
         {
             if (!EnsureBuilt() || itemId == null) return null;
             return usedIn.TryGetValue(itemId, out List<CraftDef> l) ? l : null;
+        }
+
+        /// <summary>Crafts que produzem o item (conhecidos ou não: quem chama filtra).</summary>
+        public List<CraftDef> MadeBy(string itemId)
+        {
+            if (!EnsureBuilt() || itemId == null) return null;
+            return madeBy.TryGetValue(itemId, out List<CraftDef> l) ? l : null;
         }
 
         public List<ItemDef> PerkSources(string perkId)

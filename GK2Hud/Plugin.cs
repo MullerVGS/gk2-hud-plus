@@ -10,7 +10,7 @@ namespace GK2Hud
     {
         public const string Guid = HudModule.LegacyGuid;
         public const string Name = "GK2 Hud";
-        public const string Version = "0.10.0";
+        public const string Version = "0.11.2";
 
         internal ModHost Host { get; private set; }
         internal HudModule Module { get; private set; }

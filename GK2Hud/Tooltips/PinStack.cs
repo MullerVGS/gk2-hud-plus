@@ -28,6 +28,9 @@ namespace GK2Hud.Tooltips
         public bool Docked;                     // página acoplada a uma janela: clique fora, Esc e botão direito não a fecham
         public System.Func<List<LazyWidgetDataBase>> Live;   // conteúdo que muda com o tempo (tooltip de mundo): refeito enquanto fixada
         public string LiveSig;                  // assinatura do último conteúdo vivo renderizado
+        public System.Func<Vector2?> Anchor;    // ponto de tela do objeto do mundo (bolha de mundo fixada): a bolha anda com ele
+        public Vector2 AnchorAtPin;             // esse ponto na hora de fixar
+        public Vector3 PosAtPin;                // posição da bolha na hora de fixar
         public System.Action<RectTransform> Decorate;   // conteúdo próprio posto na bolha depois dos widgets (cartões do calendário)
         public HotFinder Hot;                   // áreas da decoração que abrem bolha ao passar o mouse: devolve o termo e o retângulo
         public System.Func<string, List<LazyWidgetDataBase>> HotData;   // conteúdo da bolha de um termo de Hot
@@ -346,6 +349,42 @@ namespace GK2Hud.Tooltips
                 b.Data = data;
                 Render(b, s);
             }
+        }
+
+        /// <summary>
+        /// Bolhas soltas (as de primeiro nível): a de mundo acompanha o objeto quando a câmera anda, e nenhuma sai da
+        /// tela (o detalhe é mais alto que o hover de onde ela nasceu). As filhas vão junto.
+        /// </summary>
+        public void Follow()
+        {
+            foreach (Bubble b in Pinned)
+            {
+                if (b.Parent != null || b.Rt == null || b.Docked) continue;
+                Vector3 want = b.Rt.position;
+                Vector2? a = b.Anchor?.Invoke();
+                if (a.HasValue) want = b.PosAtPin + (Vector3)(a.Value - b.AnchorAtPin);
+                Rect r = b.ScreenRect();
+                float x = Mathf.Clamp(r.xMin + want.x - b.Rt.position.x, 0f, Mathf.Max(0f, Screen.width - r.width));
+                float y = Mathf.Clamp(r.yMin + want.y - b.Rt.position.y, 0f, Mathf.Max(0f, Screen.height - r.height));
+                var d = new Vector3(Even(x) - r.xMin, Even(y) - r.yMin, 0f);
+                if (d.sqrMagnitude < 0.01f) continue;
+                b.Rt.position += d;
+                b.RootPos = b.Rt.position;
+                foreach (Bubble c in Pinned) if (c != b && DescendsFrom(c, b)) Shift(c, d);
+                if (Transient != null && DescendsFrom(Transient, b)) Shift(Transient, d);
+            }
+        }
+
+        private static bool DescendsFrom(Bubble c, Bubble root)
+        {
+            for (Bubble p = c.Parent; p != null; p = p.Parent) if (p == root) return true;
+            return false;
+        }
+
+        private static void Shift(Bubble c, Vector3 d)
+        {
+            if (c.Rt != null) c.Rt.position += d;
+            c.SourceRect.position += (Vector2)d;
         }
 
         public void CloseTransient()

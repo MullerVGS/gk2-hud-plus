@@ -19,27 +19,44 @@ namespace GK2Hud.World
     {
         private const int MaxQueue = 4;
 
-        public List<LazyWidgetDataBase> Build(WorldTarget t)
+        /// <summary>
+        /// <paramref name="detail"/> falso = hover: o básico (o quê, barra de células, quanto falta, o que trava) e a dica
+        /// da tecla no canto. Verdadeiro = bolha fixada: entra o resto (maestria, fila, quem trabalha, ingredientes...).
+        /// </summary>
+        public List<LazyWidgetDataBase> Build(WorldTarget t, bool detail = false)
         {
             Styles s = Styles.Read();
             if (s == null || t == null) return null;
             var list = new List<LazyWidgetDataBase>();
             if (t.Drop != null)
             {
-                if (WorldProcesses.IsRotting(t.Drop)) DropSection(list, s, t.Drop);
+                if (WorldProcesses.IsRotting(t.Drop)) DropSection(list, s, t.Drop, detail);
                 Names.Scrub(list);
                 return list.Count == 0 ? null : list;
             }
             if (t.Data != null && t.Data.CraftComponent != null && WorldProcesses.HasCraftProcess(t.Data.CraftComponent))
             {
                 CraftElementBase el = t.Data.CraftComponent.CurrentCraftElement;
-                if (el.ParamsData != null && el.ParamsData.craftParamsType == CraftParamsData.CraftParamsType.GardenGrowing) GardenSection(list, s, t.Data, el);
-                else if (el.Def.isHidden && el.Def.isAuto) RenewSection(list, s, t.Data, el);
-                else CraftSection(list, s, t.Data);
+                if (el.ParamsData != null && el.ParamsData.craftParamsType == CraftParamsData.CraftParamsType.GardenGrowing) GardenSection(list, s, t.Data, el, detail);
+                else if (el.Def.isHidden && el.Def.isAuto) RenewSection(list, s, t.Data, el, detail);
+                else CraftSection(list, s, t.Data, detail);
             }
             Names.Scrub(list);
-            return list.Count == 0 ? null : list;
+            if (list.Count == 0) return null;
+            if (!detail) AddHint(list);
+            return list;
         }
+
+        private static void AddHint(List<LazyWidgetDataBase> list)
+        {
+            string hint = TooltipFeature.Current?.PinHint;
+            if (hint != null) list.Add(new PinHintData { Text = hint });
+        }
+
+        /// <summary>Linha "ícone + células". A janela nativa de craft corta a barra em 18 células.</summary>
+        private const int MaxCells = 18;
+
+        private static string Time(Styles s, float seconds, bool approx = false) => "cell_time".FontIcon() + Clock(s, seconds, approx);
 
         /// <summary>
         /// Conteúdo da bolha fixada: o normal enquanto o processo segue; senão uma linha curta no lugar do tempo congelado.
@@ -51,7 +68,7 @@ namespace GK2Hud.World
             if (t == null) return null;
             if (t.Alive)
             {
-                List<LazyWidgetDataBase> list = Build(t);
+                List<LazyWidgetDataBase> list = Build(t, true);
                 if (list != null) return list;
                 return StatusOnly(t, L10n.T(t.Drop != null ? "w_gone" : "w_done"));
             }
@@ -83,18 +100,21 @@ namespace GK2Hud.World
         // ---------------- corpo no chão ----------------
 
         /// <summary>Corpo largado no chão: some quando o timer zera (DropSystem.cs:137-160) e vira body_drop_grave_object.</summary>
-        private static void DropSection(List<LazyWidgetDataBase> list, Styles s, DropData d)
+        private static void DropSection(List<LazyWidgetDataBase> list, Styles s, DropData d, bool detail)
         {
             ItemDef def = d.Item.Definition;
             AddHeader(list, def != null ? Links.Wrap(Links.Item, def.id, def.GetHeader()) : null, s);
             var lines = new List<string> { Label(s, L10n.T("w_rots_in")) + Clock(s, d.AutoDestroyTimer) };
             // O DropView liga WhenVisibleOnScreen quando o chunk está visível (DropView.cs:1807): o timer não corre na tela.
             MultiFlagOR<CanNotBeAutoDestroyedReason> f = d.CanNotBeAutoDestroyed;
-            if (f.HasFlag(CanNotBeAutoDestroyedReason.WhenVisibleOnScreen) && f.GetFlag(CanNotBeAutoDestroyedReason.WhenVisibleOnScreen))
-                lines.Add(L10n.T("w_rot_paused"));
-            string after = Names.Wgo("body_drop_grave_object");
-            if (after != null) lines.Add(Label(s, L10n.T("w_then")) + after);
-            else lines.Add(L10n.T("w_rots_then"));
+            if (detail)
+            {
+                if (f.HasFlag(CanNotBeAutoDestroyedReason.WhenVisibleOnScreen) && f.GetFlag(CanNotBeAutoDestroyedReason.WhenVisibleOnScreen))
+                    lines.Add(L10n.T("w_rot_paused"));
+                string after = Names.Wgo("body_drop_grave_object");
+                if (after != null) lines.Add(Label(s, L10n.T("w_then")) + after);
+                else lines.Add(L10n.T("w_rots_then"));
+            }
             list.AddRange(Widgets(lines, s));
         }
 
@@ -106,7 +126,7 @@ namespace GK2Hud.World
         /// (CraftComponent.UpdateGardenGrowingCraft :1387). Cada célula boa soma gameresPerSuccessfulProgress no gameRes do
         /// canteiro (WgoData.OnSuccessfulTicksChange); a colheita sai de addItemsToWgoOnFinish (ex.: carrot = @crop + perks).
         /// </summary>
-        private static void GardenSection(List<LazyWidgetDataBase> list, Styles s, WgoData w, CraftElementBase el)
+        private static void GardenSection(List<LazyWidgetDataBase> list, Styles s, WgoData w, CraftElementBase el, bool detail)
         {
             CraftComponent cc = w.CraftComponent;
             var cd = el.Def as CraftDef;
@@ -115,13 +135,23 @@ namespace GK2Hud.World
             ItemDef crop = main != null ? GameBalance.Me.GetDataOrNull<ItemDef>(main.id) : null;
             AddHeader(list, WgoName(w), s);
 
-            var lines = new List<string>();
-            if (crop != null) lines.Add(Label(s, L10n.T("w_growing")) + ItemLink(crop));
             int total = Mathf.Max(0, el.TotalProgressTicks), done = Mathf.Max(0, el.ProgressTicks);
-            int good = el.SucceededProgressTicks, bad = el.FailedProgressTicks;
-            string prog = Label(s, L10n.T("w_progress")) + Num(s, done + "/" + total);
-            if (bad > 0) prog += " (" + L10n.T("w_cells_split", Num(s, good.ToString()), Num(s, bad.ToString())) + ")";
-            lines.Add(prog);
+            int good = Mathf.Max(0, el.SucceededProgressTicks), bad = Mathf.Max(0, el.FailedProgressTicks);
+
+            // A mesma barra da janela do canteiro (UIGardenBedWindow.UpdateProgressBar): boas à esquerda, falhadas no
+            // fim, estrela/+1 nas células que rendem colheita.
+            if (crop != null) list.Add(Text(ItemLink(crop), s.Description));
+            var row = new ProgressRowData { IconId = crop?.iconId };
+            int shown = Mathf.Min(total, MaxCells);
+            for (int i = 0; i < shown; i++)
+                row.Cells.Add(new TipCell
+                {
+                    State = i < good ? TipCell.Good : i >= total - bad ? TipCell.Failed : TipCell.Empty,
+                    Star = -1,
+                    Garden = cd != null ? cd.GetQualityForGardenProgressTick(i + 1) : -1,
+                });
+            row.More = total - shown;
+            list.Add(row);
 
             int mastery = 0, lockv = 1;
             try { mastery = el.ParamsData.MasteryValue; lockv = Mathf.Max(1, el.ParamsData.MasteryLock); }
@@ -138,70 +168,56 @@ namespace GK2Hud.World
             }
             else cells = zombie ? Mathf.Clamp01(mastery / (float)lockv) : 0f;
             if (!zombie && cells < 1f) cells = 1f;
-            if (done >= total) lines.Add(L10n.T("w_finishing"));
-            else if (cc.IsWorkPausedByMove()) lines.Add(L10n.T("w_paused_move"));
+            if (done >= total) list.Add(Text(L10n.T("w_finishing"), s.Small));
+            else if (cc.IsWorkPausedByMove()) list.Add(Text(L10n.T("w_paused_move"), s.Small));
             else if (cells > 0f)
             {
                 float per = WorldProcesses.SecondsPerTick(cc);
                 int ticks = Mathf.CeilToInt((total - done) / cells);
-                lines.Add(Label(s, L10n.T("w_time_left")) + Clock(s, Mathf.Max(0f, ticks * per - WorldProcesses.TickElapsed(cc)), approx: mastery < lockv && zombie));
+                list.Add(Text(Time(s, Mathf.Max(0f, ticks * per - WorldProcesses.TickElapsed(cc)), approx: mastery < lockv && zombie), s.Small));
             }
-            if (mastery < lockv)
-                lines.Add(Label(s, LLBase.L("ui_mastery")) + Num(s, mastery + "/" + lockv) + " · " + L10n.T("w_good_chance", Num(s, Mathf.RoundToInt(100f * mastery / lockv) + "%")));
-            else if (cells > 1f)
-                lines.Add(Label(s, LLBase.L("ui_mastery")) + Num(s, mastery + "/" + lockv) + " · " + L10n.T("w_cells_per_tick", Num(s, ((int)cells).ToString())));
+            if (!detail) return;
 
-            // Adubo: perks perk_fertilize_* do canteiro (sem duração, WgoData.cs:2490).
+            // Chance de célula boa: o widget que o jogo mostra ao passar o mouse na chance, na janela do canteiro.
+            TalentDef talent = w.Definition != null && !string.IsNullOrEmpty(w.Definition.talent) ? GameBalance.Me.GetDataOrNull<TalentDef>(w.Definition.talent) : null;
+            if (talent != null)
+            {
+                list.Add(new UITooltipSeparatorWidgetData());
+                list.Add(new UITooltipProgressTicksWidgetData(mastery, lockv, true, talent));
+            }
+
+            // Adubo: perks perk_fertilize_* do canteiro (sem duração, WgoData.cs:2490). Sem adubo, sem linha.
             var fert = new List<string>();
             if (w.ActivePerks != null)
                 foreach (PerkData p in w.ActivePerks)
                     if (p?.Definition != null && p.Definition.IsFertilizerPerk) fert.Add(Links.Wrap(Links.Perk, p.Definition.id, p.Definition.GetHeader()));
-            lines.Add(Label(s, L10n.T("w_fertilizer")) + (fert.Count > 0 ? string.Join(", ", fert) : L10n.T("w_none")));
-            list.AddRange(Widgets(lines, s));
+            if (fert.Count > 0) AddBlock(list, new List<LazyWidgetDataBase> { Text(Label(s, L10n.T("w_fertilizer")) + string.Join(", ", fert), s.Small) });
 
-            // Colheita: o que já acumulou (gameRes do canteiro) e o máximo se todas as células restantes derem certo.
+            // Colheita acumulada (gameRes do canteiro) em células de item nativas; o que ainda está em zero não entra.
             if (outs != null && cd != null)
             {
-                var harvest = new List<string>();
+                var harvest = new List<NeedItemData>();
                 foreach (ChanceOutputItem o in outs)
                 {
                     ItemDef idef = GameBalance.Me.GetDataOrNull<ItemDef>(o.id);
                     if (idef == null || o.count == null || !o.count.HasExpression) continue;
                     string expr = o.count.ToString();
-                    int now = 0, max = 0;
-                    bool fromRes = false;
-                    foreach (System.Text.RegularExpressions.Match m in ResRx.Matches(expr))
-                    {
-                        string res = m.Groups[1].Value;
-                        fromRes = true;
-                        now += w.GetGameResInt(res);
-                        max += PotentialRes(cd, res, good + 1, good + Mathf.Max(0, total - done));
-                    }
-                    if (!fromRes)
-                    {
-                        if (!int.TryParse(expr, NumberStyles.Integer, CultureInfo.InvariantCulture, out now)) continue;
-                        max = 0;
-                    }
-                    string t = ItemLink(idef) + " " + Num(s, now.ToString());
-                    if (max > 0) t += " " + L10n.T("w_up_to", Num(s, (now + max).ToString()));
-                    harvest.Add(t);
+                    int now = 0;
+                    System.Text.RegularExpressions.MatchCollection ms = ResRx.Matches(expr);
+                    foreach (System.Text.RegularExpressions.Match m in ms) now += w.GetGameResInt(m.Groups[1].Value);
+                    if (ms.Count == 0 && !int.TryParse(expr, NumberStyles.Integer, CultureInfo.InvariantCulture, out now)) continue;
+                    if (now > 0) harvest.Add(new NeedItemData(idef.id, now));
                 }
                 if (harvest.Count > 0)
-                    AddBlock(list, new List<LazyWidgetDataBase> { Text(Label(s, L10n.T("w_harvest")) + string.Join(", ", harvest), s.Small) });
+                {
+                    list.Add(new UITooltipSeparatorWidgetData());
+                    list.Add(Text(L10n.T("w_harvest"), s.SmallSelected));
+                    list.Add(new UITooltipNeedsItemWidgetData(harvest, new MultiInventory(new Inventory("inventory", 1)), w));
+                }
             }
         }
 
         private static readonly System.Text.RegularExpressions.Regex ResRx = new System.Text.RegularExpressions.Regex("WGOPar\\(\"([^\"]+)\"\\)");
-
-        /// <summary>Quanto o recurso ainda pode somar nas células from..total se todas forem boas (gameresPerSuccessfulProgress).</summary>
-        private static int PotentialRes(CraftDef cd, string res, int from, int total)
-        {
-            if (cd.gameresPerSuccessfulProgress == null) return 0;
-            int sum = 0;
-            foreach (GameResPerProgress g in cd.gameresPerSuccessfulProgress)
-                if (g != null && g.gameRes != null && g.sucessfulProgressTick >= from && g.sucessfulProgressTick <= total) sum += g.gameRes.GetInt(res);
-            return sum;
-        }
 
         // ---------------- renovação (autocraft escondido) ----------------
 
@@ -210,14 +226,14 @@ namespace GK2Hud.World
         /// o objeto pelo próximo estágio), colmeia, poço, latrina. Spawner pronto espera o jogador se afastar
         /// (WgoData.OnCraftEnd :1136, wgoDelayedSpawnSystemData).
         /// </summary>
-        private static void RenewSection(List<LazyWidgetDataBase> list, Styles s, WgoData w, CraftElementBase el)
+        private static void RenewSection(List<LazyWidgetDataBase> list, Styles s, WgoData w, CraftElementBase el, bool detail)
         {
             CraftComponent cc = w.CraftComponent;
             AddHeader(list, WgoName(w), s);
             var lines = new List<string>();
             List<SpawnStage> stages = w.SpawnWGOComponent?.SpawnStages;
             int stage = stages == null ? -1 : stages.FindIndex(x => x != null && x.craftId == el.CraftId);
-            if (stage >= 0 && stages.Count > 1) lines.Add(Label(s, L10n.T("w_stage")) + Num(s, (stage + 1) + "/" + stages.Count));
+            if (detail && stage >= 0 && stages.Count > 1) lines.Add(Label(s, L10n.T("w_stage")) + Num(s, (stage + 1) + "/" + stages.Count));
             ItemDef res = ResultItem(el.Def);
             if (res != null) lines.Add(Label(s, L10n.T("w_brings")) + ItemLink(res));
             else if (TryAddedToWgo(el.Def, out string addId, out int addCount) && GameBalance.Me.GetDataOrNull<ItemDef>(addId) is ItemDef add)
@@ -237,9 +253,9 @@ namespace GK2Hud.World
             if (delayed) lines.Add(L10n.T("w_wait_away"));
             else if (cc.Status == CraftComponentStatus.ReadyToFinishAutoCraft || (el.IsStarted && done >= total)) lines.Add(L10n.T("w_finishing"));
             else if (el.IsStarted)
-                lines.Add(Label(s, L10n.T("w_ready_in")) + Clock(s, AutoSecondsLeft(cc, el)));
+                lines.Add(Time(s, AutoSecondsLeft(cc, el)));
             else lines.Add(L10n.T("w_not_started"));
-            if (el.IsStarted && total > 0) lines.Add(Label(s, L10n.T("w_progress")) + Num(s, done + "/" + total) + " " + L10n.T("w_ticks_word"));
+            if (detail && el.IsStarted && total > 0) lines.Add(Label(s, L10n.T("w_progress")) + Num(s, done + "/" + total) + " " + L10n.T("w_ticks_word"));
             list.AddRange(Widgets(lines, s));
         }
 
@@ -274,7 +290,7 @@ namespace GK2Hud.World
 
         // ---------------- craft ----------------
 
-        private void CraftSection(List<LazyWidgetDataBase> list, Styles s, WgoData w)
+        private void CraftSection(List<LazyWidgetDataBase> list, Styles s, WgoData w, bool detail)
         {
             CraftComponent cc = w.CraftComponent;
             CraftElementBase el = cc.CurrentCraftElement;
@@ -282,12 +298,11 @@ namespace GK2Hud.World
             string name = WgoName(w);
             AddHeader(list, name != null ? Links.Wrap(Links.Station, w.id, name) : null, s);
 
-            var lines = new List<string>();
             // O quê: nome do craft (link) e quantidade que sai (pré-rolada no início do craft, CraftElementBase.cs:486).
             string what = CraftLink(def);
             int outCount = OutputCount(el, w);
             if (what != null && outCount > 1) what += " " + Num(s, "×" + outCount);
-            if (what != null) lines.Add(Label(s, L10n.T(def.isHidden ? "w_renewing" : "w_making")) + what);
+            if (what != null) list.Add(Text(what, s.Description));
 
             int total = Mathf.Max(0, el.TotalProgressTicks), done = Mathf.Max(0, el.ProgressTicks);
             bool started = el.IsStarted;
@@ -296,8 +311,20 @@ namespace GK2Hud.World
             var zombie = worker as ZombieWgoData;
             CraftComponentStatus st = cc.Status;
 
-            if (started && total > 0)
-                lines.Add(Label(s, L10n.T("w_progress")) + Num(s, done + "/" + total) + " " + L10n.T("w_ticks_word"));
+            // Barra de células como a da janela de craft (UIBaseCraftSelectionWindow.UpdateProgressBar), com as estrelas
+            // do craft estrela. Antes de começar, a duração do balanço em células vazias.
+            int span = started ? total : DurationTicks(el, w);
+            var row = new ProgressRowData { IconId = ResultItem(def)?.iconId };
+            int shown = Mathf.Min(span, MaxCells);
+            var sc = def as CraftDef;
+            for (int i = 0; i < shown; i++)
+            {
+                int star = -1;
+                if (sc != null && sc.isStarCraft) star = i + 1 == sc.goldLevel ? 3 : i + 1 == sc.silverLevel ? 2 : i + 1 == sc.bronzeLevel ? 1 : -1;
+                row.Cells.Add(new TipCell { State = started && i < done * shown / Mathf.Max(1, span) ? TipCell.Good : TipCell.Empty, Star = star, Garden = -1 });
+            }
+            row.More = span - shown;
+            if (row.Cells.Count > 0 || row.IconId != null) list.Add(row);
 
             // Estado e tempo.
             string state = null, time = null;
@@ -312,71 +339,79 @@ namespace GK2Hud.World
             // Zumbi artesão com ordem pendente para o craft: CraftComponent.Update sai cedo no autocraft (:721) e a
             // ZombieCraftActivity não bate no manual (ZombieCraftActivity.cs:99).
             else if (zombie != null && zombie.CrafterOrders.Count > 0) state = L10n.T("w_zombie_busy");
-            else if (auto)
-            {
-                float left = AutoSecondsLeft(cc, el);
-                time = Label(s, L10n.T("w_time_left")) + Clock(s, left);
-            }
+            else if (auto) time = Time(s, AutoSecondsLeft(cc, el));
             else if (zombie != null)
             {
                 float per = ZombieSecondsPerTick(zombie, w, el);
-                time = Label(s, L10n.T("w_time_left")) + (per > 0f ? Clock(s, (total - done) * per, approx: true) : L10n.T("w_unknown"));
+                time = per > 0f ? Time(s, (total - done) * per, approx: true) : null;
             }
-            else
-            {
-                state = L10n.T("w_needs_you", Num(s, (total - done).ToString()));
-            }
-            if (time != null) lines.Add(time);
-            if (state != null) lines.Add(state);
+            else state = L10n.T("w_needs_you", Num(s, (total - done).ToString()));
 
-            // Fila inteira (só autocraft: o resto depende de golpes).
-            List<CraftElementBase> queue = cc.CraftElementsQueue;
-            if (auto && queue.Count > 0)
-            {
-                float all = QueueSecondsLeft(cc, w, el, out bool infinite, out bool collect);
-                if (infinite) lines.Add(Label(s, L10n.T("w_queue_time")) + L10n.T("w_infinite"));
-                else if (all > 0f && (queue.Count > 1 || el.Count > 1))
-                    lines.Add(Label(s, L10n.T("w_queue_time")) + Clock(s, all, approx: true) + (collect ? " " + L10n.T("w_collect_each") : ""));
-            }
-
-            // Quem trabalha.
-            lines.Add(Label(s, L10n.T("w_worker")) + WorkerText(cc, w, zombie, auto));
-
-            var widgets = Widgets(lines, s);
-
-            // Bloqueio: CraftStatus ≠ OK traduzido.
+            // Bloqueio: CraftStatus ≠ OK traduzido. No hover ele toma o lugar do estado (é o que o jogador precisa saber).
             CraftStatus cs = el.CraftStatus;
-            if (cs != CraftStatus.OK && !ready)
-                widgets.Add(Text(L10n.T("w_blocked") + ": " + StatusText(cs), Native.Style("redEffectTextStyle") ?? s.Small));
+            bool blocked = cs != CraftStatus.OK && !ready;
+            if (time != null) list.Add(Text(time, s.Small));
+            if (state != null && (detail || !blocked)) list.Add(Text(state, s.Small));
+            if (blocked) list.Add(Text(StatusText(cs), Native.Style("redEffectTextStyle") ?? s.Small));
 
-            AddBlock(list, widgets);
-
-            // Fila: próximos itens (links).
-            var next = new List<string>();
-            int extra = 0;
-            if ((el.Count > 1 || el.IsInfinite) && CraftLink(def) is string cur) next.Add(cur + " " + (el.IsInfinite ? L10n.T("w_repeat") : Num(s, "×" + (el.Count - 1))));
-            foreach (CraftElementBase q in queue)
-            {
-                if (q == null || q == el || q.Def == null || q.Count <= 0 || CraftLink(q.Def) == null) continue;
-                if (next.Count >= MaxQueue) { extra++; continue; }
-                next.Add(CraftLink(q.Def) + (q.IsInfinite ? " " + L10n.T("w_repeat") : q.Count > 1 ? " " + Num(s, "×" + q.Count) : ""));
-            }
-            if (next.Count > 0)
-            {
-                string t = Label(s, L10n.T("w_next")) + string.Join(", ", next) + (extra > 0 ? " +" + extra : "");
-                AddBlock(list, new List<LazyWidgetDataBase> { Text(t, s.Small) });
-            }
-
-            // Ingredientes que faltam para o próximo craft (widget nativo com possui/precisa).
+            // Ingredientes que faltam para o próximo craft (widget nativo com possui/precisa): é a resposta ao bloqueio.
+            bool needsShown = false;
             if (!started && cs == CraftStatus.NotEnoughResources && def is CraftDef cdef)
             {
                 var needs = new UITooltipNeedsItemWidgetData(cdef, cc);
-                if (needs.CraftItemCellsData.Count > 0) { list.Add(new UITooltipSeparatorWidgetData()); list.Add(needs); }
+                if (needs.CraftItemCellsData.Count > 0) { list.Add(needs); needsShown = true; }
             }
+            if (!detail) return;
 
-            // Combustível guardado na estação (o mesmo número da bolha nativa, Wgo.TryGetFuelContainerStoredItem).
-            string fuel = FuelLine(s, w) ?? FuelNeedLine(s, w, def);
-            if (fuel != null) AddBlock(list, new List<LazyWidgetDataBase> { Text(fuel, s.Small) });
+            // Tempo da fila inteira (só autocraft: o resto depende de golpes): vai ao lado do rótulo "Next".
+            List<CraftElementBase> queue = cc.CraftElementsQueue;
+            string queueTime = null;
+            if (auto && queue.Count > 0)
+            {
+                float all = QueueSecondsLeft(cc, w, el, out bool infinite, out _);
+                if (!infinite && all > 0f && (queue.Count > 1 || el.Count > 1)) queueTime = Time(s, all, approx: true);
+            }
+            // Quem trabalha só entra quando não é a própria máquina.
+            var lines = new List<string>();
+            if (zombie != null || (auto && cc.IsServicedByZombieOperator)) lines.Add(Label(s, L10n.T("w_worker")) + L10n.T("w_worker_zombie"));
+            else if (!auto) lines.Add(Label(s, L10n.T("w_worker")) + L10n.T("w_worker_you"));
+
+            // Fila: o que vem depois, em células de item nativas com a quantidade; sem item para mostrar, em texto.
+            var nextCells = new List<NeedItemData>();
+            var next = new List<string>();
+            int extra = 0;
+            bool allItems = true;
+            void Queue(CraftDefBase d, int count, bool infinite)
+            {
+                if (next.Count >= MaxQueue) { extra++; return; }
+                ItemDef item = ResultItem(d);
+                if (item == null || infinite) allItems = false;
+                else nextCells.Add(new NeedItemData(item.id, count));
+                next.Add(CraftLink(d) + (infinite ? " " + L10n.T("w_repeat") : count > 1 ? " " + Num(s, "×" + count) : ""));
+            }
+            if ((el.Count > 1 || el.IsInfinite) && CraftLink(def) != null) Queue(def, el.Count - 1, el.IsInfinite);
+            foreach (CraftElementBase q in queue)
+            {
+                if (q == null || q == el || q.Def == null || q.Count <= 0 || CraftLink(q.Def) == null) continue;
+                Queue(q.Def, q.Count, q.IsInfinite);
+            }
+            if (next.Count > 0)
+            {
+                list.Add(new UITooltipSeparatorWidgetData());
+                if (allItems && extra == 0)
+                {
+                    list.Add(Text((s.SmallSelected.ApplyStyleToString(L10n.T("w_next")) ?? "") + (queueTime != null ? "  " + queueTime : ""), s.Small));
+                    list.Add(new UITooltipNeedsItemWidgetData(nextCells, new MultiInventory(new Inventory("inventory", 1)), w));
+                }
+                else list.Add(Text(Label(s, L10n.T("w_next")) + string.Join(", ", next) + (extra > 0 ? " +" + extra : "") + (queueTime != null ? "  " + queueTime : ""), s.Small));
+            }
+            else if (queueTime != null) lines.Add(Label(s, L10n.T("w_queue_time")) + queueTime);
+
+            // Combustível guardado na estação (o mesmo número da bolha nativa, Wgo.TryGetFuelContainerStoredItem). Com as
+            // células de ingredientes na bolha, o combustível que falta já está nelas.
+            string fuel = FuelLine(s, w) ?? (needsShown ? null : FuelNeedLine(s, w, def));
+            if (fuel != null) lines.Add(fuel);
+            AddBlock(list, Widgets(lines, s));
         }
 
         private static int OutputCount(CraftElementBase el, WgoData w)
@@ -500,13 +535,6 @@ namespace GK2Hud.World
             return v;
         }
 
-        private static string WorkerText(CraftComponent cc, WgoData w, ZombieWgoData zombie, bool auto)
-        {
-            if (zombie != null) return L10n.T("w_worker_zombie");
-            if (auto) return L10n.T(cc.IsServicedByZombieOperator ? "w_worker_auto_zombie" : "w_worker_auto");
-            return L10n.T("w_worker_you");
-        }
-
         public static string StatusText(CraftStatus cs)
         {
             switch (cs)
@@ -541,8 +569,7 @@ namespace GK2Hud.World
             int count = w.Inventory?.Data?.GetTotalCountInInventory(itemId) ?? 0;
             ItemDef fd = GameBalance.Me.GetDataOrNull<ItemDef>(itemId);
             if (fd == null) return null;
-            string name = Links.Wrap(Links.Item, itemId, fd.GetHeader());
-            return Label(s, L10n.T("w_fuel")) + name + " " + Num(s, count.ToString());
+            return Links.Wrap(Links.Item, itemId, itemId.FontIcon() + Num(s, count.ToString()));
         }
 
         /// <summary>
@@ -561,11 +588,8 @@ namespace GK2Hud.World
                 int have = w.GetCraftableMultiInventory().GetTotalCount(n.id);
                 int per = Mathf.Max(1, n.GetCount(w));
                 // O item "fire" se chama "Fuel"/"Combustível": aí o número vira o link, sem repetir o nome.
-                string label = L10n.T("w_fuel");
-                string amount = string.Equals(d.GetHeader(), label, System.StringComparison.OrdinalIgnoreCase)
-                    ? Links.Wrap(Links.Item, d.id, Num(s, have.ToString()))
-                    : ItemLink(d) + " " + Num(s, have.ToString());
-                return Label(s, label) + amount + " · " + L10n.T(have / per == 1 ? "w_fuel_craft1" : "w_fuel_crafts", Num(s, (have / per).ToString()));
+                // O ícone e o número como a bolha nativa do depósito de lenha; ao lado, para quantos crafts dá.
+                return Links.Wrap(Links.Item, d.id, d.id.FontIcon() + Num(s, have.ToString())) + "  " + Num(s, "×" + (have / per));
             }
             return null;
         }
@@ -618,6 +642,13 @@ namespace GK2Hud.World
             foreach (LazyWidgetDataBase d in list)
             {
                 if (d is UITooltipTextWidgetData t) sb.Append(t.Text);
+                else if (d is TipData td) sb.Append(td.Sig);
+                else if (d is UITooltipProgressTicksWidgetData pt) sb.Append("mastery:").Append(pt.MasteryValue).Append('/').Append(pt.MasteryLock);
+                else if (d is UITooltipNeedsItemWidgetData ni)
+                {
+                    sb.Append("cells:");
+                    foreach (UICraftItemCellData c in ni.CraftItemCellsData) sb.Append(c.currentItem?.id).Append('×').Append(c.currentItem?.GetCount()).Append(',');
+                }
                 else sb.Append(d.GetType().Name);
                 sb.Append('\n');
             }

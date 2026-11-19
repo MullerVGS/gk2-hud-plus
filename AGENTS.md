@@ -135,6 +135,34 @@ Pacote público (`GK2HudPlus/`, `mullervgs.gk2.hudplus`, nome `GK2 HUD+`): os mo
   confere os patches), `hudplus-menu.cs` (`abrir` pelo botão da pausa, `trocar` ID, `hover` ID, `rolar` POS,
   `fechar`), `settings.cs`, `mods-nativo.cs`, `guard-desligar.cs` (MOD = GUID do HUD+, PARTE = id da funcionalidade).
 
+## Tooltips em dois níveis (HUD+ 0.6.x)
+
+Regra: o hover mostra só o que se quer num relance; o resto entra na bolha fixada (`[Tooltips] PinKey`, botão do meio).
+Frase longa foi recusada ("coisa de programador"): onde o jogo tem widget ou ícone, usa-se ele.
+
+- **Conteúdo**: `WorldContent.Build(alvo, detail)` e `TooltipContent.Enrich(lista, entidade, detail)`. No hover `detail`
+  é falso; ao fixar, a bolha de mundo nasce do conteúdo vivo com `detail` e a de UI parte do tooltip como o jogo o montou
+  (`lastPlain`) e recebe o detalhe.
+- **Widgets próprios** (`Tooltips/TipWidgets.cs`): o `LazyWidgetContainer` casa dado e widget pelo tipo exato; um prefixo em
+  `ConstructWidgets` garante um widget nosso por dado, no tooltip nativo e nos clones fixados. `ProgressRowData` = ícone do
+  item + barra de células (cópias do `ProgressCellCraft` do pool, 7×10 px de arte, passo 6; a janela nativa corta em 18);
+  `PinHintData` = a dica da tecla no canto de baixo à direita, só quando fixar mostra mais. Tooltips e World registram
+  cada uma o seu método de prefixo: soltar os patches de uma tira o método dela.
+- **Ícone de item fora de célula** precisa do material nativo (`ItemCellMaterial`, shader que troca o contorno azul da arte).
+- **Nativos reaproveitados**: `UITooltipProgressTicksWidgetData` (chance de célula boa do canteiro) e
+  `UITooltipNeedsItemWidgetData(itens, inventário vazio, wgo)` para células só com quantidade (colheita, fila).
+- **Receita** no item fixado: células nativas logo abaixo do "Crafted at" (`Index.MadeBy`); receita que existe e o jogador
+  não conhece vira "Recipe: ?".
+- **Bolha de mundo fixada** anda com o objeto (`Bubble.Anchor`, `PinStack.Follow`) e nenhuma bolha solta sai da tela.
+- **Tecla em Controls** (`Tooltips/PinKeyControl.cs`): uma linha a mais no fim da `UIGameBindingSettingsWindow`, com o
+  `UIGameBindingElement` nativo e um `KeyBinding` que não entra nos bindings do jogo; o valor vai para o `.cfg`. A tecla
+  não está nas `options` da funcionalidade (mudar reiniciaria a funcionalidade e soltaria a linha no meio da troca).
+- `Names.IsDevId` exige uma letra: um relógio ("8:56") não é id.
+- Cenários: `canteiro-janela.cs` (janela nativa do canteiro, referência), `gk2hud-item-fixar.cs` (tooltip de item, com ou
+  sem fixar), `controls.cs` (janela de Controls), `gk2hud-mundo-hover.cs` + `gk2hud-mundo-fixar.cs` (mundo).
+- `docs/cenarios/fechar-janelas.cs` é preparo de todos os clipes: mexer nele defasa os 16. O `gk2 check` precisa do
+  `Steam_1` carregado (`carregar-slot.cs`); com o save de gravação ele acusa "deixou passar um bug conhecido".
+
 ## Calendário com a arte do jogo (HUD+ 0.4.0)
 
 - **Cenas dos dias**: o centro do medalhão tem uma cena por dia (`UIHUDWheel.dayCustomWheelCenterIconDay/Night`, 56×52), liberada

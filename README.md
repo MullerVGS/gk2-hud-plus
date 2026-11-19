@@ -46,11 +46,11 @@
 
 ### Tooltips
 
-**Richer tooltips.** More numbers on items, stations and characters. Middle click pins a tooltip, and highlighted terms open another one inside it.
+**Richer tooltips.** Hovering shows the essentials. Middle click pins the tooltip and opens the details: the recipe in item cells, where it is used, costs per tick. Highlighted terms open another tooltip inside it. The key can be changed in the game's Controls window.
 
 <p align="center"><img src="docs/showcase/Tooltips.webp" alt="Richer tooltips" width="450"></p>
 
-**Tooltips in the world.** Rest the mouse on a craft, a garden bed or a body to see what is going on and how long is left.
+**Tooltips in the world.** Rest the mouse on a craft, a garden bed or a body to see what is being made, the game's own progress cells and how long is left. Pinned, it follows the object and adds the queue, the harvest so far and the fuel.
 
 <p align="center"><img src="docs/showcase/World.webp" alt="Tooltips in the world" width="588"></p>
 

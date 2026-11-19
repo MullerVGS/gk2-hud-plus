@@ -44,9 +44,10 @@ namespace GK2Hud.World
         /// <summary>Modo de teste (cenários gk2hud-mundo-*.cs): no green o mouse não mexe.</summary>
         internal Vector2? VirtualMouse { get; set; }
 
-        public WorldHoverFeature(ConfigEntry<float> delay)
+        public WorldHoverFeature(HarmonyLib.Harmony harmony, ConfigEntry<float> delay)
         {
             this.delay = delay;
+            TipWidgets.Acquire(harmony, true);
             Current = this;
             int orphans = DestroyOrphans();
             if (orphans > 0) HudModule.Log.LogInfo($"proxies de mundo órfãos destruídos: {orphans}");
@@ -55,6 +56,7 @@ namespace GK2Hud.World
         public void Dispose()
         {
             HideOwn();
+            TipWidgets.Release();
             if (proxy != null) Object.Destroy(proxy.gameObject);
             proxy = null;
             target = null;
@@ -261,6 +263,14 @@ namespace GK2Hud.World
             if (tooltipTarget == null || tooltipTarget != proxy || target == null) return null;
             WorldTarget t = target;
             return () => Content.BuildLive(t);
+        }
+
+        /// <summary>Ponto de tela do objeto sob o tooltip de mundo, para a bolha fixada andar com ele (null fora de alcance).</summary>
+        internal Func<Vector2?> AnchorFor(RectTransform tooltipTarget)
+        {
+            if (tooltipTarget == null || tooltipTarget != proxy || target == null) return null;
+            WorldTarget t = target;
+            return () => t.Alive ? (Vector2?)WorldTargets.Project(t.Pivot) : null;
         }
 
         internal bool IsProxy(RectTransform rt) => rt != null && rt == proxy;

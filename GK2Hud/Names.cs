@@ -15,8 +15,8 @@ namespace GK2Hud
         private static readonly Regex DevLike = new Regex(@"^[a-z0-9_:.\-]+$");
         private static readonly Regex Noise = new Regex(@"^(clr\d+|xxs|xs|s|m|l|xl|v\d+|[ab]\d+|\d+|onetime|empty|autospawn|dev)$");
 
-        /// <summary>Texto que é um id de dev: só minúsculas/dígitos/_/:, com _ ou :, sem espaço.</summary>
-        public static bool IsDevId(string s) => !string.IsNullOrEmpty(s) && DevLike.IsMatch(s) && (s.IndexOf('_') >= 0 || s.IndexOf(':') >= 0);
+        /// <summary>Texto que é um id de dev: só minúsculas/dígitos/_/:, com _ ou :, sem espaço. Sem letra não é id (um relógio "8:56").</summary>
+        public static bool IsDevId(string s) => !string.IsNullOrEmpty(s) && DevLike.IsMatch(s) && (s.IndexOf('_') >= 0 || s.IndexOf(':') >= 0) && s.Any(char.IsLetter);
 
         /// <summary>Texto do jogo para a chave, ou null quando não existe (chave devolvida, alias quebrado, vazio).</summary>
         public static string Text(string key)
