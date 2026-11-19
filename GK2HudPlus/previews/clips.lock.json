@@ -50,6 +50,22 @@
     },
     "game": "1.012.7"
   },
+  "HudShowMax": {
+    "date": "2026-11-19",
+    "files": {
+      "GK2Hud/Hud/HudConfig.cs": "5bbf4845f7201dff",
+      "GK2Hud/Hud/HudFader.cs": "7e53c1aea27c6b47",
+      "GK2Hud/Hud/HudFeature.cs": "2dc9e8de2d86fab8",
+      "clips.txt": "7e7136a1495cd2ba",
+      "docs/cenarios/demo-hudmax.cs": "cdee415ca0665100",
+      "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
+      "docs/cenarios/gk2hud-recursos.cs": "6bde9626d1ce1072",
+      "docs/cenarios/hud-exterior-dia.cs": "df5f04f4e9866a77",
+      "tools/snippet/DemoKit.cs": "26d68e222f910497",
+      "tools/snippet/Slots.cs": "60719f4e37c234dd"
+    },
+    "game": "1.012.7"
+  },
   "Journal": {
     "date": "2026-11-17",
     "files": {
@@ -78,6 +94,21 @@
       "docs/cenarios/demo-map.cs": "8085bcfd23bf96ce",
       "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
       "docs/cenarios/hud-exterior-dia.cs": "df5f04f4e9866a77",
+      "tools/snippet/DemoKit.cs": "26d68e222f910497",
+      "tools/snippet/Slots.cs": "60719f4e37c234dd"
+    },
+    "game": "1.012.7"
+  },
+  "MapOrders": {
+    "date": "2026-11-19",
+    "files": {
+      "GK2Map/MapModule.cs": "8a6d2d7278307f4d",
+      "GK2Map/Orders.cs": "e8368032028c75cc",
+      "clips.txt": "e6d6473aa36bd8ea",
+      "docs/cenarios/demo-orders.cs": "50160356fcb04bef",
+      "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
+      "docs/cenarios/hud-exterior-dia.cs": "df5f04f4e9866a77",
+      "docs/cenarios/hudplus-funcionalidades.cs": "7d78195d3b435906",
       "tools/snippet/DemoKit.cs": "26d68e222f910497",
       "tools/snippet/Slots.cs": "60719f4e37c234dd"
     },
@@ -189,6 +220,24 @@
       "clips.txt": "cf446ed8dce2b319",
       "docs/cenarios/carregar-slot.cs": "0a7f164ef97a753d",
       "docs/cenarios/demo-calendar.cs": "0cc9f52afb12d0a1",
+      "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
+      "docs/cenarios/hud-exterior-dia.cs": "df5f04f4e9866a77",
+      "tools/snippet/DemoKit.cs": "26d68e222f910497",
+      "tools/snippet/Slots.cs": "60719f4e37c234dd"
+    },
+    "game": "1.012.7"
+  },
+  "WheelCarousel": {
+    "date": "2026-11-19",
+    "files": {
+      "GK2Hud/Calendar/CalendarModel.cs": "27a34978f4954dda",
+      "GK2Hud/Calendar/CalendarTooltip.cs": "804f3d2fe2db66f7",
+      "GK2Hud/Calendar/WeekStrip.cs": "e1a6d5f1ac7e3b83",
+      "GK2Hud/Calendar/WheelFeature.cs": "5f6689bd216008d8",
+      "GK2Hud/Names.cs": "bf205c97a94198c1",
+      "clips.txt": "8a5f07a25f1571bb",
+      "docs/cenarios/carregar-slot.cs": "0a7f164ef97a753d",
+      "docs/cenarios/demo-carousel.cs": "efeab3bcfd56e36a",
       "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
       "docs/cenarios/hud-exterior-dia.cs": "df5f04f4e9866a77",
       "tools/snippet/DemoKit.cs": "26d68e222f910497",
