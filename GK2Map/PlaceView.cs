@@ -5,7 +5,9 @@ using System.Reflection;
 using HarmonyLib;
 using LazyBearTechnology;
 using TMPro;
+using Unity.Collections;
 using UnityEngine;
+using UnityEngine.Rendering;
 using UnityEngine.UI;
 
 namespace GK2Map
@@ -341,23 +343,31 @@ namespace GK2Map
         private const int FlatRun = 64;
         private const int FlatTolerance = 1;
         private Vector2 voidPush;
-        private Texture2D probeRow, probeColumn;
+        private Texture2D probeRow, probeColumn;   // só no caminho síncrono (placa sem leitura assíncrona)
+        private RenderTexture probeScreen;
+        private Color32[] probeRowPx, probeColumnPx;
+        private int probeGen, probeArrived;
+        private bool probeInFlight;
+        private Vector2 probePush;
 
         /// <summary>
         /// Limite do mundo aberto pela própria imagem. Os dados do jogo não dizem onde há chão desenhado (os ladrilhos
         /// de terreno existem em camadas, também onde nada aparece), mas fora do cenário a câmera mostra uma cor
         /// lisa. A cada 0,1 s, no fim do frame, quatro linhas de 1 pixel nas bordas da vista são lidas da tela;
         /// cada ponto que mostra o vazio empurra o foco para dentro (empurrões opostos se anulam).
+        /// A leitura é assíncrona (<see cref="ProbeAsync"/>): <c>ReadPixels</c> fazia a CPU esperar a GPU terminar o
+        /// frame, 10 vezes por segundo (~75 ms/s medidos numa GPU rápida; numa lenta, o frame inteiro da GPU a cada vez).
         /// </summary>
         private IEnumerator ProbeVoid()
         {
             var endOfFrame = new WaitForEndOfFrame();
             float next = 0f;
+            bool async = SystemInfo.supportsAsyncGPUReadback;
             while (!exited)
             {
                 yield return endOfFrame;
                 if (exited || cam == null) yield break;
-                if (!place.Outdoor || Time.unscaledTime < next) continue;
+                if (!place.Outdoor || Time.unscaledTime < next || probeInFlight) continue;
                 next = Time.unscaledTime + ProbeSeconds;
                 Vector3[] c = new Vector3[4];
                 Viewport.GetWorldCorners(c);
@@ -365,6 +375,7 @@ namespace GK2Map
                 int y0 = Mathf.Clamp(Mathf.CeilToInt(c[0].y) + ProbeInset, 0, Screen.height - 1), y1 = Mathf.Clamp(Mathf.FloorToInt(c[2].y) - ProbeInset, 0, Screen.height - 1);
                 int w = x1 - x0 + 1, h = y1 - y0 + 1;
                 if (w < 16 || h < 16) continue;
+                if (async) { ProbeAsync(x0, x1, y0, y1, w, h); continue; }
                 if (probeRow == null || probeRow.width != w)
                 {
                     if (probeRow != null) Destroy(probeRow);
@@ -380,8 +391,72 @@ namespace GK2Map
                 push += ProbeLine(probeRow, new Rect(x0, y1, w, 1), true, new Vector2(0f, -1f));
                 push += ProbeLine(probeColumn, new Rect(x0, y0, 1, h), false, new Vector2(1f, 0f));
                 push += ProbeLine(probeColumn, new Rect(x1, y0, 1, h), false, new Vector2(-1f, 0f));
-                voidPush = push.sqrMagnitude < 0.01f ? Vector2.zero : push.normalized * ProbeStep * (ortho / savedOrtho);
+                SetVoidPush(push);
             }
+        }
+
+        private void SetVoidPush(Vector2 push) =>
+            voidPush = push.sqrMagnitude < 0.01f ? Vector2.zero : push.normalized * ProbeStep * (ortho / savedOrtho);
+
+        /// <summary>
+        /// Copia a tela para uma textura na GPU (<c>CaptureScreenshotIntoRenderTexture</c>, sem esperar) e pede as quatro
+        /// linhas com <c>AsyncGPUReadback</c>; elas chegam dois ou três frames depois e só então o empurrão vale. Em
+        /// Direct3D a cópia vem de cabeça para baixo (<c>graphicsUVStartsAtTop</c>): a linha da tela y é a linha
+        /// altura-1-y da textura, e a coluna vem na ordem inversa (conferido pixel a pixel contra o <c>ReadPixels</c>).
+        /// </summary>
+        private void ProbeAsync(int x0, int x1, int y0, int y1, int w, int h)
+        {
+            if (probeScreen == null || probeScreen.width != Screen.width || probeScreen.height != Screen.height)
+            {
+                ReleaseProbe();
+                probeScreen = new RenderTexture(Screen.width, Screen.height, 0, RenderTextureFormat.ARGB32) { name = "GK2Map_Probe" };
+            }
+            ScreenCapture.CaptureScreenshotIntoRenderTexture(probeScreen);
+            bool flip = SystemInfo.graphicsUVStartsAtTop;
+            int last = probeScreen.height - 1;
+            int gen = ++probeGen;
+            probeInFlight = true;
+            probeArrived = 0;
+            probePush = Vector2.zero;
+            Request(gen, x0, flip ? last - y0 : y0, w, 1, true, false, new Vector2(0f, 1f));
+            Request(gen, x0, flip ? last - y1 : y1, w, 1, true, false, new Vector2(0f, -1f));
+            int colY = flip ? last - y1 : y0;
+            Request(gen, x0, colY, 1, h, false, flip, new Vector2(1f, 0f));
+            Request(gen, x1, colY, 1, h, false, flip, new Vector2(-1f, 0f));
+        }
+
+        private void Request(int gen, int x, int y, int w, int h, bool horizontal, bool reverse, Vector2 inward)
+        {
+            AsyncGPUReadback.Request(probeScreen, 0, x, w, y, h, 0, 1, TextureFormat.RGBA32, r => OnProbe(r, gen, horizontal, reverse, inward));
+        }
+
+        private void OnProbe(AsyncGPUReadbackRequest r, int gen, bool horizontal, bool reverse, Vector2 inward)
+        {
+            if (exited || gen != probeGen) return;
+            if (!r.hasError)
+            {
+                NativeArray<Color32> data = r.GetData<Color32>();
+                Color32[] buf = horizontal ? probeRowPx : probeColumnPx;
+                if (buf == null || buf.Length != data.Length)
+                {
+                    buf = new Color32[data.Length];
+                    if (horizontal) probeRowPx = buf; else probeColumnPx = buf;
+                }
+                data.CopyTo(buf);
+                if (reverse) System.Array.Reverse(buf);
+                probePush += Push(buf, horizontal, inward);
+            }
+            if (++probeArrived < 4) return;
+            probeInFlight = false;
+            SetVoidPush(probePush);
+        }
+
+        private void ReleaseProbe()
+        {
+            if (probeScreen == null) return;
+            probeScreen.Release();
+            Destroy(probeScreen);
+            probeScreen = null;
         }
 
         /// <summary>
@@ -406,7 +481,12 @@ namespace GK2Map
         private static Vector2 ProbeLine(Texture2D line, Rect rect, bool horizontal, Vector2 inward)
         {
             line.ReadPixels(rect, 0, 0, false);
-            Color32[] px = line.GetPixels32();
+            return Push(line.GetPixels32(), horizontal, inward);
+        }
+
+        /// <summary>Empurrão de uma linha já lida (amostras de baixo para cima nas colunas, da esquerda para a direita nas linhas).</summary>
+        private static Vector2 Push(Color32[] px, bool horizontal, Vector2 inward)
+        {
             Vector2 push = Vector2.zero;
             for (int i = 0; i < ProbePerEdge; i++)
             {
@@ -696,6 +776,9 @@ namespace GK2Map
             if (probeRow != null) Destroy(probeRow);
             if (probeColumn != null) Destroy(probeColumn);
             probeRow = probeColumn = null;
+            ReleaseProbe();
+            probeGen++;   // leitura que ainda chegar é descartada
+            probeInFlight = false;
             stack.Clear();
             PlaceInspect.Clear();
             foreach (GameObject go in created) if (go != null) Destroy(go);

@@ -110,6 +110,8 @@ namespace GK2Hud.Calendar
                     nextRefresh = now + RefreshInterval;
                     page.Refresh();
                 }
+                if (open && window.IsShown) page.Tick();   // colunas vizinhas da faixa, aos poucos
+                else WeekStrip.WarmUp(0.5);                // arte dos cartões decodificada antes da primeira abertura
             }
             catch (Exception ex)
             {

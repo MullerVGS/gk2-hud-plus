@@ -8,6 +8,8 @@
     <Compile Include="../Shared/ModGuard.cs" Link="Shared/ModGuard.cs" />
     <Compile Include="../Shared/ModHost.cs" Link="Shared/ModHost.cs" />
     <Compile Include="../Shared/HudPlusId.cs" Link="Shared/HudPlusId.cs" />
+    <Compile Include="../Shared/FrameBudget.cs" Link="Shared/FrameBudget.cs" />
+    <Compile Include="../Shared/AsyncFileWriter.cs" Link="Shared/AsyncFileWriter.cs" />
     <Compile Include="../GK2Hud/**/*.cs" Exclude="../GK2Hud/Plugin.cs;../GK2Hud/bin/**;../GK2Hud/obj/**" Link="GK2Hud/%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="../GK2Map/**/*.cs" Exclude="../GK2Map/Plugin.cs;../GK2Map/bin/**;../GK2Map/obj/**" Link="GK2Map/%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="../GK2Saves/**/*.cs" Exclude="../GK2Saves/Plugin.cs;../GK2Saves/bin/**;../GK2Saves/obj/**" Link="GK2Saves/%(RecursiveDir)%(Filename)%(Extension)" />

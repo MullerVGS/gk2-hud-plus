@@ -1,6 +1,5 @@
-0.6.2
-- Tooltips in two levels: hovering shows the essentials, pinning (middle click) opens the details.
-- World tooltips use the game's own progress cells; a stuck craft shows the reason and the missing ingredients.
-- Pinned item tooltips show the recipe in item cells; an undiscovered recipe shows as "?".
-- Pinned world tooltips follow the object and stay inside the screen.
-- The pin key can be changed in the game's Controls window.
+0.6.3
+- Performance: the Calendar tab opens instantly no matter how many days you have played (only the visible days are built; the rest load as you scroll).
+- Performance: the week popup and world tooltips update their countdowns in place instead of rebuilding the whole tooltip.
+- Performance: the journal is saved to disk in the background, so a slow disk or antivirus no longer stutters the game.
+- Performance: the open-world view of the map reads the screen edges asynchronously, without stalling the GPU.

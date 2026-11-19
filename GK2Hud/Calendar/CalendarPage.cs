@@ -49,11 +49,13 @@ namespace GK2Hud.Calendar
         private int pageW, pageH;
 
         // faixa de cenas
-        private RectTransform stripVp, stripContent, detail, selFrame, pastShade, nowLine, nowOutline, todayScene;
+        private RectTransform stripVp, stripContent, colsRoot, detail, selFrame, pastShade, nowLine, nowOutline, todayScene;
         private TMP_Text header, rangeText;
         private Image arrowLeft, arrowRight;
         private readonly List<int> cols = new List<int>();
-        private readonly List<RectTransform> colRoots = new List<RectTransform>();
+        private readonly List<RectTransform> colRoots = new List<RectTransform>();   // null = coluna ainda não montada
+        private readonly GK2Shared.FrameBudget prefetch = new GK2Shared.FrameBudget();
+        private int timelineGen;   // muda a cada remontagem da faixa: passo da fila de uma faixa antiga não vale
         private readonly List<List<Occurrence>> colEvents = new List<List<Occurrence>>();
         private readonly Dictionary<int, List<JournalLine>> dayLines = new Dictionary<int, List<JournalLine>>();
         private readonly Dictionary<int, TMP_Text> dayLabels = new Dictionary<int, TMP_Text>();
@@ -433,6 +435,12 @@ namespace GK2Hud.Calendar
         private static List<Occurrence> IconsOf(int day) =>
             CalendarModel.OnDay(day).Where(o => o.Def.Art != null).OrderBy(o => HasClock(o) ? 1 : 0).ToList();
 
+        /// <summary>
+        /// Remonta a faixa. Lista virtualizada: os dados de todas as colunas são calculados (a altura da faixa depende da
+        /// coluna mais alta), mas os objetos só existem para as colunas visíveis e as vizinhas (<see cref="EnsureVisible"/>);
+        /// as demais são montadas quando a faixa rola até elas. Antes, abrir a aba criava uma coluna por dia jogado
+        /// desde o início do diário (centenas, ~10 objetos cada) para mostrar cinco.
+        /// </summary>
         private void RebuildTimeline(int today, double now)
         {
             HideTimelineTips();
@@ -443,36 +451,31 @@ namespace GK2Hud.Calendar
             colRoots.Clear();
             colEvents.Clear();
             dayLines.Clear();
+            prefetch.Clear();
+            timelineGen++;
+            todayScene = null;
             List<int> oldCols = new List<int>(cols);
             cols.Clear();
             cols.AddRange(Columns(today));
 
-            JournalTracker j = JournalTracker.Current;
             int eventsH = 0;
             foreach (int day in cols)
             {
                 List<Occurrence> occ = day == Baseline ? new List<Occurrence>() : IconsOf(day);
                 colEvents.Add(occ);
+                colRoots.Add(null);
                 eventsH = Mathf.Max(eventsH, EventsHeight(occ));
-                if (day != Baseline && j != null && j.Active && day <= today) dayLines[day] = JournalView.Lines(j.OnDay(day));
             }
             stripH = EventsY + eventsH;
             stripVp.sizeDelta = new Vector2(stripW, stripH);
             TopLeft(stripContent, 0, 0, cols.Count * ColW, stripH);
             LayoutDetail();
 
-            for (int i = 0; i < cols.Count; i++)
-            {
-                var go = new GameObject("Col_" + (cols[i] == Baseline ? "before" : cols[i].ToString()), typeof(RectTransform));
-                go.transform.SetParent(stripContent, false);
-                RectTransform crt = (RectTransform)go.transform;
-                TopLeft(crt, ColX(i), 0, ColW, stripH);
-                Hover h = AddHover(go);
-                int day = cols[i];
-                h.OnClick = () => Select(day);
-                colRoots.Add(crt);
-                BuildColumn(i, today, now);
-            }
+            // As colunas ficam num contêiner próprio, antes das marcas: montadas depois, continuam por baixo delas.
+            var holder = new GameObject("Cols", typeof(RectTransform));
+            holder.transform.SetParent(stripContent, false);
+            colsRoot = (RectTransform)holder.transform;
+            TopLeft(colsRoot, 0, 0, cols.Count * ColW, stripH);
 
             // Por cima das colunas: o passado escurecido, a seleção e o marcador de agora.
             pastShade = Rect(stripContent, "Past", PastShade, 0, 0, 0, SceneH).rectTransform;
@@ -488,6 +491,59 @@ namespace GK2Hud.Calendar
 
             if (!cols.SequenceEqual(oldCols)) DefaultScroll(today);
             else ApplyScroll();
+        }
+
+        /// <summary>Monta a coluna <paramref name="i"/> se ainda não existe.</summary>
+        private void EnsureColumn(int i)
+        {
+            if (i < 0 || i >= colRoots.Count || colRoots[i] != null || colsRoot == null) return;
+            int day = cols[i];
+            var go = new GameObject("Col_" + (day == Baseline ? "before" : day.ToString()), typeof(RectTransform));
+            go.transform.SetParent(colsRoot, false);
+            RectTransform crt = (RectTransform)go.transform;
+            TopLeft(crt, ColX(i), 0, ColW, stripH);
+            Hover h = AddHover(go);
+            h.OnClick = () => Select(day);
+            colRoots[i] = crt;
+            double now = CalendarModel.Now;
+            BuildColumn(i, (int)Math.Floor(now), now);
+        }
+
+        private const int Prefetch = 6;   // colunas adiantadas de cada lado da janela, aos poucos
+
+        /// <summary>
+        /// O que está na janela (e uma coluna de cada lado, para a rolagem não mostrar buraco) é montado agora; as
+        /// próximas <see cref="Prefetch"/> de cada lado entram na fila com orçamento por frame (<see cref="Tick"/>).
+        /// </summary>
+        private void EnsureVisible()
+        {
+            if (cols.Count == 0) return;
+            int a = Mathf.Clamp(scrollX / ColW - 1, 0, cols.Count - 1), b = Mathf.Clamp((scrollX + stripW - 1) / ColW + 1, 0, cols.Count - 1);
+            for (int i = a; i <= b; i++) EnsureColumn(i);
+            prefetch.Clear();
+            int gen = timelineGen;
+            for (int k = 1; k <= Prefetch; k++)
+            {
+                int left = a - k, right = b + k;
+                if (right < cols.Count && colRoots[right] == null) prefetch.Add(() => { if (gen == timelineGen) EnsureColumn(right); });
+                if (left >= 0 && colRoots[left] == null) prefetch.Add(() => { if (gen == timelineGen) EnsureColumn(left); });
+            }
+        }
+
+        /// <summary>A cada frame com a aba aberta: adianta colunas vizinhas dentro de 1 ms.</summary>
+        public void Tick()
+        {
+            if (root != null && root.activeSelf && prefetch.Pending > 0) prefetch.Run(1.0);
+        }
+
+        /// <summary>Anotações de um dia, calculadas na primeira vez que alguém pede (selo da coluna ou detalhe).</summary>
+        private List<JournalLine> LinesOf(int day, int today)
+        {
+            if (dayLines.TryGetValue(day, out List<JournalLine> l)) return l;
+            JournalTracker j = JournalTracker.Current;
+            l = day != Baseline && j != null && j.Active && day <= today ? JournalView.Lines(j.OnDay(day)) : null;
+            dayLines[day] = l;
+            return l;
         }
 
         private void BuildColumn(int i, int today, double now)
@@ -521,7 +577,8 @@ namespace GK2Hud.Calendar
             lbl.text = rel;
             dayLabels[day] = lbl;
 
-            if (dayLines.TryGetValue(day, out List<JournalLine> lines) && lines.Count > 0) JournalBadge(c, lines, day);
+            List<JournalLine> lines = LinesOf(day, today);
+            if (lines != null && lines.Count > 0) JournalBadge(c, lines, day);
 
             List<Occurrence> occ = colEvents[i];
             int y = EventsY;
@@ -675,6 +732,7 @@ namespace GK2Hud.Calendar
             int maxX = Mathf.Max(0, cols.Count * ColW - stripW);
             scrollX = Mathf.Clamp(scrollX, 0, maxX);
             stripContent.anchoredPosition = new Vector2(-scrollX, 0f);
+            EnsureVisible();
             arrowLeft.sprite = SpriteOrNull(scrollX > 0 ? "btn_i_grey-arrow_horizontal_small" : "btn_i_grey-arrow_horizontal_small-inactive");
             arrowRight.sprite = SpriteOrNull(scrollX < maxX ? "btn_i_grey-arrow_horizontal_small" : "btn_i_grey-arrow_horizontal_small-inactive");
             int a = Mathf.Clamp(scrollX / ColW, 0, cols.Count - 1), b = Mathf.Clamp((scrollX + stripW - 1) / ColW, 0, cols.Count - 1);
@@ -687,7 +745,8 @@ namespace GK2Hud.Calendar
             int idx = cols.IndexOf(today);
             if (idx < 0 || nowLine == null) return;
             float tod = Frac(now);
-            if (WeekStrip.IsDaytime(tod) != todayDaytime) BuildColumn(idx, today, now);   // virou dia/noite: a arte da cena troca
+            bool built = idx < colRoots.Count && colRoots[idx] != null;
+            if (built && WeekStrip.IsDaytime(tod) != todayDaytime) BuildColumn(idx, today, now);   // virou dia/noite: a arte da cena troca
             else if (todayScene != null) WeekStrip.Retint(todayScene, tod);
             int x = ColX(idx) + TimeX(tod);
             nowLine.anchoredPosition = new Vector2(x, 0f);
@@ -744,9 +803,15 @@ namespace GK2Hud.Calendar
             int today = (int)Math.Floor(CalendarModel.Now);
             selected = today;
             shownToday = today;
-            timelineSig = detailSig = null;
+            detailSig = null;
             revealPending = true;
-            cols.Clear();
+            // Faixa igual à da última abertura (mesmo dia, eventos e diário): os objetos ficam, só a rolagem volta ao começo.
+            if (timelineSig != null && colsRoot != null && TimelineSig(today) == timelineSig) DefaultScroll(today);
+            else
+            {
+                timelineSig = null;
+                cols.Clear();
+            }
             Refresh();
         }
 
@@ -873,7 +938,7 @@ namespace GK2Hud.Calendar
                 else if (selected > today) ry = Empty(rightContent, CalendarL10n.T("j_future"), rightW, ry);
                 else
                 {
-                    List<JournalLine> lines = dayLines.TryGetValue(selected, out List<JournalLine> cached) ? cached : JournalView.Lines(j.OnDay(selected));
+                    List<JournalLine> lines = LinesOf(selected, today) ?? new List<JournalLine>();
                     ry = lines.Count > 0 ? JournalSection(rightContent, lines, rightW, ry)
                         : Empty(rightContent, CalendarL10n.T(selected == today ? "j_today_empty" : "j_empty"), rightW, ry);
                 }
@@ -1038,7 +1103,8 @@ namespace GK2Hud.Calendar
         {
             if (AlwaysOpen(kind) || root == null) return;
             string key = selected + ":" + kind;
-            int count = dayLines.TryGetValue(selected, out List<JournalLine> l) ? l.Count(x => x.Kind == kind) : 0;
+            List<JournalLine> l = LinesOf(selected, (int)Math.Floor(CalendarModel.Now));
+            int count = l != null ? l.Count(x => x.Kind == kind) : 0;
             groupOpen[key] = !IsOpen(kind, count);
             detailSig = null;
             double now = CalendarModel.Now;
@@ -1099,7 +1165,7 @@ namespace GK2Hud.Calendar
 
         internal string Describe()
         {
-            return $"selected={(selected == Baseline ? "antes" : selected.ToString())} cols={cols.Count} scroll={scrollX} strip={stripW}x{stripH} icones={eventMarks.Count} marcas={timelineTips.Count} " +
+            return $"selected={(selected == Baseline ? "antes" : selected.ToString())} cols={cols.Count} montadas={colRoots.Count(c => c != null)} fila={prefetch.Pending} scroll={scrollX} strip={stripW}x{stripH} icones={eventMarks.Count} marcas={timelineTips.Count} " +
                    $"entries={entries.Count} linhas={tooltipTargets.Count} grupos=[{string.Join(" ", groupInfo)}] active={(root != null && root.activeSelf)} header='{header?.text}' range='{rangeText?.text}'";
         }
     }

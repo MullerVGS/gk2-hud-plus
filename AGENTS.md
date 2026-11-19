@@ -453,6 +453,32 @@ alinhamento com o HUD existente; não cobre informação nativa; legível com fu
   (estado, finalizer, desligar).
 - Só leitura do estado do jogo, salvo pedido de gameplay.
 
+## Desempenho (HUD+ 0.6.3)
+
+O jogo já é limitado pela GPU (~3500 draw calls); o mod não pode somar travadas. Quem joga em máquina fraca sente os
+picos, não a média: o que custa 50 ms aqui vira 150–250 ms lá. Regras:
+
+- **Redesenho no lugar** (`Tooltips/TipPatch.cs`): tooltip já aberto cujo conteúdo só mudou de texto (contagem, quanto
+  falta) não volta pelo `ShowAt` nativo, que desliga e religa os widgets, chama `Canvas.ForceUpdateCanvases()` (todos os
+  canvases do jogo) e força o layout. Mesmos tipos na mesma ordem → `Draw` só nos itens cuja chave
+  (`WorldContent.ItemKey`) mudou. Usado no medalhão, no tooltip de mundo e nas bolhas fixadas.
+- **Lista virtualizada**: tela com uma linha/coluna por dia, item ou anotação monta só o que está visível (± 1) e o resto
+  quando rola até lá (`CalendarPage.EnsureVisible`). Custo de abrir não pode crescer com os dias jogados.
+- **Orçamento por frame** (`Shared/FrameBudget.cs`): o que pode ser adiantado sem pressa (colunas vizinhas, decodificar a
+  arte embutida) roda numa fila que para ao gastar 0,5–1 ms no frame.
+- **Disco fora da thread do jogo** (`Shared/AsyncFileWriter.cs`): cópia rasa na thread do jogo, JSON e escrita atômica
+  numa thread de fundo; `WaitIdle` antes de ler o mesmo arquivo e no `Dispose`.
+- **Nada de ler a GPU de forma síncrona**: `ReadPixels`/`GetPixels` de tela fazem a CPU esperar o frame da GPU. Usar
+  `ScreenCapture.CaptureScreenshotIntoRenderTexture` + `AsyncGPUReadback` (em Direct3D a cópia vem invertida em y:
+  `SystemInfo.graphicsUVStartsAtTop`).
+- **Assinatura só do que muda o desenho**: o que anda com o relógio (céu, contagens, deslocamento) é atualizado no lugar
+  com referências guardadas, não entra na assinatura que reconstrói.
+- **Medir**: `gk2_mod_seconds` cobre só o `Update` do `ModHost`. Callbacks (`Canvas.willRenderCanvases`, `LateUpdate`,
+  coroutines, MonoBehaviours próprios, patches) e o layout que a Unity faz depois ficam de fora: cronometrar com Harmony
+  num cenário (prefixo/postfixo com `Stopwatch` no método) e comparar antes/depois no green. A/B de funcionalidades com
+  `hudplus-funcionalidades.cs ACAO=desligar IDS=...` (o `smoke.py --subst` já põe as aspas: `ACAO=desligar`, não
+  `ACAO='"desligar"'`) e conferir com `ACAO=listar` que desligou.
+
 ## Armadilhas conhecidas
 
 - O Mono devolve o assembly em cache quando o nome se repete: a DevBridge renomeia (Mono.Cecil) a cada carga.

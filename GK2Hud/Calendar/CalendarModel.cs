@@ -286,7 +286,10 @@ namespace GK2Hud.Calendar
                 float period = g.Definition.periodTime;
                 double next = g.execDay + (double)g.execTime;
                 if (period <= 0f) continue;
-                // A execução que já passou hoje também conta (mostra "passou").
+                // A execução que já passou hoje também conta (mostra "passou"). Recua de uma vez quase até o dia (um
+                // período por volta custava centenas de voltas por dia antigo) e termina pelo laço, como antes.
+                double back = Math.Floor((next - absDay) / period) - 1;
+                if (back > 0) next -= back * period;
                 while (next - period >= absDay) next -= period;
                 for (double t = next; t < absDay + 1; t += period)
                 {

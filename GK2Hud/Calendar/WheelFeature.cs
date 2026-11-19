@@ -58,6 +58,7 @@ namespace GK2Hud.Calendar
         private Vector2 stillAnchor;
         private bool showing, dismissed;
         private string shownSig;
+        private string[] shownKeys;   // chaves por item do que está à mostra (redesenho no lugar)
 
         /// <summary>Modo de teste (cenários gk2hud-calendario-*.cs): no green o mouse não mexe e o cursor fica oculto.</summary>
         internal Vector2? VirtualMouse { get; set; }
@@ -103,6 +104,7 @@ namespace GK2Hud.Calendar
         {
             float now = Time.unscaledTime;
             if (!EnsureAttached()) { HideOwn(); return; }
+            if (!showing) WeekStrip.WarmUp(0.5);   // arte dos cartões decodificada aos poucos, antes do primeiro popup
             Vector2 mouse = VirtualMouse ?? (Vector2)Input.mousePosition;
             if ((mouse - stillAnchor).sqrMagnitude > MoveThreshold * MoveThreshold)
             {
@@ -316,6 +318,14 @@ namespace GK2Hud.Calendar
             proxy.position = new Vector3(r.center.x, r.center.y, proxy.position.z);
             UITooltip native = Native.Instance;
             if (!first && sig == shownSig) { WeekStrip.Place(native.transform, target, Styles.Read()); return; }
+            // Só um texto mudou (a contagem do próximo evento): redesenha no lugar, sem refazer o tooltip nativo.
+            if (!first && shownSig != null && UITooltip.IsTooltipShowingAtTarget(proxy) && TipPatch.TryPatch(native, list, shownKeys, out string[] keys))
+            {
+                WeekStrip.Place(native.transform, target, Styles.Read());
+                shownSig = sig;
+                shownKeys = keys;
+                return;
+            }
             // Antes do ShowAt, para o tooltip já se posicionar com o tamanho final; depois, para ficar abaixo do cabeçalho.
             WeekStrip.Place(native.transform, target, Styles.Read());
             Native.ShowAt.Invoke(native, new object[] { list, proxy, UIBasicBubble.ForceCornerPosition.Auto, true, Vector2.zero, TooltipPlacementPriority.BottomRight });
@@ -324,6 +334,7 @@ namespace GK2Hud.Calendar
             LayoutRebuilder.ForceRebuildLayoutImmediate((RectTransform)native.transform);
             showing = UITooltip.IsTooltipShowingAtTarget(proxy);
             shownSig = sig;
+            shownKeys = TipPatch.Keys(list);
         }
 
         private static List<LazyWidgetDataBase> Build(string t, bool full = false)

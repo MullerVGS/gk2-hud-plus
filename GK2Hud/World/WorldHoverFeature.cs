@@ -36,6 +36,7 @@ namespace GK2Hud.World
         private Vector2 stillAnchor;
         private bool showing, dismissed;
         private string shownSig;
+        private string[] shownKeys;   // chaves por item do que está à mostra (redesenho no lugar)
         private bool loggedError;
         private readonly List<RaycastResult> uiHits = new List<RaycastResult>();
         private PointerEventData pointer;
@@ -243,11 +244,19 @@ namespace GK2Hud.World
             string sig = WorldContent.Signature(list);
             if (!first && sig == shownSig) return;
             UITooltip native = Native.Instance;
+            // Só textos mudaram (contagem, quanto falta): redesenha no lugar, sem refazer o tooltip nativo.
+            if (!first && shownSig != null && UITooltip.IsTooltipShowingAtTarget(proxy) && TipPatch.TryPatch(native, list, shownKeys, out string[] keys))
+            {
+                shownSig = sig;
+                shownKeys = keys;
+                return;
+            }
             Native.ShowAt.Invoke(native, new object[] { list, proxy, UIBasicBubble.ForceCornerPosition.Auto, true, Vector2.zero, TooltipPlacementPriority.TopRight });
             // O fade nativo (duração 0) zera o alfa por um frame: na atualização ele já estava visível.
             if (!first) { CanvasGroup g = Native.GroupOf(native); if (g != null) g.alpha = 1f; }
             showing = UITooltip.IsTooltipShowingAtTarget(proxy);
             shownSig = sig;
+            shownKeys = TipPatch.Keys(list);
         }
 
         private void HideOwn()

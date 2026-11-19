@@ -3,12 +3,12 @@
     "date": "2026-11-19",
     "files": {
       "GK2Hud/Calendar/CalendarL10n.cs": "e6c6ad96ae87d358",
-      "GK2Hud/Calendar/CalendarModel.cs": "27a34978f4954dda",
-      "GK2Hud/Calendar/CalendarPage.cs": "ba9b5542312e5777",
-      "GK2Hud/Calendar/CalendarTab.cs": "064631b1fb3f3572",
+      "GK2Hud/Calendar/CalendarModel.cs": "940e7b11b43b47ab",
+      "GK2Hud/Calendar/CalendarPage.cs": "4481b1051dd9c3a5",
+      "GK2Hud/Calendar/CalendarTab.cs": "fc391de0a3724b3f",
       "GK2Hud/Calendar/CalendarTooltip.cs": "804f3d2fe2db66f7",
-      "GK2Hud/Calendar/WeekStrip.cs": "e1a6d5f1ac7e3b83",
-      "GK2Hud/Calendar/WheelFeature.cs": "5f6689bd216008d8",
+      "GK2Hud/Calendar/WeekStrip.cs": "c869f329490f2751",
+      "GK2Hud/Calendar/WheelFeature.cs": "09398e529328cbde",
       "GK2Hud/Names.cs": "a0a81bc037c836b2",
       "clips.txt": "2bc109b4d547d2f6",
       "docs/cenarios/carregar-slot.cs": "0a7f164ef97a753d",
@@ -19,8 +19,8 @@
     },
     "game": "1.012.7",
     "media": {
-      "webm": "5e25c9de6051e7bc",
-      "webp": "e2e18906c141317f"
+      "webm": "2fdd180f775fab23",
+      "webp": "9afb5289f50aa049"
     }
   },
   "Hud": {
@@ -85,8 +85,8 @@
   "Journal": {
     "date": "2026-11-19",
     "files": {
-      "GK2Hud/Calendar/CalendarPage.cs": "ba9b5542312e5777",
-      "GK2Hud/Journal/JournalTracker.cs": "87a4342b476ec7e8",
+      "GK2Hud/Calendar/CalendarPage.cs": "4481b1051dd9c3a5",
+      "GK2Hud/Journal/JournalTracker.cs": "33e21c5ef2689e4d",
       "GK2Hud/Journal/JournalView.cs": "f2a3c6a26a566fa6",
       "GK2Hud/Names.cs": "a0a81bc037c836b2",
       "clips.txt": "e0814dd8204e15ae",
@@ -98,16 +98,16 @@
     },
     "game": "1.012.7",
     "media": {
-      "webm": "5763868571be9319",
-      "webp": "975de8860aaefe2d"
+      "webm": "8d540d18187a3cca",
+      "webp": "90d9214bb90a6c7b"
     }
   },
   "Map": {
-    "date": "2026-11-18",
+    "date": "2026-11-19",
     "files": {
       "GK2Map/MapModule.cs": "8a6d2d7278307f4d",
       "GK2Map/MapZoom.cs": "52ec3855c9d322d5",
-      "GK2Map/PlaceView.cs": "d672a3fd3a5294e4",
+      "GK2Map/PlaceView.cs": "49244608db2db5eb",
       "GK2Map/Places.cs": "ee5418952960f700",
       "GK2Map/TerrainMap.cs": "900ee922d691a2a3",
       "clips.txt": "4d78252ea7e5bc46",
@@ -119,8 +119,8 @@
     },
     "game": "1.012.7",
     "media": {
-      "webm": "836eb9fc7909d42c",
-      "webp": "0707df35dd5b581c"
+      "webm": "9139e3907c324415",
+      "webp": "f6784c81d6e0e6e1"
     }
   },
   "MapOrders": {
@@ -143,7 +143,7 @@
     }
   },
   "MapPlaces": {
-    "date": "2026-11-18",
+    "date": "2026-11-19",
     "files": {
       "GK2Map/L10n.cs": "b9971b0b9f049693",
       "GK2Map/MapModule.cs": "8a6d2d7278307f4d",
@@ -151,9 +151,9 @@
       "GK2Map/Orders.cs": "e8368032028c75cc",
       "GK2Map/Outline.cs": "232b01b4333ea851",
       "GK2Map/PlaceInspect.cs": "d0d83306174d0ecb",
-      "GK2Map/PlaceView.cs": "d672a3fd3a5294e4",
+      "GK2Map/PlaceView.cs": "49244608db2db5eb",
       "GK2Map/Places.cs": "ee5418952960f700",
-      "GK2Map/Plugin.cs": "50d83216e6b82771",
+      "GK2Map/Plugin.cs": "ccd930910fbb5550",
       "GK2Map/TerrainMap.cs": "900ee922d691a2a3",
       "GK2Map/ZoneInfo.cs": "1a9b89e6b50720ae",
       "clips.txt": "8db060cad52df470",
@@ -165,8 +165,8 @@
     },
     "game": "1.012.7",
     "media": {
-      "webm": "a250d5b86e160875",
-      "webp": "a40bf28746ba27d6"
+      "webm": "3ea9c9343155ea7b",
+      "webp": "f633524cc8063283"
     }
   },
   "Quests": {
@@ -241,7 +241,8 @@
       "GK2Hud/Tooltips/LeakSweeper.cs": "428160ea9cc62563",
       "GK2Hud/Tooltips/Links.cs": "1f20e8183a34a8f9",
       "GK2Hud/Tooltips/PinKeyControl.cs": "dbe1a9950be34e5b",
-      "GK2Hud/Tooltips/PinStack.cs": "edcaa608255a4f24",
+      "GK2Hud/Tooltips/PinStack.cs": "3b7710a6f7b0e1a2",
+      "GK2Hud/Tooltips/TipPatch.cs": "cea59683dcd7d9d8",
       "GK2Hud/Tooltips/TipWidgets.cs": "6851fd57eacb8566",
       "GK2Hud/Tooltips/TooltipContent.cs": "eb1cf793a5e13057",
       "GK2Hud/Tooltips/TooltipContext.cs": "69eda75c1e7f576a",
@@ -255,17 +256,17 @@
     },
     "game": "1.012.7",
     "media": {
-      "webm": "a916f381ccf37a84",
-      "webp": "dfe2042434ccb6f3"
+      "webm": "b55b61eabc4e6d69",
+      "webp": "e98b05e0d956f61c"
     }
   },
   "Wheel": {
     "date": "2026-11-19",
     "files": {
-      "GK2Hud/Calendar/CalendarModel.cs": "27a34978f4954dda",
+      "GK2Hud/Calendar/CalendarModel.cs": "940e7b11b43b47ab",
       "GK2Hud/Calendar/CalendarTooltip.cs": "804f3d2fe2db66f7",
-      "GK2Hud/Calendar/WeekStrip.cs": "e1a6d5f1ac7e3b83",
-      "GK2Hud/Calendar/WheelFeature.cs": "5f6689bd216008d8",
+      "GK2Hud/Calendar/WeekStrip.cs": "c869f329490f2751",
+      "GK2Hud/Calendar/WheelFeature.cs": "09398e529328cbde",
       "GK2Hud/Names.cs": "a0a81bc037c836b2",
       "clips.txt": "cf446ed8dce2b319",
       "docs/cenarios/carregar-slot.cs": "0a7f164ef97a753d",
@@ -277,17 +278,17 @@
     },
     "game": "1.012.7",
     "media": {
-      "webm": "1b68c63646990fe5",
-      "webp": "0254f0a7934a110f"
+      "webm": "17b238616bf3a35d",
+      "webp": "c26b44109376a84a"
     }
   },
   "WheelCarousel": {
     "date": "2026-11-19",
     "files": {
-      "GK2Hud/Calendar/CalendarModel.cs": "27a34978f4954dda",
+      "GK2Hud/Calendar/CalendarModel.cs": "940e7b11b43b47ab",
       "GK2Hud/Calendar/CalendarTooltip.cs": "804f3d2fe2db66f7",
-      "GK2Hud/Calendar/WeekStrip.cs": "e1a6d5f1ac7e3b83",
-      "GK2Hud/Calendar/WheelFeature.cs": "5f6689bd216008d8",
+      "GK2Hud/Calendar/WeekStrip.cs": "c869f329490f2751",
+      "GK2Hud/Calendar/WheelFeature.cs": "09398e529328cbde",
       "GK2Hud/Names.cs": "a0a81bc037c836b2",
       "clips.txt": "8a5f07a25f1571bb",
       "docs/cenarios/carregar-slot.cs": "0a7f164ef97a753d",
@@ -299,8 +300,8 @@
     },
     "game": "1.012.7",
     "media": {
-      "webm": "2fd59c582f1b9078",
-      "webp": "0e32c7a0186486e1"
+      "webm": "cbc92f243bbe3927",
+      "webp": "1942d5bf8c798a8e"
     }
   },
   "WheelSpin": {
@@ -325,8 +326,8 @@
     "files": {
       "GK2Hud/Names.cs": "a0a81bc037c836b2",
       "GK2Hud/Tooltips/TooltipContent.cs": "eb1cf793a5e13057",
-      "GK2Hud/World/WorldContent.cs": "403b78bae30b02f7",
-      "GK2Hud/World/WorldHoverFeature.cs": "638204fc62e4e484",
+      "GK2Hud/World/WorldContent.cs": "38a8a7018c1bc35c",
+      "GK2Hud/World/WorldHoverFeature.cs": "2ff64be1b5490be4",
       "GK2Hud/World/WorldProcesses.cs": "6d5954ff69db59f7",
       "GK2Hud/World/WorldTargets.cs": "e312b1746842b610",
       "clips.txt": "fd19c3f473aa1b54",
@@ -338,8 +339,8 @@
     },
     "game": "1.012.7",
     "media": {
-      "webm": "ea6cfb823eaec87c",
-      "webp": "66d82218825f5ff7"
+      "webm": "1ff3d8a15b64ed44",
+      "webp": "bd4c1cfb9554fe9c"
     }
   }
 }

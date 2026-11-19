@@ -28,6 +28,7 @@ namespace GK2Hud.Tooltips
         public bool Docked;                     // página acoplada a uma janela: clique fora, Esc e botão direito não a fecham
         public System.Func<List<LazyWidgetDataBase>> Live;   // conteúdo que muda com o tempo (tooltip de mundo): refeito enquanto fixada
         public string LiveSig;                  // assinatura do último conteúdo vivo renderizado
+        public string[] ShownKeys;              // chaves por item do que está à mostra (redesenho no lugar, ver TipPatch)
         public System.Func<Vector2?> Anchor;    // ponto de tela do objeto do mundo (bolha de mundo fixada): a bolha anda com ele
         public Vector2 AnchorAtPin;             // esse ponto na hora de fixar
         public Vector3 PosAtPin;                // posição da bolha na hora de fixar
@@ -149,6 +150,7 @@ namespace GK2Hud.Tooltips
             // para o som ficar só na abertura.
             if (b.Tip.gameObject.activeSelf) Native.SetTarget(b.Tip, target);
             Native.ShowAt.Invoke(b.Tip, new object[] { data, target, UIBasicBubble.ForceCornerPosition.Auto, false, Vector2.zero, TooltipPlacementPriority.TopRight });
+            b.ShownKeys = TipPatch.Keys(data);
             if (g != null) { g.alpha = 1f; g.interactable = true; g.blocksRaycasts = true; }
             RectTransform image = PlaceImage(b);
             if (b.Decorate != null)
@@ -347,8 +349,25 @@ namespace GK2Hud.Tooltips
                 if (sig == b.LiveSig) continue;
                 b.LiveSig = sig;
                 b.Data = data;
-                Render(b, s);
+                if (!Patch(b, s)) Render(b, s);
             }
+        }
+
+        /// <summary>
+        /// Conteúdo vivo com a mesma estrutura (só textos e números mudaram): redesenha os itens no lugar, sem refazer a
+        /// bolha (que desliga e religa os widgets e atualiza todos os canvases do jogo). A bolha fica onde está.
+        /// </summary>
+        private bool Patch(Bubble b, Styles s)
+        {
+            List<LazyWidgetDataBase> data = b.Pinned ? Links.Highlighted(b.Data, s) : new List<LazyWidgetDataBase>(b.Data);
+            if (!TipPatch.TryPatch(b.Tip, data, b.ShownKeys, out string[] keys)) return false;
+            b.ShownKeys = keys;
+            if (b.Decorate != null) b.Decorate(b.Rt);
+            b.LinkTexts.Clear();
+            if (b.Pinned)
+                foreach (TMP_Text t in b.Rt.GetComponentsInChildren<TMP_Text>())
+                    if (Links.HasLinks(t.text)) b.LinkTexts.Add(t);
+            return true;
         }
 
         /// <summary>

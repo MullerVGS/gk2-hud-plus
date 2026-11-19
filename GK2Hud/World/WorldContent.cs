@@ -639,20 +639,29 @@ namespace GK2Hud.World
         public static string Signature(List<LazyWidgetDataBase> list)
         {
             var sb = new StringBuilder();
-            foreach (LazyWidgetDataBase d in list)
-            {
-                if (d is UITooltipTextWidgetData t) sb.Append(t.Text);
-                else if (d is TipData td) sb.Append(td.Sig);
-                else if (d is UITooltipProgressTicksWidgetData pt) sb.Append("mastery:").Append(pt.MasteryValue).Append('/').Append(pt.MasteryLock);
-                else if (d is UITooltipNeedsItemWidgetData ni)
-                {
-                    sb.Append("cells:");
-                    foreach (UICraftItemCellData c in ni.CraftItemCellsData) sb.Append(c.currentItem?.id).Append('×').Append(c.currentItem?.GetCount()).Append(',');
-                }
-                else sb.Append(d.GetType().Name);
-                sb.Append('\n');
-            }
+            foreach (LazyWidgetDataBase d in list) AppendKey(sb, d).Append('\n');
             return sb.ToString();
+        }
+
+        /// <summary>Chave de um item só (o redesenho no lugar compara item a item, ver <see cref="Tooltips.TipPatch"/>).</summary>
+        public static string ItemKey(LazyWidgetDataBase d)
+        {
+            if (d is UITooltipTextWidgetData t) return t.Text ?? string.Empty;
+            return AppendKey(new StringBuilder(), d).ToString();
+        }
+
+        private static StringBuilder AppendKey(StringBuilder sb, LazyWidgetDataBase d)
+        {
+            if (d is UITooltipTextWidgetData t) sb.Append(t.Text);
+            else if (d is TipData td) sb.Append(td.Sig);
+            else if (d is UITooltipProgressTicksWidgetData pt) sb.Append("mastery:").Append(pt.MasteryValue).Append('/').Append(pt.MasteryLock);
+            else if (d is UITooltipNeedsItemWidgetData ni)
+            {
+                sb.Append("cells:");
+                foreach (UICraftItemCellData c in ni.CraftItemCellsData) sb.Append(c.currentItem?.id).Append('×').Append(c.currentItem?.GetCount()).Append(',');
+            }
+            else sb.Append(d.GetType().Name);
+            return sb;
         }
     }
 }

@@ -27,6 +27,7 @@ namespace GK2Hud.Calendar
         internal const float WeekW = SceneW - 2f * CropSide, WeekH = SceneH - CropTop - CropBottom;
 
         private static UIHUDWheel wheel;
+        private static Gradient gradSky, gradHorizon;   // do UIHUDWheel, guardados com ele
         private static readonly Dictionary<int, string> builtSig = new Dictionary<int, string>();   // por tooltip (nativo ou bolha fixada)
         private const string LinkPrefix = "cal:";
         private const string TimePrefix = "t:";
@@ -117,21 +118,84 @@ namespace GK2Hud.Calendar
             return left > 0 && left < 1 ? CalendarModel.Countdown(left) : CalendarModel.Clock(o.Start);
         }
 
-        /// <summary>O que muda sem refazer a tira: as contagens e o deslocamento do carrossel.</summary>
+        /// <summary>
+        /// O que muda sem refazer a tira: as contagens, o céu do cartão de hoje (anda com o relógio) e o deslocamento do
+        /// carrossel. As referências ficam guardadas num componente da tira (<see cref="StripLive"/>), montado uma vez.
+        /// </summary>
         private static void UpdateLive(Transform strip, double now)
         {
-            foreach (TextMeshProUGUI t in strip.GetComponentsInChildren<TextMeshProUGUI>())
+            StripLive live = StripLive.Of(strip);
+            int today = (int)System.Math.Floor(now);
+            for (int i = 0; i < live.Times.Count; i++)
             {
-                if (!t.name.StartsWith(TimePrefix)) continue;
-                string[] p = t.name.Substring(TimePrefix.Length).Split(':');
-                if (p.Length != 2 || !int.TryParse(p[1], out int day)) continue;
-                foreach (Occurrence o in CalendarModel.OnDay(day))
-                    if (o.Def.Id == p[0]) { string v = TimeText(o, now); if (t.text != v) t.text = v; break; }
+                StripLive.Clock t = live.Times[i];
+                if (t.Text == null) continue;
+                if (Time.unscaledTime >= t.Recheck)
+                {
+                    // O jogo pode remarcar um evento (execDay/execTime): a ocorrência é relida de tempos em tempos.
+                    t.Occ = CalendarModel.OnDay(t.Day).Find(o => o.Def.Id == t.Id);
+                    t.Has = t.Occ.Def != null;
+                    t.Recheck = Time.unscaledTime + 2f;
+                }
+                if (!t.Has) continue;
+                string v = TimeText(t.Occ, now);
+                if (t.Text.text != v) t.Text.text = v;
             }
-            Transform content = strip.Find(ViewportName + "/" + ContentName);
-            if (content != null)
-                ((RectTransform)content).anchoredPosition = new Vector2(CarouselBack - Mathf.Floor((1f + Frac(now)) * WeekW), 0f);   // o conteúdo começa em ontem
+            if (live.TodayDay == today && live.TodayScene != null) Retint(live.TodayScene, Frac(now));
+            if (live.Content != null)
+                live.Content.anchoredPosition = new Vector2(CarouselBack - Mathf.Floor((1f + Frac(now)) * WeekW), 0f);   // o conteúdo começa em ontem
         }
+
+        /// <summary>Referências do que a tira atualiza ao vivo; um clone (bolha fixada) remonta pela hierarquia na primeira vez.</summary>
+        internal sealed class StripLive : MonoBehaviour
+        {
+            internal sealed class Clock
+            {
+                public TextMeshProUGUI Text;
+                public string Id;
+                public int Day;
+                public float Recheck;
+                public Occurrence Occ;
+                public bool Has;
+            }
+
+            internal readonly List<Clock> Times = new List<Clock>();
+            internal RectTransform Content;
+            internal Transform TodayScene;
+            internal int TodayDay = int.MinValue;
+            private bool ready;
+
+            internal static StripLive Of(Transform strip)
+            {
+                StripLive live = strip.GetComponent<StripLive>();
+                if (live == null) live = strip.gameObject.AddComponent<StripLive>();
+                if (!live.ready) live.Scan(strip);
+                return live;
+            }
+
+            private void Scan(Transform strip)
+            {
+                ready = true;
+                Times.Clear();
+                foreach (TextMeshProUGUI t in strip.GetComponentsInChildren<TextMeshProUGUI>(true))
+                {
+                    if (!t.name.StartsWith(TimePrefix)) continue;
+                    string[] p = t.name.Substring(TimePrefix.Length).Split(':');
+                    if (p.Length == 2 && int.TryParse(p[1], out int day)) Times.Add(new Clock { Text = t, Id = p[0], Day = day });
+                }
+                Content = strip.Find(ViewportName + "/" + ContentName) as RectTransform;
+                TodayScene = null;
+                TodayDay = int.MinValue;
+                foreach (Transform c in strip.GetComponentsInChildren<Transform>(true))
+                {
+                    if (!c.name.StartsWith(TodayMark)) continue;
+                    if (int.TryParse(c.name.Substring(TodayMark.Length), out int d)) { TodayScene = c.parent; TodayDay = d; }
+                    break;
+                }
+            }
+        }
+
+        private const string TodayMark = "today:";
 
         /// <summary>Ícone de evento sob o mouse numa bolha com a tira: devolve o termo ("cal:evento:dia") e o retângulo na tela.</summary>
         public static string EventAt(Transform tip, Vector2 screen, out Rect rect)
@@ -177,12 +241,16 @@ namespace GK2Hud.Calendar
         {
             if (wheel != null) return true;
             wheel = Resources.FindObjectsOfTypeAll<UIHUDWheel>().FirstOrDefault(w => w.gameObject.scene.IsValid());
-            return wheel != null;
+            if (wheel == null) return false;
+            Traverse tw = Traverse.Create(wheel);
+            gradSky = tw.Field("gradientSky").GetValue<Gradient>();
+            gradHorizon = tw.Field("gradientHorizon").GetValue<Gradient>();
+            return true;
         }
 
         private static string Signature(string target, List<int> days, double now)
         {
-            var sb = new StringBuilder(target).Append(Carousel ? 'c' : 's').Append('|').Append(LLBase.CurrentLang).Append('|').Append((int)(Frac(now) * 96));
+            var sb = new StringBuilder(target).Append(Carousel ? 'c' : 's').Append('|').Append(LLBase.CurrentLang).Append('|').Append(IsDaytime(Frac(now)) ? 'D' : 'N');
             KnowledgeSystem ks = MainGame.Instance.GameSave.knowledgeSystem;
             foreach (int d in days)
             {
@@ -278,7 +346,8 @@ namespace GK2Hud.Calendar
             // O rótulo do dia ("Today", "In 2 days") só entra na bolha fixada; no hover, o sigilo e a ordem bastam.
             if (week && labels)
                 Label(card.transform, day < today ? CalendarL10n.T("yesterday") : CalendarL10n.Relative(day - today), isToday ? s.SmallSelected : s.Small, SceneW);
-            Scene(card.transform, day, isToday ? Frac(now) : 0.5f, week);
+            RectTransform scene = Scene(card.transform, day, isToday ? Frac(now) : 0.5f, week);
+            if (isToday) new GameObject(TodayMark + day, typeof(RectTransform)).transform.SetParent(scene, false);
             if (!week) return;
 
             // Os que têm hora vão por último: a hora fica embaixo do ícone, na folga depois da última linha.
@@ -373,17 +442,50 @@ namespace GK2Hud.Calendar
         /// <summary>Atualiza as cores do céu e do horizonte de uma cena já montada para a hora dada (a cena de hoje anda com o relógio).</summary>
         internal static void Retint(Transform scene, float tod)
         {
-            if (scene == null || wheel == null) return;
-            Traverse w = Traverse.Create(wheel);
-            Transform sky = scene.Find("Sky"), horizon = scene.Find("Horizon");
-            if (sky != null) sky.GetComponent<Image>().color = w.Field("gradientSky").GetValue<Gradient>().Evaluate(tod);
-            if (horizon != null) horizon.GetComponent<Image>().color = w.Field("gradientHorizon").GetValue<Gradient>().Evaluate(tod);
+            if (scene == null || !EnsureWheel()) return;
+            Tint(scene.Find("Sky"), gradSky, tod);
+            Tint(scene.Find("Horizon"), gradHorizon, tod);
+        }
+
+        // Só toca na cor quando ela muda de fato: cor nova suja a malha do canvas.
+        private static void Tint(Transform t, Gradient g, float tod)
+        {
+            Image img = t != null && g != null ? t.GetComponent<Image>() : null;
+            if (img == null) return;
+            Color32 want = g.Evaluate(tod), have = img.color;
+            if (want.r != have.r || want.g != have.g || want.b != have.b || want.a != have.a) img.color = want;
         }
 
         /// <summary>Mesmo corte dia/noite do UIHUDWheel.OnTimeOfDayChanged.</summary>
         internal static bool IsDaytime(float tod) => tod >= 0.25f && tod < 0.8f;
 
         private static readonly Dictionary<string, Sprite> expanded = new Dictionary<string, Sprite>();
+        private static GK2Shared.FrameBudget warm;
+
+        // Por reflexão: as sobrecargas com Span do módulo não compilam contra net472.
+        private static System.Reflection.MethodInfo loadImage;
+        private static System.Reflection.MethodInfo LoadImage => loadImage ?? (loadImage = AccessTools.Method(
+            System.Type.GetType("UnityEngine.ImageConversion, UnityEngine.ImageConversionModule"), "LoadImage", new[] { typeof(Texture2D), typeof(byte[]), typeof(bool) }));
+
+        /// <summary>
+        /// Decodifica a arte embutida aos poucos, antes do primeiro uso (uma imagem pequena por frame, dentro de
+        /// <paramref name="ms"/>): o primeiro popup e a primeira aba não pagam a decodificação de uma vez.
+        /// </summary>
+        internal static void WarmUp(double ms)
+        {
+            if (warm == null)
+            {
+                warm = new GK2Shared.FrameBudget();
+                const string pre = "calart.", ext = ".png";
+                foreach (string res in typeof(WeekStrip).Assembly.GetManifestResourceNames())
+                {
+                    if (!res.StartsWith(pre) || !res.EndsWith(ext)) continue;
+                    string name = res.Substring(pre.Length, res.Length - pre.Length - ext.Length);
+                    warm.Add(() => Expanded(name));
+                }
+            }
+            if (warm.Pending > 0) warm.Run(ms);
+        }
 
         private static Sprite Expanded(string name)
         {
@@ -396,9 +498,7 @@ namespace GK2Hud.Calendar
                     var bytes = new byte[st.Length];
                     st.Read(bytes, 0, bytes.Length);
                     var tex = new Texture2D(2, 2, TextureFormat.RGBA32, false) { filterMode = FilterMode.Point, wrapMode = TextureWrapMode.Clamp, hideFlags = HideFlags.HideAndDontSave };
-                    // Por reflexão: as sobrecargas com Span do módulo não compilam contra net472.
-                    System.Reflection.MethodInfo load = AccessTools.Method(System.Type.GetType("UnityEngine.ImageConversion, UnityEngine.ImageConversionModule"),
-                        "LoadImage", new[] { typeof(Texture2D), typeof(byte[]), typeof(bool) });
+                    System.Reflection.MethodInfo load = LoadImage;
                     if (load != null && (bool)load.Invoke(null, new object[] { tex, bytes, true }))
                     {
                         sprite = Sprite.Create(tex, new Rect(0, 0, tex.width, tex.height), new Vector2(0.5f, 0.5f), 50f);
@@ -416,6 +516,7 @@ namespace GK2Hud.Calendar
             foreach (Sprite s in expanded.Values)
                 if (s != null) { Object.Destroy(s.texture); Object.Destroy(s); }
             expanded.Clear();
+            warm = null;
             builtSig.Clear();
             wheel = null;
         }

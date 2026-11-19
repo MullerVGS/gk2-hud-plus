@@ -101,6 +101,7 @@ namespace GK2Hud.Journal
         private float nextTick, writeAt = -1f;
         private bool loggedError;
         private int version;   // muda a cada anotação (caches de consulta e da página)
+        private readonly GK2Shared.AsyncFileWriter writer = new GK2Shared.AsyncFileWriter();
 
         public JournalTracker()
         {
@@ -115,6 +116,7 @@ namespace GK2Hud.Journal
         public void Dispose()
         {
             Flush();
+            if (!writer.WaitIdle(5000)) HudModule.Log.LogWarning("diário: a gravação não terminou a tempo: " + path);
             if (Current == this) Current = null;
         }
 
@@ -124,6 +126,8 @@ namespace GK2Hud.Journal
             {
                 float now = Time.unscaledTime;
                 if (writeAt > 0f && now >= writeAt) Flush();
+                string err = writer.TakeError();
+                if (err != null) HudModule.Log.LogWarning("diário: não gravou " + err);
                 if (now < nextTick) return;
                 nextTick = now + Interval;
                 GameSave gs = MainGame.Instance != null ? MainGame.Instance.GameSave : null;
@@ -147,6 +151,7 @@ namespace GK2Hud.Journal
         private void Attach(GameSave gs)
         {
             Flush();
+            writer.WaitIdle(5000);   // o arquivo do slot pode ser o que acabou de ir para a fila
             gameSave = gs;
             // Os backups que o jogo gira (Steam_1_backup_1..3) são a mesma partida, mais atrás no tempo: mesmo diário.
             lastSermon = MainGame.PlayerData.currentSermon;   // o último sermão do save carregado: sem data, não entra
@@ -340,19 +345,20 @@ namespace GK2Hud.Journal
             if (writeAt < 0f) writeAt = Time.unscaledTime + WriteDelay;
         }
 
+        /// <summary>
+        /// Grava fora da thread do jogo: uma cópia rasa do diário vai para a fila (as anotações não mudam depois de
+        /// criadas; as listas sim, por isso são copiadas) e o JSON é montado e escrito na thread de fundo.
+        /// </summary>
         private void Flush()
         {
             writeAt = -1f;
             if (file == null || path == null) return;
-            try
+            var copy = new JournalFile
             {
-                Directory.CreateDirectory(Path.GetDirectoryName(path));
-                string tmp = path + ".tmp";
-                File.WriteAllText(tmp, Newtonsoft.Json.JsonConvert.SerializeObject(file));
-                if (File.Exists(path)) File.Delete(path);
-                File.Move(tmp, path);
-            }
-            catch (Exception ex) { HudModule.Log.LogWarning("diário: não gravou " + path + ": " + ex.Message); }
+                version = file.version, slot = file.slot, startDay = file.startDay, startTod = file.startTod,
+                baseline = new List<string>(file.baseline), entries = new List<JournalEntry>(file.entries),
+            };
+            writer.Write(path, () => Newtonsoft.Json.JsonConvert.SerializeObject(copy));
         }
 
         private static JournalFile Read(string p)
