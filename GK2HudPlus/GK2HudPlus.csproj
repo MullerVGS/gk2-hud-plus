@@ -20,6 +20,7 @@
     <!-- Menu: clipes de pré-visualização (VideoPlayer). -->
     <Reference Include="$(Refs)/Managed/UnityEngine.VideoModule.dll" Private="false" />
     <!-- Cenas expandidas dos cartões do calendário. -->
+    <EmbeddedResource Include="../GK2Crafting/art/*.png" LogicalName="gk2crafting.%(Filename)%(Extension)" />
     <EmbeddedResource Include="../GK2Hud/Calendar/art/*.png" LogicalName="calart.%(Filename)%(Extension)" />
   </ItemGroup>
 </Project>

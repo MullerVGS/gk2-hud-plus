@@ -27,6 +27,16 @@ namespace GK2Crafting
                 new Loc("Open the Folio from the alchemy table window, once the Folio is built.",
                     "Abre o Folio pela janela da mesa de alquimia, depois que o Folio foi construído."),
                 h => new FolioButton(h), dispose: b => b.Dispose());
+            FeatureInfo hideChests = null;
+            FeatureInfo finder = host.Feature("ItemFinder", "crafting", "ItemPicker", "Available",
+                new Loc("Available items first", "Disponíveis primeiro"),
+                new Loc("When picking an item from your chests, the items you can use come first, added up across all chests and sorted for that station.",
+                    "Ao escolher um item dos baús, os itens que servem vêm primeiro, somados de todos os baús e na ordem que importa para a mesa."),
+                h => new ItemFinder(h, hideChests != null && hideChests.Toggle.Value), dispose: f => f.Dispose());
+            hideChests = host.Option(finder, "ItemFinderHideChests", "ItemPicker", "HideChests", true,
+                new Loc("Hide the chest lists", "Esconder a lista dos baús"),
+                new Loc("Show only the available items, without each chest below them.",
+                    "Mostra só os disponíveis, sem cada baú embaixo."));
         }
 
         /// <summary>Erro fora dos patches (clique, hover): conta para a parte e, repetido, desliga a funcionalidade.</summary>

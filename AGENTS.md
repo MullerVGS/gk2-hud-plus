@@ -199,14 +199,35 @@ Frase longa foi recusada ("coisa de programador"): onde o jogo tem widget ou íc
 Mod de jogador (`GK2Crafting/`, `mullervgs.gk2.crafting`, categoria `crafting` do HUD+): atalhos nas janelas das estações
 de craft.
 - **Folio na mesa de alquimia** (`FolioButton`, desde HUD+ 0.7.0): célula `comm-item_cell-dark` (a do Boost) no canto de
-  cima à direita do painel de ingredientes da `UIAlchemyWindow`, com o ícone `i_recipe_bag_alchemy` e o material do ícone
-  da célula de resultado (hover = contorno na `HighlightedColorMouse` dela, sons do `LazyButton` dela). Tooltip nativo com
+  cima à direita do painel de ingredientes da `UIAlchemyWindow`, com o livro do Folio do mundo (25x18, sem o atril) e, no
+  hover, o quadro de foco das células (`selection`, 42x42) e os sons do `LazyButton` da célula de resultado. O Folio é
+  objeto 3D (malha `alchemical_folio`, não sprite): a arte sai de `folio-render.cs` (câmera própria, 1 px de arte = 1 px)
+  + `tools/art/folio-livro.py` (recorte, só pixels originais) e vai embutida (`gk2crafting.folio_book.png`;
+  `ImageConversion.LoadImage` por reflexão, como no calendário). Tooltip nativo com
   `alchemy_recipe_book`/`_d` (nome e descrição do Folio). O clique abre `UIAlchemyFolioWindow` como o livro do mundo
   (`Flow_OpenFolioWindow`, grafo `alchemy_recipe_book`); a pilha de janelas devolve a mesa ao fechar. Só aparece se existe
   `alchemy_recipe_book` no mundo (`WorldData.GetWgoDataList`, cache por id): o Folio é construção que precisa ser
-  liberada. Escondida com controle (sem navegação até ela). O ícone do próprio Folio (`i_b_scrollcase`) foi descartado:
-  é desenho de planta e lia como "construir".
-- Cenários: `alquimia-mesa.cs` (teleporta e abre a mesa; `MESA` = índice, `ACAO=listar|folio|fechar`), `demo-folio.cs`.
+  liberada. Escondida com controle (sem navegação até ela). Descartados: `i_b_scrollcase` (desenho de planta, lia como
+  "construir") e o pergaminho `i_recipe_bag_alchemy` (o pedido foi o livro do jogo).
+- **Disponíveis primeiro** (`ItemFinder`, desde HUD+ 0.7.0): a `UIMultiInventoryWindow` é a mesma janela de escolha em 10
+  telas (ingrediente da alquimia, máquina de recurso, embalsamar, órgão na autópsia, coleira na ressurreição e no zumbi,
+  equipamento de zumbi, peça do túmulo, sermão, máquina de pânico, semente/adubo). Postfix no construtor do
+  `UIMultiInventoryWindowData` insere no topo um `InventoryWidgetData` sobre um `Inventory` próprio com cópias somadas
+  (por id; com durabilidade não junta) dos itens que passam no filtro da tela. Clique: acha a `UIItemCell` real do maior
+  monte nas seções desenhadas e chama o `OnItemCellPress` nativo com ela (telas tiram o item pelo UID ou adicionam o
+  próprio item clicado). A tela vem do tipo que declara o callback (`Kind`): runas (alquimia; só com a pesquisa do item
+  concluída, como o tooltip), caveiras (autópsia, embalsamar), maestria/defesa (equipamento de zumbi), qualidade (oração,
+  canteiro, túmulo; a estrela já é da célula). Selo no canto de cima à esquerda (a estrela fica em cima à direita, o
+  status embaixo à esquerda) com o `countLabel` clonado: números nas cores das runas/caveiras (o ícone de fonte tem 12 px
+  de arte e três não cabem em 42). Botão de ordem = clone do `MoveAllSimilarItemsBtn` do cabeçalho com os ícones da
+  ordem; tooltip por `UIMouseTooltip.AttachCustom` (o `Attach` só mostra chave de tradução que existe); escolha em
+  `[ItemPicker] Sort`. Opção `HideChests` (ligada) esconde as seções dos baús depois do desenho. Armadilhas: `Redraw()` da
+  janela com ela aberta duplica as seções (o `Draw` não solta as antigas) e o `Hide` nativo quebra; para reordenar,
+  `InventoryWidget.Redraw()` só da seção. Selos e botão saem antes do `Hide` (widgets do pool) e o que é descartado é
+  renomeado e escondido na hora (o `Destroy` só age no fim do quadro).
+- Cenários: `alquimia-mesa.cs` (teleporta e abre a mesa; `MESA` = índice, `ACAO=listar|folio|fechar`), `demo-folio.cs`,
+  `alquimia-ingrediente.cs` (abre a escolha pelo "+"), `escolha-itens.cs` (lista, troca a ordem, clica), `escolha-simular.cs`
+  (abre a escolha como se fosse outra tela, só visual), `demo-itemfinder.cs`, `folio-render.cs`.
   Referências: `docs/referencia/alquimia.png`, `folio.png`.
 
 ## GK2 Saves

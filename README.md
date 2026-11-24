@@ -102,6 +102,14 @@ formulas are one click away from the ingredients.
 
 <p align="center"><img src="docs/showcase/FolioButton.webp" alt="Folio at the alchemy table" width="500"></p>
 
+**Available items first.** When a station asks you to pick an item from your chests (alchemy ingredients, organs,
+seeds, sermons, zombie tools...), the items it accepts come first, added up across every chest, in the order that
+matters there: runes for alchemy, skulls for organs, quality for seeds and sermons, mastery for tools. Small numbers on
+each cell show what the game only tells in the tooltip, and one button switches to sorting by quantity. The chest
+lists below can stay hidden.
+
+<p align="center"><img src="docs/showcase/ItemFinder.webp" alt="Available items first" width="500"></p>
+
 ### Gameplay, off by default
 
 These two change the state of the game, so they start turned off.
@@ -171,7 +179,7 @@ copy of the game. The full guide the agents follow is in [AGENTS.md](AGENTS.md) 
 | `GK2HudPlus/` | **GK2 HUD+**: the package, with the feature list and the menu |
 | `GK2Hud/` | tooltips, HUD numbers, medallion, calendar, journal, quest tree |
 | `GK2Map/` | map zoom, place view, inspection, orders |
-| `GK2Crafting/` | shortcuts in crafting station windows (Folio at the alchemy table) |
+| `GK2Crafting/` | crafting stations: Folio at the alchemy table, available items first in the item picker |
 | `GK2Saves/` | Save and Load in the pause menu, save history |
 | `GK2ZombieRefund/` | zombie perk refund |
 | `GK2Insight/` | debug tool: in-game panels, data dump and telemetry (not part of the package) |

@@ -23,6 +23,8 @@ public static class Snippet
         var win = LazyUI.GetWindow<UIAlchemyWindow>();
         if (ACAO == "fechar")
         {
+            var escolha = LazyUI.GetWindow<UIMultiInventoryWindow>();
+            if (escolha.IsShown) escolha.Close();
             var folio = LazyUI.GetWindow<UIAlchemyFolioWindow>();
             if (folio.IsShown) folio.Close();
             if (win.IsShown) win.Close();

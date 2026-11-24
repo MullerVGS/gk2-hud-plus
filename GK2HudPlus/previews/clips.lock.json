@@ -26,11 +26,11 @@
   "FolioButton": {
     "date": "2026-11-24",
     "files": {
-      "GK2Crafting/CraftingModule.cs": "16902ae3a6d0be6f",
-      "GK2Crafting/FolioButton.cs": "01d68b9ee22b8f8c",
-      "GK2Crafting/Plugin.cs": "f4e9e11843847b06",
-      "clips.txt": "bc67b3908aaaed5e",
-      "docs/cenarios/alquimia-mesa.cs": "ae079618aafec8f2",
+      "GK2Crafting/CraftingModule.cs": "2cbbeaa42e8fc305",
+      "GK2Crafting/FolioButton.cs": "2c14b2df4f8cb30b",
+      "GK2Crafting/art/folio_book.png": "09fccea42abf1d34",
+      "clips.txt": "c3202ee0f6ed6361",
+      "docs/cenarios/alquimia-mesa.cs": "8e46a38212a9a7fb",
       "docs/cenarios/demo-folio.cs": "14db5652b36d6f9b",
       "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
       "tools/snippet/DemoKit.cs": "26d68e222f910497",
@@ -38,8 +38,8 @@
     },
     "game": "1.012.9",
     "media": {
-      "webm": "f2c4b30770b1e233",
-      "webp": "7a135db59186258c"
+      "webm": "dba331dd9270215e",
+      "webp": "b36204eab0bdba80"
     }
   },
   "Hud": {
@@ -99,6 +99,24 @@
     "media": {
       "webm": "4546886edabc9eb7",
       "webp": "fe85d303aaacf9a3"
+    }
+  },
+  "ItemFinder": {
+    "date": "2026-11-24",
+    "files": {
+      "GK2Crafting/CraftingModule.cs": "2cbbeaa42e8fc305",
+      "GK2Crafting/ItemFinder.cs": "ec1ce167da379af5",
+      "clips.txt": "4c82ba82678d3691",
+      "docs/cenarios/alquimia-mesa.cs": "8e46a38212a9a7fb",
+      "docs/cenarios/demo-itemfinder.cs": "c481a2e537856c59",
+      "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
+      "tools/snippet/DemoKit.cs": "26d68e222f910497",
+      "tools/snippet/Slots.cs": "60719f4e37c234dd"
+    },
+    "game": "1.012.9",
+    "media": {
+      "webm": "2313ad58c9902008",
+      "webp": "8f4bb57bea1f8d5e"
     }
   },
   "Journal": {

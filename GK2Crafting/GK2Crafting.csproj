@@ -7,4 +7,7 @@
     <Compile Include="../Shared/ModHost.cs" Link="Shared/ModHost.cs" />
     <Compile Include="../Shared/HudPlusId.cs" Link="Shared/HudPlusId.cs" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="art/*.png" LogicalName="gk2crafting.%(Filename)%(Extension)" />
+  </ItemGroup>
 </Project>
