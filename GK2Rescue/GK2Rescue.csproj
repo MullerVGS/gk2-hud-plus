@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <AssemblyName>GK2Rescue</AssemblyName>
+  </PropertyGroup>
+  <ItemGroup>
+    <Compile Include="../Shared/ModGuard.cs" Link="Shared/ModGuard.cs" />
+    <Compile Include="../GK2Saves/SaveGuard.cs" Link="SaveGuard.cs" />
+  </ItemGroup>
+</Project>

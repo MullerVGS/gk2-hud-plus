@@ -53,7 +53,10 @@ for n, raw in enumerate(Path(listing).read_text(encoding="utf-8").splitlines()):
     else:
         f = work / f"{n:03d}-{Path(path).stem}.cs"
         f.write_text(src, encoding="utf-8")
-        out = subprocess.run([gk2, "run", str(f)], capture_output=True, text=True).stdout
+        run = subprocess.run([gk2, "run", str(f)], capture_output=True, text=True)
+        out = run.stdout
+        # O relatório resume em 160 caracteres; preserve o retorno inteiro para conferir pilhas e estado.
+        f.with_suffix(".log").write_text(out + run.stderr, encoding="utf-8")
         i = out.find("\n{")
         try:
             data = json.loads(out[i + 1:] if i >= 0 else out[out.index("{"):])
@@ -62,13 +65,18 @@ for n, raw in enumerate(Path(listing).read_text(encoding="utf-8").splitlines()):
         result = str(data.get("result", data.get("error", "")))
         if expect.startswith("log:"):
             log = subprocess.run([gk2, "log", "300"], capture_output=True, text=True).stdout
-            ok = data.get("ok") is True and re.search(expect[4:], log) is not None
+            ok = run.returncode == 0 and data.get("ok") is True and re.search(expect[4:], log) is not None
         else:
-            ok = data.get("ok") is True and re.search(expect, result) is not None
+            ok = run.returncode == 0 and data.get("ok") is True and re.search(expect, result) is not None
         pic = ""
         if shot:
-            pic = subprocess.run([gk2, "shot", f"{prefix}-{shot}"], capture_output=True, text=True).stdout.strip().splitlines()[-1:]
-            pic = f" — print `{pic[0]}`" if pic else ""
+            capture = subprocess.run([gk2, "shot", f"{prefix}-{shot}"], capture_output=True, text=True)
+            paths = capture.stdout.strip().splitlines()[-1:]
+            if capture.returncode == 0 and paths and Path(paths[0]).is_file():
+                pic = f" — print `{paths[0]}`"
+            else:
+                ok = False
+                pic = " — captura falhou"
         if not ok:
             fails += 1
         short = " ".join(result.split())[:160]

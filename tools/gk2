@@ -80,6 +80,10 @@ install_green() { # copia para BepInEx/plugins do green; se a DLL estiver travad
   local dll=$1 proj=$2 dst="$GREEN/BepInEx/plugins/$2/$2.dll"
   mkdir -p "$(dirname "$dst")"
   if cp "$dll" "$dst" 2>/dev/null; then rm -f "$dst.next"; else cp "$dll" "$dst.next"; echo "(DLL em uso pelo green: ficou $proj.dll.next, aplicado no próximo start)"; fi
+  if [ -d "$HERE/$proj/previews" ]; then
+    mkdir -p "$(dirname "$dst")/previews"
+    cp -u "$HERE/$proj/previews/"*.webm "$(dirname "$dst")/previews/"
+  fi
 }
 
 apply_pending() {
@@ -178,9 +182,6 @@ EOF
       done
     fi
     install_green "$dll" "$proj"
-    if [ -d "$HERE/$proj/previews" ]; then   # clipes do menu (gk2 rec), lidos de BepInEx/plugins/<proj>/previews
-      mkdir -p "$GREEN/BepInEx/plugins/$proj/previews"; cp -u "$HERE/$proj/previews/"*.webm "$GREEN/BepInEx/plugins/$proj/previews/" 2>/dev/null || true
-    fi
     if bridge_up; then
       path=$(stage "$dll" "$proj")
       api "/reload?path=$(python3 -c 'import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))' "$path")" | print_logs
@@ -412,7 +413,8 @@ EOF
     for pack in "$BLUE_DATA"/Mods/Code/*/; do
       for dll in "$pack"BepInEx/plugins/*/*.dll; do
         [ -f "$dll" ] || continue; p=$(basename "$(dirname "$dll")")
-        mkdir -p "$GREEN/BepInEx/plugins/$p"; cp "$dll" "$GREEN/BepInEx/plugins/$p/"
+        # O pacote inclui recursos usados em execução (como previews/), não só a DLL.
+        mkdir -p "$GREEN/BepInEx/plugins/$p"; cp -a "$(dirname "$dll")/." "$GREEN/BepInEx/plugins/$p/"
         echo "- $p $(sed -n 's/.*"version": *"\([^"]*\)".*/\1/p' "$pack/modinfo.json" 2>/dev/null)" | tee -a "$R"
       done
     done

@@ -2,13 +2,20 @@
 # cenário [CONSTANTE=valor ...] | regex esperada no resultado (ou log:regex no log do jogo) | nome do print (vazio = sem print)
 # As constantes trocam `const`/`static` do cenário (texto vira string entre aspas automaticamente).
 docs/cenarios/fechar-janelas.cs | fechadas |
+docs/cenarios/hud-exterior-dia.cs | zona yard |
+tools/update/preparar.cs | inventário preparado |
 docs/cenarios/gk2hud-mundo-hover.cs | showing=True | hud-mundo
 docs/cenarios/gk2hud-mundo-hover.cs LIMPAR=true | limpo |
-docs/cenarios/gk2hud-pilha.cs ITEM=nails_iron | fixou nativo | hud-pilha
+docs/cenarios/demo-tooltips.cs FIM=aninhado | parado com o tooltip aninhado | hud-pilha
 docs/cenarios/gk2hud-fechar.cs | antes |
 docs/cenarios/fechar-janelas.cs | fechadas |
 docs/cenarios/gk2hud-calendario.cs | showing=True | hud-calendario
 docs/cenarios/gk2hud-calendario.cs ALVO=limpar | . |
+docs/cenarios/gk2hud-calendario.cs ALVO=aba | open=True | hud-calendario-aba
+docs/cenarios/gk2hud-calendario-abas.cs | 6 reaberta \(TAB\): CharMainPage |
+docs/cenarios/fechar-janelas.cs | fechadas |
+docs/cenarios/controls.cs | aberta, linhas: | controls
+docs/cenarios/controls.cs | fechada |
 docs/cenarios/gk2hud-quests.cs | page=\(x | hud-quests
 docs/cenarios/gk2hud-fechar.cs | antes |
 docs/cenarios/fechar-janelas.cs | fechadas |
@@ -17,7 +24,10 @@ docs/cenarios/gk2map-local.cs | vista ativa: True | map-local
 docs/cenarios/gk2map-local.cs ACAO=sair | vista ativa: False |
 docs/cenarios/fechar-janelas.cs | fechadas |
 docs/cenarios/hudplus-funcionalidades.cs ACAO=ligar IDS=SaveLoad,Refund | SaveLoad +ligada.*\n.*Refund +ligada |
-docs/cenarios/hudplus-menu.cs | janela aberta | hudplus-menu
+docs/cenarios/hudplus-funcionalidades.cs ACAO=ciclo | (?s)\A(?!.*religou=False)(?!.*desligou=False).*religou=True |
+docs/cenarios/hudplus-funcionalidades.cs | (?s)\A(?!.*FALHOU).*Tooltips |
+docs/cenarios/hudplus-menu.cs | janela aberta |
+tools/update/preview.cs | prévia reproduzindo | hudplus-menu
 docs/cenarios/hudplus-menu.cs ACAO=fechar | janela fechada · pausa aberta |
 docs/cenarios/fechar-janelas.cs | fechadas |
 docs/cenarios/pausa.cs | pausa aberta | saves-pausa
@@ -25,10 +35,16 @@ docs/cenarios/gk2saves-clicar.cs | clicado Load | saves-load
 docs/cenarios/fechar-janelas.cs | fechadas |
 docs/cenarios/gk2saves-clicar.cs BOTAO=Save | clicado Save |
 docs/cenarios/fechar-janelas.cs | log:save manual ok |
-docs/cenarios/zumbi-perks.cs ZUMBI=McDead | aberta | 
-docs/cenarios/gk2zombierefund-clicar.cs NO=ztalent_apprentice_carpenter | hover: | refund-hover
-docs/cenarios/gk2zombierefund-clicar.cs NO=ztalent_apprentice_carpenter ACAO=direito | diálogo aberto | refund-dialogo
-docs/cenarios/gk2zombierefund-clicar.cs NO=ztalent_apprentice_carpenter ACAO=nao | diálogo fechado |
+docs/cenarios/gk2saves-bloqueio.cs | interactable=False; depois de devolver: True |
+docs/cenarios/gk2saves-salvar-varios.cs VEZES=5 | Steam_1 | saves-historico
+docs/cenarios/fechar-janelas.cs | fechadas |
+docs/cenarios/gk2saves-carregar.cs | carregado .* → slot em jogo Steam_1 · | saves-carregado
+docs/cenarios/fechar-janelas.cs | fechadas |
+tools/update/refund.cs FASE=hover | validado | refund-hover
+tools/update/refund.cs FASE=direito | diálogo aberto · validado | refund-dialogo
+tools/update/refund.cs FASE=nao | diálogo fechado · validado |
+tools/update/refund.cs FASE=direito | diálogo aberto · validado |
+tools/update/refund.cs FASE=sim | diálogo fechado · validado | refund-confirmado
 docs/cenarios/fechar-janelas.cs | fechadas |
 docs/cenarios/insight-camadas.cs | local ligada | insight
 docs/cenarios/insight-camadas.cs LOCAL=false TECH=false | local desligada |
