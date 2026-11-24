@@ -19,6 +19,7 @@ namespace GK2HudPlus.Menu
             ["hud"] = new Loc("HUD", "HUD"),
             ["calendar"] = new Loc("Calendar", "Calendário"),
             ["map"] = new Loc("Map", "Mapa"),
+            ["crafting"] = new Loc("Crafting", "Criação"),
             ["gameplay"] = new Loc("Gameplay", "Jogabilidade"),
         };
 

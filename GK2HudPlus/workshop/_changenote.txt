@@ -1,5 +1,2 @@
-0.6.3
-- Performance: the Calendar tab opens instantly no matter how many days you have played (only the visible days are built; the rest load as you scroll).
-- Performance: the week popup and world tooltips update their countdowns in place instead of rebuilding the whole tooltip.
-- Performance: the journal is saved to disk in the background, so a slow disk or antivirus no longer stutters the game.
-- Performance: the open-world view of the map reads the screen edges asynchronously, without stalling the GPU.
+0.7.0
+- New: Folio at the alchemy table. Once the Folio is built, a cell in the alchemy table window opens it; closing it brings the table back.

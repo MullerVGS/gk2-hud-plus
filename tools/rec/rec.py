@@ -27,7 +27,7 @@ LOCK = os.path.join(repo, "GK2HudPlus/previews/clips.lock.json")
 PREVIEWS = os.path.join(repo, "GK2HudPlus/previews")
 SHOWCASE = os.path.join(repo, "docs/showcase")
 README = os.path.join(repo, "README.md")
-MODULES = ["GK2Hud/HudModule.cs", "GK2Map/MapModule.cs", "GK2Saves/SavesModule.cs", "GK2ZombieRefund/RefundModule.cs"]
+MODULES = ["GK2Hud/HudModule.cs", "GK2Map/MapModule.cs", "GK2Saves/SavesModule.cs", "GK2ZombieRefund/RefundModule.cs", "GK2Crafting/CraftingModule.cs"]
 KIT = "tools/snippet/DemoKit.cs"
 SLOTS = "tools/snippet/Slots.cs"
 

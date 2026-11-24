@@ -95,6 +95,13 @@
 
 <p align="center"><img src="docs/showcase/WheelSpin.webp" alt="Turning day medallion" width="240"></p>
 
+### Crafting
+
+**Folio at the alchemy table.** Once the Folio is built, the alchemy table window gets a cell that opens it, so the
+formulas are one click away from the ingredients.
+
+<p align="center"><img src="docs/showcase/FolioButton.webp" alt="Folio at the alchemy table" width="500"></p>
+
 ### Gameplay, off by default
 
 These two change the state of the game, so they start turned off.
@@ -164,6 +171,7 @@ copy of the game. The full guide the agents follow is in [AGENTS.md](AGENTS.md) 
 | `GK2HudPlus/` | **GK2 HUD+**: the package, with the feature list and the menu |
 | `GK2Hud/` | tooltips, HUD numbers, medallion, calendar, journal, quest tree |
 | `GK2Map/` | map zoom, place view, inspection, orders |
+| `GK2Crafting/` | shortcuts in crafting station windows (Folio at the alchemy table) |
 | `GK2Saves/` | Save and Load in the pause menu, save history |
 | `GK2ZombieRefund/` | zombie perk refund |
 | `GK2Insight/` | debug tool: in-game panels, data dump and telemetry (not part of the package) |

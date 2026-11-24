@@ -14,6 +14,7 @@ MapPlaces | docs/cenarios/fechar-janelas.cs; docs/cenarios/hud-exterior-dia.cs |
 MapOrders | docs/cenarios/fechar-janelas.cs; docs/cenarios/hud-exterior-dia.cs; docs/cenarios/hudplus-funcionalidades.cs ACAO=ligar IDS=MapOrders; docs/cenarios/demo-orders.cs MODO=abrir | docs/cenarios/demo-orders.cs MODO=pedidos | 500,240,960,640 | GK2Map/Orders.cs GK2Map/MapModule.cs
 SaveLoad | docs/cenarios/fechar-janelas.cs; docs/cenarios/hud-exterior-dia.cs; docs/cenarios/gk2saves-salvar-varios.cs VEZES=2; docs/cenarios/fechar-janelas.cs | docs/cenarios/demo-saves.cs | 600,200,760,680 | GK2Saves/*.cs
 Refund | docs/cenarios/fechar-janelas.cs; docs/cenarios/hud-exterior-dia.cs | docs/cenarios/demo-refund.cs | 640,200,640,700 | GK2ZombieRefund/*.cs
+FolioButton | docs/cenarios/fechar-janelas.cs; docs/cenarios/alquimia-mesa.cs ACAO=fechar; docs/cenarios/alquimia-mesa.cs | docs/cenarios/demo-folio.cs | 590,196,1000,680 | GK2Crafting/*.cs
 # Jogo novo de gravação (Steam_2, snapshot "inicio"): árvore de quests, calendário, diário e medalhão sem spoiler.
 Quests | docs/cenarios/carregar-slot.cs SLOT=Steam_2 SE_PRECISO=true; docs/cenarios/fechar-janelas.cs | docs/cenarios/demo-quests.cs QUEST=6_intro_guards_burial | 616,184,1176,592 | GK2Hud/Quests/*.cs GK2Hud/Names.cs
 CalendarTab | docs/cenarios/carregar-slot.cs SLOT=Steam_2 SE_PRECISO=true; docs/cenarios/fechar-janelas.cs | docs/cenarios/demo-calendar.cs MODO=aba | 330,180,1176,592 | GK2Hud/Calendar/*.cs GK2Hud/Names.cs

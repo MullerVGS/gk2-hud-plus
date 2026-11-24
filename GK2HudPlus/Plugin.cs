@@ -2,6 +2,7 @@ using System.Linq;
 using BepInEx;
 using GK2Hud;
 using GK2HudPlus.Menu;
+using GK2Crafting;
 using GK2Map;
 using GK2Saves;
 using GK2Shared;
@@ -10,8 +11,9 @@ using GK2ZombieRefund;
 namespace GK2HudPlus
 {
     /// <summary>
-    /// GK2 HUD+: interface (<see cref="HudModule"/>), mapa (<see cref="MapModule"/>), saves (<see cref="SavesModule"/>) e
-    /// refund de perk de zumbi (<see cref="RefundModule"/>) num plugin só, com um .cfg e uma lista de funcionalidades que
+    /// GK2 HUD+: interface (<see cref="HudModule"/>), mapa (<see cref="MapModule"/>), estações de craft
+    /// (<see cref="CraftingModule"/>), saves (<see cref="SavesModule"/>) e refund de perk de zumbi
+    /// (<see cref="RefundModule"/>) num plugin só, com um .cfg e uma lista de funcionalidades que
     /// ligam e desligam sem reabrir o jogo. Funcionalidades que mudam o estado do jogo começam desligadas.
     /// </summary>
     [BepInPlugin(Guid, Name, Version)]
@@ -19,13 +21,14 @@ namespace GK2HudPlus
     {
         public const string Guid = HudPlusId.Guid;
         public const string Name = HudPlusId.Name;
-        public const string Version = "0.6.3";
+        public const string Version = "0.7.0";
 
         internal ModHost Host { get; private set; }
 
         /// <summary>Acessados por reflexão nos cenários (docs/cenarios/).</summary>
         internal HudModule Hud { get; private set; }
         internal MapModule Map { get; private set; }
+        internal CraftingModule Crafting { get; private set; }
         internal SavesModule Saves { get; private set; }
         internal RefundModule Refund { get; private set; }
         internal ModGuard Guard => Host?.Guard;
@@ -36,6 +39,7 @@ namespace GK2HudPlus
             Host = new ModHost(this, Logger, Guid, Name, bundle: true);
             Hud = new HudModule(Host);
             Map = new MapModule(Host);
+            Crafting = new CraftingModule(Host);
             Saves = new SavesModule(Host);
             Refund = new RefundModule(Host);
             Host.Start();

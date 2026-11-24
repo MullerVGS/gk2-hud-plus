@@ -14,6 +14,7 @@
     <Compile Include="../GK2Map/**/*.cs" Exclude="../GK2Map/Plugin.cs;../GK2Map/bin/**;../GK2Map/obj/**" Link="GK2Map/%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="../GK2Saves/**/*.cs" Exclude="../GK2Saves/Plugin.cs;../GK2Saves/bin/**;../GK2Saves/obj/**" Link="GK2Saves/%(RecursiveDir)%(Filename)%(Extension)" />
     <Compile Include="../GK2ZombieRefund/**/*.cs" Exclude="../GK2ZombieRefund/Plugin.cs;../GK2ZombieRefund/bin/**;../GK2ZombieRefund/obj/**" Link="GK2ZombieRefund/%(RecursiveDir)%(Filename)%(Extension)" />
+    <Compile Include="../GK2Crafting/**/*.cs" Exclude="../GK2Crafting/Plugin.cs;../GK2Crafting/bin/**;../GK2Crafting/obj/**" Link="GK2Crafting/%(RecursiveDir)%(Filename)%(Extension)" />
     <!-- BurstableBounds (limites dos ladrilhos de terreno, GK2Map) usa float3. -->
     <Reference Include="$(Refs)/Managed/Unity.Mathematics.dll" Private="false" />
     <!-- Menu: clipes de pré-visualização (VideoPlayer). -->

@@ -23,6 +23,25 @@
       "webp": "9afb5289f50aa049"
     }
   },
+  "FolioButton": {
+    "date": "2026-11-24",
+    "files": {
+      "GK2Crafting/CraftingModule.cs": "16902ae3a6d0be6f",
+      "GK2Crafting/FolioButton.cs": "01d68b9ee22b8f8c",
+      "GK2Crafting/Plugin.cs": "f4e9e11843847b06",
+      "clips.txt": "bc67b3908aaaed5e",
+      "docs/cenarios/alquimia-mesa.cs": "ae079618aafec8f2",
+      "docs/cenarios/demo-folio.cs": "14db5652b36d6f9b",
+      "docs/cenarios/fechar-janelas.cs": "6c62576d3fdc5a08",
+      "tools/snippet/DemoKit.cs": "26d68e222f910497",
+      "tools/snippet/Slots.cs": "60719f4e37c234dd"
+    },
+    "game": "1.012.9",
+    "media": {
+      "webm": "f2c4b30770b1e233",
+      "webp": "7a135db59186258c"
+    }
+  },
   "Hud": {
     "date": "2026-11-15",
     "files": {

@@ -59,9 +59,9 @@ Pacote público (`GK2HudPlus/`, `mullervgs.gk2.hudplus`, nome `GK2 HUD+`): os mo
 `.cfg` e uma lista de funcionalidades que ligam e desligam sem reabrir o jogo. Insight, DevBridge e HotLoader ficam de fora.
 
 - **Módulos**: cada mod de jogador virou um módulo que não é plugin (`HudModule`, `MapModule`, `SavesModule`,
-  `RefundModule`) e registra as funcionalidades num `ModHost` (`Shared/ModHost.cs`). O `Plugin.cs` de cada pasta é só o
+  `RefundModule`, `CraftingModule`) e registra as funcionalidades num `ModHost` (`Shared/ModHost.cs`). O `Plugin.cs` de cada pasta é só o
   ponto de entrada do mod avulso (`[BepInIncompatibility(HudPlusId.Guid)]`: com o HUD+ instalado, o BepInEx ignora o
-  avulso). O `GK2HudPlus.csproj` compila as quatro pastas inteiras menos esses `Plugin.cs`.
+  avulso). O `GK2HudPlus.csproj` compila as cinco pastas inteiras menos esses `Plugin.cs`.
 - **Funcionalidade** = `host.Feature(id, categoria, seção, chave, nome, descrição, create, update, dispose, gameplay,
   options)`: toggle em `[seção] chave`, nome e descrição em en/pt (`Loc`) para o menu, e a parte do ModGuard que roda
   quando ligada. **Opção** = `host.Option(pai, ...)`: booleano mostrado abaixo da funcionalidade; mudar uma opção (ou
@@ -193,6 +193,21 @@ Frase longa foi recusada ("coisa de programador"): onde o jogo tem widget ou íc
   recolhem acima de 8 linhas; só cria as linhas de grupos abertos.
 - Cenários: `arte-dias.cs` (exporta a arte de dia), `gk2hud-calendario.cs` (medalhão, sigilo, aba; GRUPO/ROLAR/FAIXA),
   `gk2hud-calendario-fixar.cs` (fixa a semana e passa o mouse num ícone).
+
+## GK2 Crafting
+
+Mod de jogador (`GK2Crafting/`, `mullervgs.gk2.crafting`, categoria `crafting` do HUD+): atalhos nas janelas das estações
+de craft.
+- **Folio na mesa de alquimia** (`FolioButton`, desde HUD+ 0.7.0): célula `comm-item_cell-dark` (a do Boost) no canto de
+  cima à direita do painel de ingredientes da `UIAlchemyWindow`, com o ícone `i_recipe_bag_alchemy` e o material do ícone
+  da célula de resultado (hover = contorno na `HighlightedColorMouse` dela, sons do `LazyButton` dela). Tooltip nativo com
+  `alchemy_recipe_book`/`_d` (nome e descrição do Folio). O clique abre `UIAlchemyFolioWindow` como o livro do mundo
+  (`Flow_OpenFolioWindow`, grafo `alchemy_recipe_book`); a pilha de janelas devolve a mesa ao fechar. Só aparece se existe
+  `alchemy_recipe_book` no mundo (`WorldData.GetWgoDataList`, cache por id): o Folio é construção que precisa ser
+  liberada. Escondida com controle (sem navegação até ela). O ícone do próprio Folio (`i_b_scrollcase`) foi descartado:
+  é desenho de planta e lia como "construir".
+- Cenários: `alquimia-mesa.cs` (teleporta e abre a mesa; `MESA` = índice, `ACAO=listar|folio|fechar`), `demo-folio.cs`.
+  Referências: `docs/referencia/alquimia.png`, `folio.png`.
 
 ## GK2 Saves
 

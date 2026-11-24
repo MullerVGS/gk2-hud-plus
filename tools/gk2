@@ -168,13 +168,13 @@ EOF
     # build + instala no green (persistente) + hot-reload se a ponte estiver no ar
     proj=${1:?projeto}
     case "$proj" in
-      GK2Hud|GK2Map|GK2Saves|GK2ZombieRefund)
+      GK2Hud|GK2Map|GK2Saves|GK2ZombieRefund|GK2Crafting)
         [ -d "$GREEN/BepInEx/plugins/GK2HudPlus" ] && die "o GK2 HUD+ está no green e já traz $proj; para testar o avulso, tire BepInEx/plugins/GK2HudPlus do green" ;;
     esac
     dll=$(build "$proj")
     if [ "$proj" = GK2HudPlus ]; then
       # O pacote substitui os avulsos: descarrega os que estiverem rodando e tira as pastas deles do green.
-      for m in GK2Hud:arthur.gk2.hud GK2Map:arthur.gk2.map GK2Saves:arthur.gk2.saves GK2ZombieRefund:arthur.gk2.zombierefund; do
+      for m in GK2Hud:arthur.gk2.hud GK2Map:arthur.gk2.map GK2Saves:arthur.gk2.saves GK2ZombieRefund:arthur.gk2.zombierefund GK2Crafting:mullervgs.gk2.crafting; do
         dir="$GREEN/BepInEx/plugins/${m%%:*}"; [ -d "$dir" ] || continue
         bridge_up && api "/unload?guid=${m#*:}" >/dev/null
         rm -rf "$dir" 2>/dev/null || { mv "$dir" "$GREEN/BepInEx/plugins/~${m%%:*}.removido" 2>/dev/null; }
@@ -388,12 +388,12 @@ EOF
     else echo "- sem decomp anterior para comparar" >> "$R"; fi
 
     section "Build contra o jogo novo"
-    projetos="GK2DevBridge GK2HotLoader GK2Insight GK2Hud GK2Map GK2Saves GK2ZombieRefund GK2HudPlus"
+    projetos="GK2DevBridge GK2HotLoader GK2Insight GK2Hud GK2Map GK2Saves GK2ZombieRefund GK2Crafting GK2HudPlus"
     for p in $projetos; do
       if dll=$(build "$p" 2>"$U/build-$p.log"); then
         avisos=$(grep -c -i "warning" "$U/build-$p.log" || true)
         # Os avulsos só compilam: no green quem roda é o GK2 HUD+, que já os traz.
-        case "$p" in GK2Hud|GK2Map|GK2Saves|GK2ZombieRefund) ;; *) install_green "$dll" "$p" >/dev/null ;; esac
+        case "$p" in GK2Hud|GK2Map|GK2Saves|GK2ZombieRefund|GK2Crafting) ;; *) install_green "$dll" "$p" >/dev/null ;; esac
         echo "- $p ok ($avisos aviso(s))" | tee -a "$R"
       else echo "- $p FALHOU (ver .update/build-$p.log)" | tee -a "$R"; falhas+=("build de $p"); fi
     done
@@ -409,7 +409,7 @@ EOF
 
     section "Mods do blue (Mods/Code) no green"
     "$0" green stop >/dev/null 2>&1
-    for d in GK2Hud GK2Map GK2Saves GK2ZombieRefund GK2HudPlus; do rm -rf "$GREEN/BepInEx/plugins/$d"; done   # só o que vem do blue
+    for d in GK2Hud GK2Map GK2Saves GK2ZombieRefund GK2Crafting GK2HudPlus; do rm -rf "$GREEN/BepInEx/plugins/$d"; done   # só o que vem do blue
     for pack in "$BLUE_DATA"/Mods/Code/*/; do
       for dll in "$pack"BepInEx/plugins/*/*.dll; do
         [ -f "$dll" ] || continue; p=$(basename "$(dirname "$dll")")
@@ -428,9 +428,9 @@ EOF
 
     section "Green de volta aos builds do repo"
     "$0" green stop >/dev/null 2>&1
-    for d in GK2Hud GK2Map GK2Saves GK2ZombieRefund; do rm -rf "$GREEN/BepInEx/plugins/$d"; done
+    for d in GK2Hud GK2Map GK2Saves GK2ZombieRefund GK2Crafting; do rm -rf "$GREEN/BepInEx/plugins/$d"; done
     for p in $projetos; do
-      case "$p" in GK2Hud|GK2Map|GK2Saves|GK2ZombieRefund) continue ;; esac
+      case "$p" in GK2Hud|GK2Map|GK2Saves|GK2ZombieRefund|GK2Crafting) continue ;; esac
       [ -f "$HERE/$p/bin/Release/$p.dll" ] && install_green "$HERE/$p/bin/Release/$p.dll" "$p" >/dev/null
     done
     "$0" save reset >/dev/null; echo "- builds do repo reinstalados, save de teste restaurado, green parado" | tee -a "$R"
