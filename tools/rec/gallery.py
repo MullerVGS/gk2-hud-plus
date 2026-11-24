@@ -20,7 +20,8 @@ OUT = os.path.join(MEDIA, "workshop")
 W, H = 1920, 1080
 
 # (nome, fonte, título, legenda). Fonte: "shot:<sufixo em .shots>", "take:<tomada>@<s>" (tela inteira) ou
-# "clip:<Id>@<s>" (região do clipe, posta em tamanho real sobre o quintal desfocado).
+# "clip:<Id>@<s>" (região do clipe, posta em tamanho real sobre o quintal desfocado); "clip:<Id>@<s>#x,y,w,h" recorta a
+# região (px do clipe, pares) para tirar o escuro em volta da janela.
 CARDS = [
     ("world-garden", "shot:capa-mundo", "Tooltips in the world", "Hover for the essentials. Pin it for the chance per cell and the harvest so far"),
     ("world-station", "shot:segue-a", "What every station is doing", "Progress, time left, the queue and the fuel, in the game's own widgets"),
@@ -30,6 +31,8 @@ CARDS = [
     ("places", "take:mapa@5.2", "Look inside places you have visited", "Hover an object for its name, click to see what it holds"),
     ("calendar", "clip:CalendarTab@5.0", "A calendar tab", "The days, their events and what you did on each one"),
     ("quests", "clip:Quests@5.0", "Quest tree with names", "Click a quest to read how you got there"),
+    ("item-picker", "clip:ItemFinder@7.0#40,100,660,650", "Available items first", "Picking from your chests: what fits comes first, added up and sorted for that station"),
+    ("folio", "clip:FolioButton@3.0#40,10,950,660", "The Folio at the alchemy table", "Once it is built, its formulas are one click away from the ingredients"),
 ]
 
 
@@ -48,12 +51,17 @@ def source(spec):
         if not hits:
             sys.exit(f"falta o print {rest} em .shots/")
         return Image.open(hits[-1]).convert("RGB"), True
+    rest, _, crop = rest.partition("#")
     name, _, at = rest.partition("@")
     if kind == "take":
         im = frame(os.path.join(MEDIA, "tomadas", name + ".mp4"), float(at))
         # A tomada guarda 1 pixel de arte por pixel e volta ao tamanho de tela: refaz a dobra sem o borrão do vídeo.
         return im.resize((W // 2, H // 2), Image.BOX).resize((W, H), Image.NEAREST), True
-    return frame(os.path.join(MEDIA, name + ".mp4"), float(at)), False
+    im = frame(os.path.join(MEDIA, name + ".mp4"), float(at))
+    if crop:
+        x, y, w, h = (int(v) for v in crop.split(","))
+        im = im.crop((x, y, x + w, y + h))
+    return im, False
 
 
 def backdrop():
